@@ -1,0 +1,15 @@
+// Generated using cmake
+
+#pragma once
+#ifndef UNI_CPP_IMPL_VERSION_HPP
+#define UNI_CPP_IMPL_VERSION_HPP
+
+// uni-cpp library version in XXXYYYZZZ format
+// (MAJOR * 1'000'000) + (MINOR * 1'000) + PATCH
+#define UNI_CPP_VERSION @UNI_CPP_VERSION_NUMBER@
+
+#define UNI_CPP_VERSION_MAJOR @UNI_CPP_VERSION_MAJOR@
+#define UNI_CPP_VERSION_MINOR @UNI_CPP_VERSION_MINOR@
+#define UNI_CPP_VERSION_PATCH @UNI_CPP_VERSION_PATCH@
+
+#endif // UNI_CPP_IMPL_VERSION_HPP

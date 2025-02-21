@@ -33,8 +33,9 @@ set(UNI_CPP_HEADERS
     )
 
 set(UNI_CPP_TEST_SOURCES
-    test/char.cpp
-    test/string.cpp
+    test/src/all.cpp
+    test/src/char.cpp
+    test/src/string.cpp
     )
 
 add_library(${PROJECT_NAME} INTERFACE ${UNI_CPP_HEADERS})

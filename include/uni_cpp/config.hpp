@@ -33,4 +33,10 @@ namespace upp::impl
 #define UNI_CPP_ASSERT(...) ((void)0)
 #endif
 
+#if !defined(__cpp_deleted_function) || (__cpp_deleted_function < 202403L)
+#define UNI_CPP_DELETE(reason) delete
+#else
+#define UNI_CPP_DELETE(reason) delete (reason)
+#endif
+
 #endif // UNI_CPP_CONFIG_HPP

@@ -6,10 +6,25 @@
 
 #include <cstdint>
 #include <optional>
+#include <stdexcept>
+#include <array>
 #include <type_traits>
+#include <utility>
 #include <compare>
 #include <limits>
 #include <bit>
+
+#if !defined(__cpp_size_t_suffix) && defined(__INTELLISENSE__)
+
+inline namespace intellisense_fix
+{
+	consteval std::size_t operator"" uz(unsigned long long int val) noexcept
+	{
+		return static_cast<std::size_t>(val);
+	}
+} // namespace intellisense_fix
+
+#endif
 
 namespace upp
 {
@@ -30,6 +45,160 @@ namespace upp
 
 	class ascii_char;
 	class uchar;
+
+	template<typename T>
+	concept char_type = std::is_same_v<T, ascii_char> || std::is_same_v<T, uchar>;
+
+	namespace impl
+	{
+		// inplace_vector like class used by:
+		// encode_utf8_t/encode_utf16_t and to_lowercase_t/to_uppercase_t
+		template<typename T, std::size_t buffer_size>
+		class inplace_vector_like
+		{
+		public:
+			using value_type			 = T;
+			using reference				 = T&;
+			using const_reference		 = const T&;
+			using iterator				 = const T*;
+			using const_iterator		 = const T*;
+			using reverse_iterator		 = std::reverse_iterator<iterator>;
+			using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+			using difference_type		 = std::ptrdiff_t;
+			using size_type				 = std::size_t;
+
+			constexpr inplace_vector_like() noexcept
+				: m_size(0U)
+			{
+			}
+
+			constexpr inplace_vector_like(const inplace_vector_like&) noexcept = default;
+			constexpr inplace_vector_like(inplace_vector_like&&) noexcept	   = default;
+
+			constexpr ~inplace_vector_like() noexcept = default;
+
+			constexpr inplace_vector_like& operator=(const inplace_vector_like&) noexcept = default;
+			constexpr inplace_vector_like& operator=(inplace_vector_like&&) noexcept	  = default;
+
+			constexpr const_iterator begin() const noexcept
+			{
+				return m_data.data();
+			}
+			constexpr const_iterator cbegin() const noexcept
+			{
+				return begin();
+			}
+			constexpr const_iterator end() const noexcept
+			{
+				return m_data.data() + m_size;
+			}
+			constexpr const_iterator cend() const noexcept
+			{
+				return end();
+			}
+			constexpr const_reverse_iterator rbegin() const noexcept
+			{
+				return const_reverse_iterator(end());
+			}
+			constexpr const_reverse_iterator crbegin() const noexcept
+			{
+				return rbegin();
+			}
+			constexpr const_reverse_iterator rend() const noexcept
+			{
+				return const_reverse_iterator(begin());
+			}
+			constexpr const_reverse_iterator crend() const noexcept
+			{
+				return rend();
+			}
+
+			constexpr size_type size() const noexcept
+			{
+				return static_cast<size_type>(m_size);
+			}
+			constexpr size_type max_size() const noexcept
+			{
+				return buffer_size;
+			}
+
+			constexpr const T* data() const noexcept
+			{
+				return m_data.data();
+			}
+
+			constexpr bool empty() const noexcept
+			{
+				return m_size == 0;
+			}
+
+			constexpr void swap(inplace_vector_like& other) noexcept
+			{
+				std::swap(*this, other);
+			}
+
+			constexpr bool operator==(const inplace_vector_like& other) const noexcept
+			{
+				if (m_size != other.m_size)
+					return false;
+
+				for (auto it1 = cbegin(), it2 = other.cbegin(); it1 != cend(); ++it1, ++it2)
+				{
+					if (*it1 != *it2)
+						return false;
+				}
+				return true;
+			}
+
+		protected:
+			constexpr inplace_vector_like(std::array<T, buffer_size> data, std::uint32_t psize) noexcept
+				: m_data(data)
+				, m_size(psize)
+			{
+			}
+
+			friend uchar;
+
+		private:
+			std::array<T, buffer_size> m_data;
+			std::uint32_t			   m_size;
+		};
+
+		template<typename T, std::size_t buffer_size>
+		class encode_utf : public inplace_vector_like<T, buffer_size>
+		{
+		private:
+			using base = inplace_vector_like<T, buffer_size>;
+			friend uchar;
+
+		public:
+			using base::base;
+		};
+
+		enum class to_case_enum : std::uint8_t
+		{
+			lower,
+			upper
+		};
+
+		// 1st note: template on to_case_enum so that to_lowercase_t and to_uppercase_t are seperate types
+		// 2nd note: T is always uchar, but needs to be template param because uchar is an incomplete type here
+		template<to_case_enum, typename T = uchar>
+		class to_case : public inplace_vector_like<T, 3>
+		{
+		private:
+			using base = inplace_vector_like<T, 3>;
+			friend uchar;
+
+		public:
+			using base::base;
+
+			constexpr T simple_mapping() const noexcept
+			{
+				return *data();
+			}
+		};
+	} // namespace impl
 
 	class ascii_char
 	{
@@ -111,6 +280,12 @@ namespace upp
 	class uchar
 	{
 	public:
+		using encode_utf8_t	 = impl::encode_utf<char8_t, 4>;
+		using encode_utf16_t = impl::encode_utf<char16_t, 2>;
+
+		using to_lowercase_t = impl::to_case<impl::to_case_enum::lower>;
+		using to_uppercase_t = impl::to_case<impl::to_case_enum::upper>;
+
 		constexpr uchar() noexcept
 			: m_value(0)
 		{
@@ -187,6 +362,17 @@ namespace upp
 			return ascii_char::substitute_character();
 		}
 
+		[[nodiscard]] constexpr to_lowercase_t to_lowercase() const noexcept
+		{
+			std::array<uchar, 3> arr{*this};
+			return to_lowercase_t(arr, 1U); // TODO
+		}
+		[[nodiscard]] constexpr to_uppercase_t to_uppercase() const noexcept
+		{
+			std::array<uchar, 3> arr{*this};
+			return to_uppercase_t(arr, 1U); // TODO
+		}
+
 		[[nodiscard]] constexpr std::size_t length_utf8() const noexcept
 		{
 			if (m_value < 0x80)
@@ -206,6 +392,59 @@ namespace upp
 				return 2;
 		}
 
+		[[nodiscard]] constexpr encode_utf8_t encode_utf8() const noexcept
+		{
+			std::array<char8_t, 4> arr;
+			const std::size_t	   size_utf8 = length_utf8();
+
+			switch (size_utf8)
+			{
+			case 1uz: {
+				arr[0] = static_cast<char8_t>(m_value);
+				break;
+			}
+			case 2uz: {
+				arr[0] = static_cast<char8_t>((m_value >> 6) | 0xC0U);
+				arr[1] = static_cast<char8_t>((m_value & 0x3FU) | 0x80U);
+				break;
+			}
+			case 3uz: {
+				arr[0] = static_cast<char8_t>((m_value >> 12) | 0xE0U);
+				arr[1] = static_cast<char8_t>(((m_value >> 6) & 0x3FU) | 0x80U);
+				arr[2] = static_cast<char8_t>((m_value & 0x3FU) | 0x80U);
+				break;
+			}
+			case 4uz: {
+				arr[0] = static_cast<char8_t>((m_value >> 18) | 0xF0U);
+				arr[1] = static_cast<char8_t>(((m_value >> 12) & 0x3FU) | 0x80U);
+				arr[2] = static_cast<char8_t>(((m_value >> 6) & 0x3FU) | 0x80U);
+				arr[3] = static_cast<char8_t>((m_value & 0x3FU) | 0x80U);
+				break;
+			}
+			default: std::unreachable();
+			}
+
+			return encode_utf8_t(arr, static_cast<std::uint32_t>(size_utf8));
+		}
+		[[nodiscard]] constexpr encode_utf16_t encode_utf16() const noexcept
+		{
+			std::array<char16_t, 2> arr;
+			const std::size_t		size_utf16 = length_utf16();
+
+			if (size_utf16 == 1)
+			{
+				arr[0] = static_cast<char16_t>(m_value);
+			}
+			else // size_utf16 == 2
+			{
+				const std::uint32_t code = m_value - 0x10'000;
+
+				arr[0] = static_cast<char16_t>(0xD800 | (code >> 10));
+				arr[1] = static_cast<char16_t>(0xDC00 | (code & 0x3FF));
+			}
+			return encode_utf16_t(arr, static_cast<std::uint32_t>(size_utf16));
+		}
+
 	private:
 		constexpr uchar(const std::uint32_t value) noexcept
 			: m_value(value)
@@ -223,8 +462,7 @@ namespace upp
 			if (value > static_cast<unsigned long long int>(std::numeric_limits<std::uint8_t>::max()) ||
 				!is_valid_ascii(static_cast<std::uint8_t>(value)))
 			{
-				// Note: this function is consteval, meaning this will cause a compile-time error
-				throw "Invalid ASCII value";
+				throw std::invalid_argument("Invalid ASCII value");
 			}
 
 			return ascii_char::from(static_cast<std::uint8_t>(value)).value();
@@ -234,8 +472,7 @@ namespace upp
 		{
 			if (!is_valid_ascii(static_cast<std::uint8_t>(value)))
 			{
-				// Note: this function is consteval, meaning this will cause a compile-time error
-				throw "Invalid ASCII value";
+				throw std::invalid_argument("Invalid ASCII value");
 			}
 
 			return ascii_char::from(static_cast<std::uint8_t>(value)).value();
@@ -246,8 +483,7 @@ namespace upp
 			if (value > static_cast<unsigned long long int>(std::numeric_limits<std::uint32_t>::max()) ||
 				!is_valid_usv(static_cast<std::uint32_t>(value)))
 			{
-				// Note: this function is consteval, meaning this will cause a compile-time error
-				throw "Invalid Unicode scalar value";
+				throw std::invalid_argument("Invalid Unicode scalar value");
 			}
 
 			return uchar::from(static_cast<std::uint32_t>(value)).value();
@@ -257,8 +493,7 @@ namespace upp
 		{
 			if (!is_valid_usv(static_cast<std::uint32_t>(value)))
 			{
-				// Note: this function is consteval, meaning this will cause a compile-time error
-				throw "Invalid Unicode scalar value";
+				throw std::invalid_argument("Invalid Unicode scalar value");
 			}
 
 			return uchar::from(static_cast<std::uint32_t>(value)).value();
@@ -266,19 +501,10 @@ namespace upp
 	} // namespace literals
 } // namespace upp
 
-template<>
-struct std::hash<upp::ascii_char>
+template<upp::char_type T>
+struct std::hash<T>
 {
-	[[nodiscard]] constexpr std::size_t operator()(const upp::ascii_char ch) const noexcept
-	{
-		return static_cast<std::size_t>(ch.value());
-	}
-};
-
-template<>
-struct std::hash<upp::uchar>
-{
-	[[nodiscard]] constexpr std::size_t operator()(const upp::uchar ch) const noexcept
+	[[nodiscard]] constexpr std::size_t operator()(const T ch) const noexcept
 	{
 		return static_cast<std::size_t>(ch.value());
 	}

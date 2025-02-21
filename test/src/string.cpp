@@ -16,3 +16,11 @@ TEST_CASE("", "[upp::ascii_string]")
 	upp::utf16_string ascii_str;
 	auto			  x = ascii_str.as_bytes();
 }
+
+TEST_CASE("", "")
+{
+	using namespace upp::literals;
+
+	upp::utf8_string str;
+	str.push_back(U'%'_uc);
+}

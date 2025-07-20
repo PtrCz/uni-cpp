@@ -12,7 +12,7 @@ AllowAllArgumentsOnNextLine: 'true'
 AllowAllParametersOfDeclarationOnNextLine: 'true'
 AllowShortBlocksOnASingleLine: 'true'
 AllowShortCaseLabelsOnASingleLine: 'true'
-AllowShortFunctionsOnASingleLine: None
+AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: 'false'
@@ -21,15 +21,19 @@ AlwaysBreakTemplateDeclarations: 'Yes'
 BreakBeforeTernaryOperators: 'true'
 BreakConstructorInitializers: BeforeComma
 ColumnLimit: '150'
+ConstructorInitializerAllOnOneLineOrOnePerLine: 'false'
+ConstructorInitializerIndentWidth: '4'
 FixNamespaceComments: 'true'
 IncludeBlocks: Preserve
-KeepEmptyLinesAtTheStartOfBlocks: 'false'
+KeepEmptyLinesAtTheStartOfBlocks: 'true'
 MaxEmptyLinesToKeep: '1'
 NamespaceIndentation: All
 PointerAlignment: Left
-ReflowComments: 'true'
+ReflowComments: 'false'
 SortIncludes: 'false'
 SortUsingDeclarations: 'false'
+SpaceAfterCStyleCast: 'false'
+SpaceAfterLogicalNot: 'false'
 SpaceAfterTemplateKeyword: 'false'
 SpaceBeforeAssignmentOperators: 'true'
 SpaceBeforeCpp11BracedList: 'false'
@@ -38,6 +42,6 @@ SpaceBeforeInheritanceColon: 'true'
 SpaceBeforeRangeBasedForLoopColon: 'true'
 SpaceInEmptyParentheses: 'false'
 Standard: Auto
-UseTab: Always
+UseTab: Never
 
 ...

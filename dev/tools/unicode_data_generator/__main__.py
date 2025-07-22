@@ -9,6 +9,7 @@ from generate_tables import generate_tables
 from fine_tune import generate_fine_tuned_tables
 from test_lookup_tables import test_lookup_tables
 from generate_cpp_file import generate_cpp_file
+from generate_test_data import generate_case_conversion_test_data
 
 def is_valid_semver(version: str) -> bool:
     semver_regex = re.compile(
@@ -67,6 +68,13 @@ def main():
             tables,
             prop_tables['cpp_extra_contents']
             )
+        
+    # Generate test data files
+
+    for generate_test_data_func in (
+        generate_case_conversion_test_data,
+    ):
+        generate_test_data_func(unicode_version, code_point_data, case_data)
 
 
 if __name__ == '__main__':

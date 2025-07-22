@@ -421,11 +421,11 @@ namespace upp
             }
 
             /// @brief Returns the number of UTF-8 code units (bytes) required to encode this `uchar` in UTF-8.
-            /// 
+            ///
             /// @return Number between 1 and 4, inclusive.
             ///
             /// @see length_utf16, encode_utf8
-            /// 
+            ///
             [[nodiscard]] constexpr std::size_t length_utf8() const noexcept
             {
                 // read: https://cceckman.com/writing/branchless-utf8-encoding/
@@ -442,7 +442,7 @@ namespace upp
             /// @return Number that is always either 1 or 2.
             ///
             /// @see length_utf8, encode_utf16
-            /// 
+            ///
             [[nodiscard]] constexpr std::size_t length_utf16() const noexcept { return (m_value < 0x10000) ? 1uz : 2uz; }
 
             /// @brief Returns a sequence of UTF-8 code units (bytes) representing this character encoded in UTF-8.
@@ -491,7 +491,7 @@ namespace upp
             /// @return A sized range of `char16_t`s that are UTF-16 code units.
             ///
             /// @see encode_utf8, length_utf16
-            /// 
+            ///
             [[nodiscard]] constexpr encode_utf16_t encode_utf16() const noexcept
             {
                 std::array<char16_t, 2> arr;

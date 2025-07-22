@@ -420,19 +420,37 @@ namespace upp
                 return ascii_char::substitute_character();
             }
 
+            /// @brief Returns the number of UTF-8 code units (bytes) required to encode this `uchar` in UTF-8.
+            /// 
+            /// @return Number between 1 and 4, inclusive.
+            ///
+            /// @see length_utf16, encode_utf8
+            /// 
             [[nodiscard]] constexpr std::size_t length_utf8() const noexcept
             {
                 // read: https://cceckman.com/writing/branchless-utf8-encoding/
                 // license: https://github.com/cceckman/unicode-branchless/blob/main/LICENSE
 
-                static constexpr std::array<std::uint8_t, 22> length_lookup_table{
-                    4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1,
-                };
+                static constexpr std::array<std::uint8_t, 33> length_lookup_table{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 3,
+                                                                                  3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1};
 
-                return static_cast<std::size_t>(length_lookup_table[std::countl_zero(m_value | 1) - 11]);
+                return static_cast<std::size_t>(length_lookup_table[std::countl_zero(m_value | 1)]);
             }
+
+            /// @brief Returns the number of UTF-16 code units required to encode this `uchar` in UTF-16.
+            ///
+            /// @return Number that is always either 1 or 2.
+            ///
+            /// @see length_utf8, encode_utf16
+            /// 
             [[nodiscard]] constexpr std::size_t length_utf16() const noexcept { return (m_value < 0x10000) ? 1uz : 2uz; }
 
+            /// @brief Returns a sequence of UTF-8 code units (bytes) representing this character encoded in UTF-8.
+            ///
+            /// @return A sized range of `char8_t`s that are UTF-8 code units.
+            ///
+            /// @see encode_utf16, length_utf8
+            ///
             [[nodiscard]] constexpr encode_utf8_t encode_utf8() const noexcept
             {
                 std::array<char8_t, 4> arr;
@@ -467,6 +485,13 @@ namespace upp
 
                 return encode_utf8_t(arr, static_cast<std::uint8_t>(size_utf8));
             }
+
+            /// @brief Returns a sequence of UTF-16 code units representing this character encoded in UTF-16.
+            ///
+            /// @return A sized range of `char16_t`s that are UTF-16 code units.
+            ///
+            /// @see encode_utf8, length_utf16
+            /// 
             [[nodiscard]] constexpr encode_utf16_t encode_utf16() const noexcept
             {
                 std::array<char16_t, 2> arr;
@@ -491,6 +516,18 @@ namespace upp
                 return encode_utf16_t(arr, static_cast<std::uint8_t>(size_utf16));
             }
 
+            /// @brief Returns a sequence of `uchar`s that are the lowercase mapping of this `uchar`.
+            ///
+            /// If this `uchar` does not have a lowercase mapping, it maps to itself.
+            ///
+            /// This conversion is performed without tailoring; it is independent of context and language.
+            ///
+            /// See [Unicode Standard Chapter 4.2 (Case)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124722)
+            /// and [Unicode Standard Chapter 3.13 (Default Case Algorithms)](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G33992).
+            ///
+            /// @return A sized range of `uchar`s that are the lowercase mapping.
+            /// @see to_uppercase, to_titlecase
+            ///
             [[nodiscard]] constexpr to_lowercase_t to_lowercase() const noexcept
             {
                 namespace upp_data = impl::unicode_data::case_conversion;
@@ -502,6 +539,18 @@ namespace upp
                 return to_lowercase_t{data, mapping.length};
             }
 
+            /// @brief Returns a sequence of `uchar`s that are the uppercase mapping of this `uchar`.
+            ///
+            /// If this `uchar` does not have an uppercase mapping, it maps to itself.
+            ///
+            /// This conversion is performed without tailoring; it is independent of context and language.
+            ///
+            /// See [Unicode Standard Chapter 4.2 (Case)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124722)
+            /// and [Unicode Standard Chapter 3.13 (Default Case Algorithms)](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G33992).
+            ///
+            /// @return A sized range of `uchar`s that are the uppercase mapping.
+            /// @see to_lowercase, to_titlecase
+            ///
             [[nodiscard]] constexpr to_uppercase_t to_uppercase() const noexcept
             {
                 namespace upp_data = impl::unicode_data::case_conversion;
@@ -513,6 +562,21 @@ namespace upp
                 return to_uppercase_t{data, mapping.length};
             }
 
+            /// @brief Returns a sequence of `uchar`s that are the titlecase mapping of this `uchar`.
+            ///
+            /// If this `uchar` does not have a titlecase mapping, it maps to itself.
+            ///
+            /// This conversion is performed without tailoring; it is independent of context and language.
+            ///
+            /// See [Unicode Standard Chapter 4.2 (Case)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124722)
+            /// and [Unicode Standard Chapter 3.13 (Default Case Algorithms)](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G33992).
+            ///
+            /// @note Titlecase in Unicode is **NOT** the same as uppercase.
+            ///       See [Unicode Standard Chapter 4.2 (Case)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124722).
+            ///
+            /// @return A sized range of `uchar`s that are the titlecase mapping.
+            /// @see to_lowercase, to_uppercase
+            ///
             [[nodiscard]] constexpr to_titlecase_t to_titlecase() const noexcept
             {
                 namespace upp_data = impl::unicode_data::case_conversion;
@@ -536,6 +600,13 @@ namespace upp
 
         inline namespace literals
         {
+            /// @brief User-defined literal for creating an `ascii_char` from an integer literal.
+            /// @param value The ASCII character code.
+            ///
+            /// @throws std::invalid_argument If the `value` is **not** a valid ASCII character code.
+            ///
+            /// @note This function is evaluated at compile time.
+            ///
             [[nodiscard]] consteval ascii_char operator""_ac(const unsigned long long int value)
             {
                 if (value > static_cast<unsigned long long int>(std::numeric_limits<std::uint8_t>::max()) ||
@@ -547,6 +618,13 @@ namespace upp
                 return ascii_char::from_unchecked(static_cast<std::uint8_t>(value));
             }
 
+            /// @brief User-defined literal for creating an `ascii_char` from a UTF-8 character literal.
+            /// @param value The ASCII character.
+            ///
+            /// @throws std::invalid_argument If the `value` is **not** a valid ASCII character.
+            ///
+            /// @note This function is evaluated at compile time.
+            ///
             [[nodiscard]] consteval ascii_char operator""_ac(const char8_t value)
             {
                 if (!is_valid_ascii(static_cast<std::uint8_t>(value)))
@@ -557,6 +635,13 @@ namespace upp
                 return ascii_char::from_unchecked(static_cast<std::uint8_t>(value));
             }
 
+            /// @brief User-defined literal for creating a `uchar` from an integer literal.
+            /// @param value The Unicode scalar value.
+            ///
+            /// @throws std::invalid_argument If the `value` is **not** a valid Unicode scalar value.
+            ///
+            /// @note This function is evaluated at compile time.
+            ///
             [[nodiscard]] consteval uchar operator""_uc(const unsigned long long int value)
             {
                 if (value > static_cast<unsigned long long int>(std::numeric_limits<std::uint32_t>::max()) ||
@@ -568,6 +653,13 @@ namespace upp
                 return uchar::from_unchecked(static_cast<std::uint32_t>(value));
             }
 
+            /// @brief User-defined literal for creating a `uchar` from a UTF-32 character literal.
+            /// @param value The Unicode scalar value.
+            ///
+            /// @throws std::invalid_argument If the `value` is **not** a valid Unicode scalar value.
+            ///
+            /// @note This function is evaluated at compile time.
+            ///
             [[nodiscard]] consteval uchar operator""_uc(const char32_t value)
             {
                 if (!is_valid_usv(static_cast<std::uint32_t>(value)))

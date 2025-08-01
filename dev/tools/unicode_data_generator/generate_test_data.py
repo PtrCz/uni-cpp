@@ -12,6 +12,18 @@ def unicode_scalar_values():
     for code_point in range(0xE000, 0x110000):
         yield code_point
 
+"""
+
+Note: test data files have the following format:
+
+<code point>:<value>;[<value>;...]
+
+or in proper regex:
+
+^[0-9A-Fa-f]+:([0-9A-Fa-f]+;)+$
+
+"""
+
 def generate_case_conversion_test_data(unicode_version: str, code_point_data: dict, case_data: dict) -> None:
     print('[*] Generating case conversion test data')
 

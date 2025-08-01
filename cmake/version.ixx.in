@@ -42,7 +42,7 @@ export namespace upp
         ///
         /// @return `true` if all version components are equal; otherwise, `false`.
         ///
-        [[nodiscard]] constexpr bool                 operator==(const version_t&) const noexcept = default;
+        [[nodiscard]] constexpr bool operator==(const version_t&) const noexcept = default;
 
         /// @brief Three-way comparison operator.
         ///
@@ -54,7 +54,7 @@ export namespace upp
     /// @brief The version of the uni-cpp library.
     ///
     inline constexpr version_t version{.major = @UNI_CPP_VERSION_MAJOR@, .minor = @UNI_CPP_VERSION_MINOR@, .patch = @UNI_CPP_VERSION_PATCH@};
-    
+
     /// @brief The Unicode standard version supported by this library.
     ///
     inline constexpr version_t unicode_version{.major = @UNI_CPP_UNICODE_VERSION_MAJOR@, .minor = @UNI_CPP_UNICODE_VERSION_MINOR@, .patch = @UNI_CPP_UNICODE_VERSION_PATCH@};

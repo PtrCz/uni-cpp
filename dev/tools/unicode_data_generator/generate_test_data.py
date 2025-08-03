@@ -35,19 +35,34 @@ def generate_case_conversion_test_data(unicode_version: str, code_point_data: di
 
     for case in ['lowercase', 'uppercase', 'titlecase']:
 
+        greatest_code_point_with_mapping = case_data[case]['mappings']['greatest_code_point_with_mapping']
+
         with open(f'{test_data_path}/{case}_mappings.txt', 'w', encoding='utf-8') as file:
             first = True
+            
             for code_point in unicode_scalar_values():
 
-                if not first:
-                    file.write('\n')
+                should_be_tested = any((
 
-                file.write(f'{code_point:06X}:')
+                    code_point < 0x500, # test for a few first code points
+                    len(code_point_data[code_point][f'{case}_mapping']) != 1, # test for all special mappings (<200)
+                    
+                    # test for the greatest code point with mapping and a few code points next to it
+                    greatest_code_point_with_mapping - 100 <= code_point <= greatest_code_point_with_mapping + 100
 
-                for mapping_code_point in code_point_data[code_point][f'{case}_mapping']:
-                    file.write(f'{mapping_code_point:06X};')
+                ))
 
-                first = False
+                if should_be_tested:
+
+                    if not first:
+                        file.write('\n')
+
+                    file.write(f'{code_point:06X}:')
+
+                    for mapping_code_point in code_point_data[code_point][f'{case}_mapping']:
+                        file.write(f'{mapping_code_point:06X};')
+
+                    first = False
 
 def generate_utf_encoding_test_data(unicode_version: str, code_point_data: dict, case_data: dict) -> None:
     print('[*] Generating UTF encoding test data')
@@ -63,24 +78,36 @@ def generate_utf_encoding_test_data(unicode_version: str, code_point_data: dict,
 
         with open(f'{test_data_path}/{encoding}_encoding.txt', 'w', encoding='utf-8') as file:
             first = True
+            
             for code_point in unicode_scalar_values(): # encode every usv
+                    
+                should_be_tested = any((
+                    # test code points near UTF code point boundaries where the encoded byte length changes
 
-                if not first:
-                    file.write('\n')
+                    code_point < 0x100,
+                    0x700 <= code_point <= 0x900,
+                    0xFF00 <= code_point <= 0x100FF,
+                    0x10FF00 <= code_point <= 0x10FFFF,
+                ))
 
-                file.write(f'{code_point:06X}:')
+                if should_be_tested:
 
-                if encoding == 'utf_8':
-                    code_units = chr(code_point).encode(encoding)
+                    if not first:
+                        file.write('\n')
 
-                elif encoding == 'utf_16':
-                    encoded_bytes = chr(code_point).encode('utf_16_le')
+                    file.write(f'{code_point:06X}:')
 
-                    code_units = [int.from_bytes(encoded_bytes[i:i+2], 'little') for i in range(0, len(encoded_bytes), 2)]
+                    if encoding == 'utf_8':
+                        code_units = chr(code_point).encode(encoding)
 
-                for code_unit in code_units:
-                    hex_length: int = 2 if encoding == 'utf_8' else 4
+                    elif encoding == 'utf_16':
+                        encoded_bytes = chr(code_point).encode('utf_16_le')
 
-                    file.write(f'{code_unit:0{hex_length}X};')
+                        code_units = [int.from_bytes(encoded_bytes[i:i+2], 'little') for i in range(0, len(encoded_bytes), 2)]
 
-                first = False
+                    for code_unit in code_units:
+                        hex_length: int = 2 if encoding == 'utf_8' else 4
+
+                        file.write(f'{code_unit:0{hex_length}X};')
+
+                    first = False

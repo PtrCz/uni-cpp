@@ -21,11 +21,8 @@ namespace upp_test
         return num;
     }
 
-    constexpr auto unicode_scalar_values = std::views::join(std::array{std::views::iota(std::uint32_t{0x0000}, std::uint32_t{0xD800}),
-                                                                       std::views::iota(std::uint32_t{0xE000}, std::uint32_t{0x110000})}) |
-                                           std::views::transform([](std::uint32_t code_point) { return upp::uchar::from_unchecked(code_point); });
-
-    export {
+    export
+    {
         template<std::unsigned_integral ValueType>
         [[nodiscard]] std::unordered_map<std::uint32_t, std::vector<ValueType>> load_test_data(const std::filesystem::path& filepath)
         {
@@ -84,9 +81,12 @@ namespace upp_test
 
             const auto test_data = load_test_data<integer_t>(filepath);
 
-            for (upp::uchar ch : upp_test::unicode_scalar_values)
+            for (const auto& [code_point, data] : test_data)
             {
-                CHECK(std::ranges::equal(std::invoke(func, ch), test_data.at(ch.value())));
+                const auto ch = upp::uchar::from(code_point);
+                REQUIRE(ch.has_value());
+
+                CHECK(std::ranges::equal(std::invoke(func, ch.value()), data));
             }
         }
     }

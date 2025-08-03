@@ -21,7 +21,8 @@ export import std;
 
 namespace upp
 {
-    export {
+    export
+    {
         /// @brief Check whether `value` is within the ASCII range (`0` to `0x7F`, inclusive).
         ///
         [[nodiscard]] constexpr bool is_valid_ascii(std::uint8_t value) noexcept
@@ -158,7 +159,8 @@ namespace upp
         };
     } // namespace impl
 
-    export {
+    export
+    {
         /// @brief An ASCII character type representing a single ASCII character code.
         ///
         class ascii_char

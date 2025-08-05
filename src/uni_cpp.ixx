@@ -11,3 +11,4 @@ namespace upp
 
 export import :version;
 export import :uchar;
+export import :string;

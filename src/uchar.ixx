@@ -1,6 +1,7 @@
 export module uni_cpp:uchar;
 
 import uni_cpp.impl.unicode_data;
+import :utility;
 
 export import std;
 

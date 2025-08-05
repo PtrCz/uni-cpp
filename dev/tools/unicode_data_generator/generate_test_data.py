@@ -71,7 +71,7 @@ def generate_utf_encoding_test_data(unicode_version: str, code_point_data: dict,
 
     pathlib.Path(test_data_path).mkdir(parents = True, exist_ok = True)
 
-    # Note: This functions uses pythons encode function to encode every USV.
+    # Note: This functions uses pythons encode function to encode UTF.
     # Then in C++ we check whether these values are the same as the ones from our encoding functions.
 
     for encoding in ['utf_8', 'utf_16']:

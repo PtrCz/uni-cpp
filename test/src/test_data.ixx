@@ -21,8 +21,7 @@ namespace upp_test
         return num;
     }
 
-    export
-    {
+    export {
         template<std::unsigned_integral ValueType>
         [[nodiscard]] std::unordered_map<std::uint32_t, std::vector<ValueType>> load_test_data(const std::filesystem::path& filepath)
         {

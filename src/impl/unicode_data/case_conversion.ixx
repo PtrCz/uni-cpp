@@ -17,8 +17,7 @@ namespace upp::impl::unicode_data::case_conversion
         }
     };
 
-    export
-    {
+    export {
         enum class case_mapping_type
         {
             lowercase = 0,
@@ -59,8 +58,7 @@ namespace upp::impl::unicode_data::case_conversion
         return static_cast<std::uint8_t>((value >> bit_offset) & 0xFF);
     }
 
-    export
-    {
+    export {
 
         template<case_mapping_type MappingType>
         [[nodiscard]] constexpr case_mapping lookup_case_mapping(const std::uint32_t code_point) noexcept

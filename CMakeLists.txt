@@ -41,9 +41,10 @@ if (PROJECT_IS_TOP_LEVEL)
 
     if (CLANG_FORMAT_PATH)
         add_custom_target(format
-            COMMAND ${CLANG_FORMAT_PATH} --style=file:.clang-format --i ${UNI_CPP_SOURCES} ${UNI_CPP_TEST_SOURCES}
+            COMMAND ${CLANG_FORMAT_PATH} --style=file:.clang-format -i ${UNI_CPP_SOURCES} ${UNI_CPP_TEST_SOURCES}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             COMMENT "Running clang-format inplace"
+            VERBATIM
         )
     else()
         message(WARNING "clang-format not found! 'format' target will not be available.")
@@ -51,18 +52,53 @@ if (PROJECT_IS_TOP_LEVEL)
 
     find_package(Doxygen)
 
-    if(DOXYGEN_FOUND)
+    if(DOXYGEN_FOUND AND CLANG_FORMAT_PATH)
+        set(DOXYGEN_PREPROCESSED_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen_preprocessed/src)
+
         set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Doxyfile.in)
         set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 
         configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
 
+        set(DOXY_PREPROCESSED_FILES)
+
+        foreach(src ${UNI_CPP_SOURCES})
+            file(RELATIVE_PATH rel
+                ${CMAKE_CURRENT_SOURCE_DIR}/src
+                ${src})
+
+            set(out ${DOXYGEN_PREPROCESSED_DIR}/${rel})
+
+            get_filename_component(out_dir ${out} DIRECTORY)
+            file(MAKE_DIRECTORY ${out_dir})
+
+            add_custom_command(
+                OUTPUT ${out}
+                COMMAND ${Python_EXECUTABLE}
+                        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/preprocess-doxygen.py
+                        ${src}
+                        ${out}
+                COMMAND ${CLANG_FORMAT_PATH} -i --style=file:${CMAKE_CURRENT_SOURCE_DIR}/.clang-format ${out}
+                DEPENDS ${src} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/preprocess-doxygen.py
+                COMMENT "Preprocessing ${rel} for Doxygen"
+                VERBATIM
+            )
+
+            list(APPEND DOXY_PREPROCESSED_FILES ${out})
+        endforeach()
+
+        add_custom_target(doxygen_preprocess
+            DEPENDS ${DOXY_PREPROCESSED_FILES}
+        )
+
         add_custom_target(doxygen
             COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen_preprocessed
             COMMENT "Generating documentation using Doxygen"
             VERBATIM)
+
+        add_dependencies(doxygen doxygen_preprocess)
     else()
-        message(WARNING "doxygen not found! 'doxygen' target will not be available.")
+        message(WARNING "doxygen or clang-format not found! 'doxygen' target will not be available.")
     endif()
 endif()

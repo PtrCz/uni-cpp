@@ -55,7 +55,7 @@ namespace upp
 
     /// @brief The version of the uni-cpp library.
     ///
-    inline constexpr version_t version{.major = 0, .minor = 2, .patch = 0};
+    inline constexpr version_t version{.major = 0, .minor = 3, .patch = 0};
 
     /// @brief The Unicode standard version supported by this library.
     ///

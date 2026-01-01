@@ -50,7 +50,7 @@ if (PROJECT_IS_TOP_LEVEL)
     find_package(Python COMPONENTS Interpreter)
 
     if(DOXYGEN_FOUND AND Python_FOUND AND CLANG_FORMAT_PATH)
-        set(DOXYGEN_PREPROCESSED_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen_preprocessed/uni-cpp)
+        set(DOXYGEN_PREPROCESSED_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen_preprocessed)
 
         set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Doxyfile.in)
         set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
@@ -61,7 +61,7 @@ if (PROJECT_IS_TOP_LEVEL)
 
         foreach(src ${UNI_CPP_SOURCES})
             file(RELATIVE_PATH rel
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/uni-cpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include
                 ${src})
 
             set(out ${DOXYGEN_PREPROCESSED_DIR}/${rel})
@@ -76,6 +76,7 @@ if (PROJECT_IS_TOP_LEVEL)
                         ${src}
                         ${out}
                 COMMAND ${CLANG_FORMAT_PATH} -i --style=file:${CMAKE_CURRENT_SOURCE_DIR}/.clang-format ${out}
+                WORKING_DIRECTORY ${DOXYGEN_PREPROCESSED_DIR}
                 DEPENDS ${src} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/preprocess-doxygen.py
                 COMMENT "Preprocessing ${rel} for Doxygen"
                 VERBATIM

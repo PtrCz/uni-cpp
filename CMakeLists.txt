@@ -47,8 +47,9 @@ if (PROJECT_IS_TOP_LEVEL)
     endif()
 
     find_package(Doxygen)
+    find_package(Python COMPONENTS Interpreter)
 
-    if(DOXYGEN_FOUND AND CLANG_FORMAT_PATH)
+    if(DOXYGEN_FOUND AND Python_FOUND AND CLANG_FORMAT_PATH)
         set(DOXYGEN_PREPROCESSED_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen_preprocessed/uni-cpp)
 
         set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Doxyfile.in)
@@ -66,10 +67,10 @@ if (PROJECT_IS_TOP_LEVEL)
             set(out ${DOXYGEN_PREPROCESSED_DIR}/${rel})
 
             get_filename_component(out_dir ${out} DIRECTORY)
-            file(MAKE_DIRECTORY ${out_dir})
 
             add_custom_command(
                 OUTPUT ${out}
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${out_dir}
                 COMMAND ${Python_EXECUTABLE}
                         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/preprocess-doxygen.py
                         ${src}
@@ -95,6 +96,6 @@ if (PROJECT_IS_TOP_LEVEL)
 
         add_dependencies(doxygen doxygen_preprocess)
     else()
-        message(WARNING "doxygen or clang-format not found! 'doxygen' target will not be available.")
+        message(WARNING "doxygen, python or clang-format not found! 'doxygen' target will not be available.")
     endif()
 endif()

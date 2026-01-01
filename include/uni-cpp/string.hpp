@@ -5,7 +5,7 @@
 #include <string>
 
 #include "impl/unicode_data/all.hpp"
-#include "utility.hpp"
+#include "impl/utility.hpp"
 
 #include <type_traits>
 #include <memory>

@@ -6,7 +6,7 @@
 #include <optional>
 
 #include "impl/unicode_data/all.hpp"
-#include "utility.hpp"
+#include "impl/utility.hpp"
 
 #include <concepts>
 #include <iterator>

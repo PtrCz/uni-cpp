@@ -1,11 +1,15 @@
-export module uni_cpp:string;
+#ifndef UNI_CPP_STRING_HPP
+#define UNI_CPP_STRING_HPP
 
-export import :uchar;
+#include "uchar.hpp"
+#include <string>
 
-import uni_cpp.impl.unicode_data;
-import :utility;
+#include "impl/unicode_data/all.hpp"
+#include "utility.hpp"
 
-export import std;
+#include <type_traits>
+#include <memory>
+#include <memory_resource>
 
 namespace upp
 {
@@ -162,3 +166,5 @@ namespace upp
         };
     } // namespace impl
 } // namespace upp
+
+#endif // UNI_CPP_STRING_HPP

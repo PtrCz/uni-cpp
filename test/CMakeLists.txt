@@ -1,6 +1,6 @@
 project("uni-cpp-test" LANGUAGES CXX)
 
-file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.ixx src/*.hpp src/*.inl)
+file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.hpp src/*.inl)
 
 set(UNI_CPP_TEST_SOURCES ${TEST_SOURCES} PARENT_SCOPE)
 

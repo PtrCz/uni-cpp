@@ -4,14 +4,16 @@
 // Make sure you are editing the file with the .in extenstion in the uni-cpp/cmake directory;
 // otherwise, everything you change will be overwritten the moment cmake is run!
 
-export module uni_cpp:version;
+#ifndef UNI_CPP_VERSION_HPP
+#define UNI_CPP_VERSION_HPP
 
-export import std;
+#include <cstdint>
+#include <compare>
 
 /// @file
 /// @brief Provides version information for the uni-cpp library and the Unicode version it supports.
 
-export namespace upp
+namespace upp
 {
     /// @brief Represents a semantic version (major.minor.patch).
     ///
@@ -53,9 +55,11 @@ export namespace upp
 
     /// @brief The version of the uni-cpp library.
     ///
-    inline constexpr version_t version{.major = 0, .minor = 2, .patch = 0};
+    inline constexpr version_t version{.major = @UNI_CPP_VERSION_MAJOR@, .minor = @UNI_CPP_VERSION_MINOR@, .patch = @UNI_CPP_VERSION_PATCH@};
 
     /// @brief The Unicode standard version supported by this library.
     ///
-    inline constexpr version_t unicode_version{.major = 16, .minor = 0, .patch = 0};
+    inline constexpr version_t unicode_version{.major = @UNI_CPP_UNICODE_VERSION_MAJOR@, .minor = @UNI_CPP_UNICODE_VERSION_MINOR@, .patch = @UNI_CPP_UNICODE_VERSION_PATCH@};
 } // namespace upp
+
+#endif // UNI_CPP_VERSION_HPP

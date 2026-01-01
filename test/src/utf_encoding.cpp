@@ -1,8 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 
-import std;
-import uni_cpp;
-import test_data;
+#include "test_data.hpp"
+
+#include <uni-cpp/all.hpp>
+#include <cstdint>
+#include <ranges>
 
 TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
 {

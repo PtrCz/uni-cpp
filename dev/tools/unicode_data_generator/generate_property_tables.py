@@ -146,15 +146,15 @@ def generate_case_conversion_property_tables(unicode_version: str, code_point_da
         greatest_code_point: int = case_data[case]['mappings']['greatest_code_point_with_mapping']
 
         greatest_code_point_str: str = f'{greatest_code_point:#08X}'.replace('0X', '0x')
-        cpp_extra_contents += f'constexpr std::uint32_t greatest_code_point_with_{case}_mapping = {greatest_code_point_str};\n'
+        cpp_extra_contents += f'inline constexpr std::uint32_t greatest_code_point_with_{case}_mapping = {greatest_code_point_str};\n'
 
     return {
-        'cpp_output_filepath': f'{get_output_path(unicode_version)}/data.case_conversion.ixx',
+        'cpp_output_filepath': f'{get_output_path(unicode_version)}/case_conversion.hpp',
         'unicode_version': unicode_version,
         'prop_value_list': prop_value_list,
         'prop_value_type_size': 4,
-        'namespace_name': 'case_conversion',
+        'namespace_name': 'case_conversion::impl',
         'property_type_name': 'std::uint32_t',
-        'cpp_extra_contents': cpp_extra_contents,
+        'cpp_extra_contents': cpp_extra_contents + '\n',
         'hardcoded_optimal_block_size': 64 # Best block size for Unicode 16.0.0
     }

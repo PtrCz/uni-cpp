@@ -1,7 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 
-import std;
-import uni_cpp;
+#include <uni-cpp/all.hpp>
+
+#include <type_traits>
+#include <array>
+#include <utility>
 
 TEST_CASE("upp::ascii_char type traits", "[upp::ascii_char]")
 {

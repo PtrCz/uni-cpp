@@ -39,12 +39,12 @@ TEST_CASE("upp::ascii_char from(), from_lossy() & from_unchecked()", "[upp::asci
     std::array<std::pair<std::uint8_t, bool>, 6> tests = {
         // {value, is_valid} pairs
         // clang-format off
-        std::make_pair(0x00, true ),
-        std::make_pair(0x41, true ),
-        std::make_pair(0x7F, true ),
-        std::make_pair(0x80, false),
-        std::make_pair(0xA2, false),
-        std::make_pair(0xFF, false),
+        std::make_pair(std::uint8_t{0x00}, true ),
+        std::make_pair(std::uint8_t{0x41}, true ),
+        std::make_pair(std::uint8_t{0x7F}, true ),
+        std::make_pair(std::uint8_t{0x80}, false),
+        std::make_pair(std::uint8_t{0xA2}, false),
+        std::make_pair(std::uint8_t{0xFF}, false),
         // clang-format on
     };
 

@@ -439,7 +439,7 @@ namespace upp
         [[nodiscard]] constexpr std::size_t length_utf8() const noexcept
         {
             // read: https://cceckman.com/writing/branchless-utf8-encoding/
-            // license: https://github.com/cceckman/unicode-branchless/blob/main/LICENSE
+            // license: https://codeberg.org/cceckman/unicode-branchless/src/branch/main/LICENSE
 
             static constexpr std::array<std::uint8_t, 33> length_lookup_table{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 3,
                                                                               3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1};

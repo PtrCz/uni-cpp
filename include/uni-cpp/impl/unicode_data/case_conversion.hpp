@@ -32,8 +32,8 @@ namespace upp::impl::unicode_data::case_conversion
         template<case_mapping_type MappingType>
         [[nodiscard]] consteval std::uint32_t greatest_code_point_with_mapping() noexcept
         {
-            constexpr std::array values{greatest_code_point_with_lowercase_mapping, greatest_code_point_with_uppercase_mapping,
-                                        greatest_code_point_with_titlecase_mapping};
+            static constexpr std::array values{greatest_code_point_with_lowercase_mapping, greatest_code_point_with_uppercase_mapping,
+                                               greatest_code_point_with_titlecase_mapping};
 
             return values[std::to_underlying(MappingType)];
         }
@@ -56,7 +56,7 @@ namespace upp::impl::unicode_data::case_conversion
         {
             const std::uint32_t value = lookup(code_point);
 
-            constexpr auto bit_offset = 8 * std::to_underlying(MappingType);
+            static constexpr auto bit_offset = 8 * std::to_underlying(MappingType);
 
             return static_cast<std::uint8_t>((value >> bit_offset) & 0xFF);
         }
@@ -81,7 +81,7 @@ namespace upp::impl::unicode_data::case_conversion
 
             const auto length_bit = (special_mapping & (1ULL << 63)) >> 63; // MSB is the length bit
 
-            constexpr std::uint64_t single_code_point_21bit_mask = 0b0001'1111'1111'1111'1111'1111;
+            static constexpr std::uint64_t single_code_point_21bit_mask = 0b0001'1111'1111'1111'1111'1111;
 
             return impl::case_mapping{
                 // clang-format off

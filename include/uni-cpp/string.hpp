@@ -31,11 +31,6 @@ namespace upp
     template<allocator_for<char32_t> Allocator = std::allocator<char32_t>>
     class basic_utf32_string;
 
-    class ascii_string_view;
-    class utf8_string_view;
-    class utf16_string_view;
-    class utf32_string_view;
-
     namespace impl
     {
         template<typename>
@@ -75,12 +70,6 @@ namespace upp
     template<typename T>
     concept string_type = unicode_string_type<T> || impl::is_ascii_string<T>::value;
 
-    template<typename T>
-    concept unicode_string_view_type = impl::is_any_of<T, utf8_string_view, utf16_string_view, utf32_string_view>;
-
-    template<typename T>
-    concept string_view_type = unicode_string_view_type<T> || std::is_same_v<T, ascii_string_view>;
-
     namespace impl
     {
         enum class string_encoding
@@ -101,7 +90,6 @@ namespace upp
         {
             using char_type      = ascii_char;
             using code_unit_type = char;
-            using view_type      = ascii_string_view;
 
             static constexpr bool is_variable_width = false;
         };
@@ -111,7 +99,6 @@ namespace upp
         {
             using char_type      = uchar;
             using code_unit_type = char8_t;
-            using view_type      = utf8_string_view;
 
             static constexpr bool is_variable_width = true;
         };
@@ -121,7 +108,6 @@ namespace upp
         {
             using char_type      = uchar;
             using code_unit_type = char16_t;
-            using view_type      = utf16_string_view;
 
             static constexpr bool is_variable_width = true;
         };
@@ -131,7 +117,6 @@ namespace upp
         {
             using char_type      = uchar;
             using code_unit_type = char32_t;
-            using view_type      = utf32_string_view;
 
             static constexpr bool is_variable_width = false;
         };
@@ -144,7 +129,6 @@ namespace upp
             using allocator_type  = Allocator;
             using size_type       = std::allocator_traits<Allocator>::size_type;
             using difference_type = std::allocator_traits<Allocator>::difference_type;
-            using view_type       = encoding_properties<Encoding>::view_type;
             using char_type       = encoding_properties<Encoding>::char_type;
 
         public:

@@ -16,7 +16,7 @@ TEST_CASE("upp::ascii_char type traits", "[upp::ascii_char]")
 
 TEST_CASE("upp::ascii_char user-defined literals", "[upp::ascii_char]")
 {
-    using namespace upp::literals;
+    using namespace upp::char_literals;
 
     CHECK(u8'A'_ac.value() == 0x41);
     CHECK((0x1A_ac).value() == 0x1A);
@@ -72,7 +72,7 @@ TEST_CASE("upp::ascii_char from(), from_lossy() & from_unchecked()", "[upp::asci
 
 TEST_CASE("upp::ascii_char comparison operators", "[upp::ascii_char]")
 {
-    using namespace upp::literals;
+    using namespace upp::char_literals;
 
     CHECK(u8'\0'_ac == 0_ac);
     CHECK(u8'\n'_ac == 0xA_ac);
@@ -103,7 +103,7 @@ TEST_CASE("upp::uchar type traits", "[upp::uchar]")
 
 TEST_CASE("upp::uchar user-defined literals", "[upp::uchar]")
 {
-    using namespace upp::literals;
+    using namespace upp::char_literals;
 
     CHECK(U'A'_uc.value() == 0x41);
     CHECK((0xFFFD_uc).value() == 0xFFFD);
@@ -169,7 +169,7 @@ TEST_CASE("upp::uchar from(), from_lossy() & from_unchecked()", "[upp::uchar]")
 
 TEST_CASE("upp::uchar comparison operators", "[upp::uchar]")
 {
-    using namespace upp::literals;
+    using namespace upp::char_literals;
 
     CHECK(U'\0'_uc == 0_uc);
     CHECK(U'\n'_uc == 0xA_uc);
@@ -192,7 +192,7 @@ TEST_CASE("upp::uchar comparison operators", "[upp::uchar]")
 
 TEST_CASE("upp::uchar is_ascii() & as_ascii()", "[upp::uchar]")
 {
-    using namespace upp::literals;
+    using namespace upp::char_literals;
 
     CHECK(U'a'_uc.is_ascii());
     CHECK((0x7F_uc).is_ascii());
@@ -211,7 +211,7 @@ TEST_CASE("upp::uchar is_ascii() & as_ascii()", "[upp::uchar]")
 
 TEST_CASE("upp::uchar length_utf8() & length_utf16()", "[upp::uchar]")
 {
-    using namespace upp::literals;
+    using namespace upp::char_literals;
 
     CHECK(U'\U00000000'_uc.length_utf8() == 1);
     CHECK(U'\U0000007F'_uc.length_utf8() == 1);

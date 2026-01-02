@@ -7,7 +7,11 @@
 /// The main namespace of the uni-cpp library.
 namespace upp
 {
-}
+    /// Inline namespace containing uni-cpp's user-defined literals.
+    inline namespace literals
+    {
+    }
+} // namespace upp
 
 #include "version.hpp"
 #include "uchar.hpp"

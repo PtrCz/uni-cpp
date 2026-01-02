@@ -610,75 +610,79 @@ namespace upp
 
     inline namespace literals
     {
-        /// @brief User-defined literal for creating an `ascii_char` from an integer literal.
-        /// @param value The ASCII character code.
-        ///
-        /// @throws std::invalid_argument If the `value` is **not** a valid ASCII character code.
-        ///
-        /// @note This function is evaluated at compile time.
-        ///
-        [[nodiscard]] consteval ascii_char operator""_ac(const unsigned long long int value)
+        /// Inline namespace containing user-defined literals for uni-cpp character types.
+        inline namespace char_literals
         {
-            if (value > static_cast<unsigned long long int>(std::numeric_limits<std::uint8_t>::max()) ||
-                !is_valid_ascii(static_cast<std::uint8_t>(value)))
+            /// @brief User-defined literal for creating an `ascii_char` from an integer literal.
+            /// @param value The ASCII character code.
+            ///
+            /// @throws std::invalid_argument If the `value` is **not** a valid ASCII character code.
+            ///
+            /// @note This function is evaluated at compile time.
+            ///
+            [[nodiscard]] consteval ascii_char operator""_ac(const unsigned long long int value)
             {
-                throw std::invalid_argument("Invalid ASCII value");
+                if (value > static_cast<unsigned long long int>(std::numeric_limits<std::uint8_t>::max()) ||
+                    !is_valid_ascii(static_cast<std::uint8_t>(value)))
+                {
+                    throw std::invalid_argument("Invalid ASCII value");
+                }
+
+                return ascii_char::from_unchecked(static_cast<std::uint8_t>(value));
             }
 
-            return ascii_char::from_unchecked(static_cast<std::uint8_t>(value));
-        }
-
-        /// @brief User-defined literal for creating an `ascii_char` from a UTF-8 character literal.
-        /// @param value The ASCII character.
-        ///
-        /// @throws std::invalid_argument If the `value` is **not** a valid ASCII character.
-        ///
-        /// @note This function is evaluated at compile time.
-        ///
-        [[nodiscard]] consteval ascii_char operator""_ac(const char8_t value)
-        {
-            if (!is_valid_ascii(static_cast<std::uint8_t>(value)))
+            /// @brief User-defined literal for creating an `ascii_char` from a UTF-8 character literal.
+            /// @param value The ASCII character.
+            ///
+            /// @throws std::invalid_argument If the `value` is **not** a valid ASCII character.
+            ///
+            /// @note This function is evaluated at compile time.
+            ///
+            [[nodiscard]] consteval ascii_char operator""_ac(const char8_t value)
             {
-                throw std::invalid_argument("Invalid ASCII value");
+                if (!is_valid_ascii(static_cast<std::uint8_t>(value)))
+                {
+                    throw std::invalid_argument("Invalid ASCII value");
+                }
+
+                return ascii_char::from_unchecked(static_cast<std::uint8_t>(value));
             }
 
-            return ascii_char::from_unchecked(static_cast<std::uint8_t>(value));
-        }
-
-        /// @brief User-defined literal for creating a `uchar` from an integer literal.
-        /// @param value The Unicode scalar value.
-        ///
-        /// @throws std::invalid_argument If the `value` is **not** a valid Unicode scalar value.
-        ///
-        /// @note This function is evaluated at compile time.
-        ///
-        [[nodiscard]] consteval uchar operator""_uc(const unsigned long long int value)
-        {
-            if (value > static_cast<unsigned long long int>(std::numeric_limits<std::uint32_t>::max()) ||
-                !is_valid_usv(static_cast<std::uint32_t>(value)))
+            /// @brief User-defined literal for creating a `uchar` from an integer literal.
+            /// @param value The Unicode scalar value.
+            ///
+            /// @throws std::invalid_argument If the `value` is **not** a valid Unicode scalar value.
+            ///
+            /// @note This function is evaluated at compile time.
+            ///
+            [[nodiscard]] consteval uchar operator""_uc(const unsigned long long int value)
             {
-                throw std::invalid_argument("Invalid Unicode scalar value");
+                if (value > static_cast<unsigned long long int>(std::numeric_limits<std::uint32_t>::max()) ||
+                    !is_valid_usv(static_cast<std::uint32_t>(value)))
+                {
+                    throw std::invalid_argument("Invalid Unicode scalar value");
+                }
+
+                return uchar::from_unchecked(static_cast<std::uint32_t>(value));
             }
 
-            return uchar::from_unchecked(static_cast<std::uint32_t>(value));
-        }
-
-        /// @brief User-defined literal for creating a `uchar` from a UTF-32 character literal.
-        /// @param value The Unicode scalar value.
-        ///
-        /// @throws std::invalid_argument If the `value` is **not** a valid Unicode scalar value.
-        ///
-        /// @note This function is evaluated at compile time.
-        ///
-        [[nodiscard]] consteval uchar operator""_uc(const char32_t value)
-        {
-            if (!is_valid_usv(static_cast<std::uint32_t>(value)))
+            /// @brief User-defined literal for creating a `uchar` from a UTF-32 character literal.
+            /// @param value The Unicode scalar value.
+            ///
+            /// @throws std::invalid_argument If the `value` is **not** a valid Unicode scalar value.
+            ///
+            /// @note This function is evaluated at compile time.
+            ///
+            [[nodiscard]] consteval uchar operator""_uc(const char32_t value)
             {
-                throw std::invalid_argument("Invalid Unicode scalar value");
-            }
+                if (!is_valid_usv(static_cast<std::uint32_t>(value)))
+                {
+                    throw std::invalid_argument("Invalid Unicode scalar value");
+                }
 
-            return uchar::from_unchecked(static_cast<std::uint32_t>(value));
-        }
+                return uchar::from_unchecked(static_cast<std::uint32_t>(value));
+            }
+        } // namespace char_literals
     } // namespace literals
 } // namespace upp
 

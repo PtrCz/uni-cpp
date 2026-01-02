@@ -1,21 +1,6 @@
 #ifndef UNI_CPP_UCHAR_HPP
 #define UNI_CPP_UCHAR_HPP
 
-#include <cstddef>
-#include <cstdint>
-#include <optional>
-
-#include "impl/unicode_data/case_conversion.hpp"
-
-#include <concepts>
-#include <iterator>
-#include <array>
-#include <compare>
-#include <bit>
-#include <utility>
-#include <limits>
-#include <stdexcept>
-
 /// @file
 ///
 /// @brief Character type definitions and utilities for the uni-cpp library.
@@ -30,6 +15,21 @@
 /// - Case conversion for characters
 /// - Checking character properties
 ///
+
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+
+#include "impl/unicode_data/case_conversion.hpp"
+
+#include <concepts>
+#include <iterator>
+#include <array>
+#include <compare>
+#include <bit>
+#include <utility>
+#include <limits>
+#include <stdexcept>
 
 namespace upp
 {

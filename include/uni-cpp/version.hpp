@@ -7,11 +7,11 @@
 #ifndef UNI_CPP_VERSION_HPP
 #define UNI_CPP_VERSION_HPP
 
-#include <cstdint>
-#include <compare>
-
 /// @file
 /// @brief Provides version information for the uni-cpp library and the Unicode version it supports.
+
+#include <cstdint>
+#include <compare>
 
 namespace upp
 {

@@ -59,6 +59,8 @@ namespace upp
     ///
     /// @see uchar, ascii_char
     ///
+    /// @headerfile "" <uni-cpp/uchar.hpp>
+    ///
     template<typename T>
     concept char_type = std::same_as<T, ascii_char> || std::same_as<T, uchar>;
 
@@ -171,6 +173,8 @@ namespace upp
 
     /// @brief An ASCII character type representing a single ASCII character code.
     ///
+    /// @headerfile "" <uni-cpp/uchar.hpp>
+    ///
     class ascii_char
     {
     public:
@@ -277,6 +281,8 @@ namespace upp
     };
 
     /// @brief A Unicode character type representing a single [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value).
+    ///
+    /// @headerfile "" <uni-cpp/uchar.hpp>
     ///
     class uchar
     {

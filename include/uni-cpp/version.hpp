@@ -17,6 +17,8 @@ namespace upp
 {
     /// @brief Represents a semantic version (major.minor.patch).
     ///
+    /// @headerfile "" <uni-cpp/version.hpp>
+    ///
     struct version_t
     {
     public:

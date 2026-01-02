@@ -545,13 +545,7 @@ namespace upp
         ///
         [[nodiscard]] constexpr to_lowercase_t to_lowercase() const noexcept
         {
-            namespace upp_data = impl::unicode_data::case_conversion;
-
-            const auto mapping = upp_data::lookup_case_mapping<upp_data::case_mapping_type::lowercase>(m_value);
-
-            const std::array<uchar, 3> data = {uchar{mapping.code_points[0]}, uchar{mapping.code_points[1]}, uchar{mapping.code_points[2]}};
-
-            return to_lowercase_t{data, mapping.length};
+            return to_case_impl<to_lowercase_t, impl::unicode_data::case_conversion::case_mapping_type::lowercase>();
         }
 
         /// @brief Returns a sequence of `uchar`s that are the uppercase mapping of this `uchar`.
@@ -568,13 +562,7 @@ namespace upp
         ///
         [[nodiscard]] constexpr to_uppercase_t to_uppercase() const noexcept
         {
-            namespace upp_data = impl::unicode_data::case_conversion;
-
-            const auto mapping = upp_data::lookup_case_mapping<upp_data::case_mapping_type::uppercase>(m_value);
-
-            const std::array<uchar, 3> data = {uchar{mapping.code_points[0]}, uchar{mapping.code_points[1]}, uchar{mapping.code_points[2]}};
-
-            return to_uppercase_t{data, mapping.length};
+            return to_case_impl<to_uppercase_t, impl::unicode_data::case_conversion::case_mapping_type::uppercase>();
         }
 
         /// @brief Returns a sequence of `uchar`s that are the titlecase mapping of this `uchar`.
@@ -594,19 +582,23 @@ namespace upp
         ///
         [[nodiscard]] constexpr to_titlecase_t to_titlecase() const noexcept
         {
-            namespace upp_data = impl::unicode_data::case_conversion;
-
-            const auto mapping = upp_data::lookup_case_mapping<upp_data::case_mapping_type::titlecase>(m_value);
-
-            const std::array<uchar, 3> data = {uchar{mapping.code_points[0]}, uchar{mapping.code_points[1]}, uchar{mapping.code_points[2]}};
-
-            return to_titlecase_t{data, mapping.length};
+            return to_case_impl<to_titlecase_t, impl::unicode_data::case_conversion::case_mapping_type::titlecase>();
         }
 
     private:
         explicit constexpr uchar(std::uint32_t value) noexcept
             : m_value(value)
         {
+        }
+
+        template<typename ResultType, impl::unicode_data::case_conversion::case_mapping_type MappingType>
+        [[nodiscard]] constexpr ResultType to_case_impl() const noexcept
+        {
+            const auto mapping = impl::unicode_data::case_conversion::lookup_case_mapping<MappingType>(m_value);
+
+            const std::array<uchar, 3> data = {uchar{mapping.code_points[0]}, uchar{mapping.code_points[1]}, uchar{mapping.code_points[2]}};
+
+            return ResultType{data, mapping.length};
         }
 
     private:

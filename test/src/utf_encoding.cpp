@@ -2,7 +2,7 @@
 
 #include "test_data.hpp"
 
-#include <uni-cpp/all.hpp>
+#include <uni-cpp/uchar.hpp>
 #include <cstdint>
 #include <ranges>
 

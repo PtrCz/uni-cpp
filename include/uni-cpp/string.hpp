@@ -4,7 +4,7 @@
 #include "uchar.hpp"
 #include <string>
 
-#include "impl/unicode_data/all.hpp"
+#include "impl/unicode_data/case_conversion.hpp"
 #include "impl/utility.hpp"
 
 #include <type_traits>

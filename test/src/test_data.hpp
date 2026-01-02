@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <uni-cpp/all.hpp>
+#include <uni-cpp/uchar.hpp>
 
 #include <string_view>
 #include <unordered_map>

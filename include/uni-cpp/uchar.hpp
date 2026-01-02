@@ -5,8 +5,7 @@
 #include <cstdint>
 #include <optional>
 
-#include "impl/unicode_data/all.hpp"
-#include "impl/utility.hpp"
+#include "impl/unicode_data/case_conversion.hpp"
 
 #include <concepts>
 #include <iterator>

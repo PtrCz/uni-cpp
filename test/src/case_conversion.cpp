@@ -2,7 +2,7 @@
 
 #include "test_data.hpp"
 
-#include <uni-cpp/all.hpp>
+#include <uni-cpp/uchar.hpp>
 #include <ranges>
 
 TEST_CASE("Lowercase conversion & lowercase mappings", "[case conversion][upp::uchar]")

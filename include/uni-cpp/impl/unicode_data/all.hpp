@@ -1,6 +1,0 @@
-#ifndef UNI_CPP_IMPL_UNICODE_DATA_ALL_HPP
-#define UNI_CPP_IMPL_UNICODE_DATA_ALL_HPP
-
-#include "case_conversion.hpp"
-
-#endif // UNI_CPP_IMPL_UNICODE_DATA_ALL_HPP

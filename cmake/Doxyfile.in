@@ -1120,7 +1120,8 @@ EXCLUDE_PATTERNS       = @DOXYGEN_PREPROCESSED_DIR@/*/impl/*
 # ANamespace::AClass, ANamespace::*Test
 
 EXCLUDE_SYMBOLS        = upp::impl \
-                         upp::impl::*
+                         upp::impl::* \
+                         UNI_CPP_IMPL_*
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or directories
 # that contain example code fragments that are included (see the \include
@@ -2491,7 +2492,7 @@ ENABLE_PREPROCESSING   = YES
 # The default value is: NO.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-MACRO_EXPANSION        = NO
+MACRO_EXPANSION        = YES
 
 # If the EXPAND_ONLY_PREDEF and MACRO_EXPANSION tags are both set to YES then
 # the macro expansion is limited to the macros specified with the PREDEFINED and

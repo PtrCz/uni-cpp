@@ -91,6 +91,16 @@ namespace upp
             using difference_type = std::allocator_traits<Allocator>::difference_type;
             using char_type       = traits::char_type;
 
+            /// @brief Default constructor. Constructs an empty string.
+            ///
+            /// Constructs an empty string with a default-constructed allocator.
+            ///
+            constexpr UNI_CPP_IMPL_CONSTRUCTOR() noexcept(noexcept(allocator_type()));
+
+            /// @brief Constructs an empty string with the given allocator.
+            ///
+            constexpr explicit UNI_CPP_IMPL_CONSTRUCTOR(const allocator_type& alloc) noexcept;
+
             // DOXYGEN-PREPROCESSOR: END basic_string_base
         protected:
             std::basic_string<code_unit_type, std::char_traits<code_unit_type>, Allocator> m_string;

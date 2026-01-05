@@ -19,3 +19,16 @@ TEST_CASE("string type traits", "[string types]")
     check_type_traits_for.template operator()<upp::utf16_string>();
     check_type_traits_for.template operator()<upp::utf32_string>();
 }
+
+TEST_CASE("string default constructor", "[string types]")
+{
+    auto check_default_constructor_for = [&]<typename StringType>() {
+        StringType empty;
+        StringType with_allocator{std::allocator<typename StringType::code_unit_type>()};
+    };
+
+    check_default_constructor_for.template operator()<upp::ascii_string>();
+    check_default_constructor_for.template operator()<upp::utf8_string>();
+    check_default_constructor_for.template operator()<upp::utf16_string>();
+    check_default_constructor_for.template operator()<upp::utf32_string>();
+}

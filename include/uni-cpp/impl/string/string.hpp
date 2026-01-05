@@ -1,6 +1,11 @@
 #ifndef UNI_CPP_IMPL_STRING_STRING_HPP
 #define UNI_CPP_IMPL_STRING_STRING_HPP
 
+/// @file
+///
+/// @brief Class definitions of string types
+///
+
 #include "../../uchar.hpp"
 #include <string>
 

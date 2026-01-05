@@ -1,6 +1,11 @@
 #ifndef UNI_CPP_IMPL_STRING_FWD_HPP
 #define UNI_CPP_IMPL_STRING_FWD_HPP
 
+/// @file
+///
+/// @brief Forward declarations of string types
+///
+
 #include "../utility.hpp"
 
 #include <type_traits>

@@ -24,6 +24,44 @@ namespace upp
             : m_string{alloc}
         {
         }
+
+        template<string_encoding Encoding, typename Allocator>
+        constexpr basic_string_base<Encoding, Allocator>::basic_string_base(const basic_string_base& other)
+            : m_string{other.m_string}
+        {
+        }
+
+        template<string_encoding Encoding, typename Allocator>
+        constexpr basic_string_base<Encoding, Allocator>::basic_string_base(const basic_string_base& other, const allocator_type& alloc)
+            : m_string{other.m_string, alloc}
+        {
+        }
+
+        template<string_encoding Encoding, typename Allocator>
+        constexpr basic_string_base<Encoding, Allocator>::basic_string_base(basic_string_base&& other) noexcept
+            : m_string{std::move(other.m_string)}
+        {
+            other.clear();
+        }
+
+        template<string_encoding Encoding, typename Allocator>
+        constexpr basic_string_base<Encoding, Allocator>::basic_string_base(basic_string_base&& other, const allocator_type& alloc)
+            : m_string{std::move(other.m_string), alloc}
+        {
+            other.clear();
+        }
+
+        template<string_encoding Encoding, typename Allocator>
+        [[nodiscard]] constexpr Allocator basic_string_base<Encoding, Allocator>::get_allocator() const noexcept
+        {
+            return m_string.get_allocator();
+        }
+
+        template<string_encoding Encoding, typename Allocator>
+        constexpr void basic_string_base<Encoding, Allocator>::clear() noexcept
+        {
+            m_string.clear();
+        }
     } // namespace impl
 } // namespace upp
 

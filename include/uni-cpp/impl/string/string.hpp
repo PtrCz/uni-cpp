@@ -95,11 +95,72 @@ namespace upp
             ///
             /// Constructs an empty string with a default-constructed allocator.
             ///
+            /// @par Exceptions
+            /// This constructor throws an exception only if the allocator’s default constructor fails.
+            ///
+            /// @par Exception Safety
+            /// If an exception is thrown for any reason, this function has no effect (strong exception safety guarantee).
+            ///
             constexpr UNI_CPP_IMPL_CONSTRUCTOR() noexcept(noexcept(allocator_type()));
 
             /// @brief Constructs an empty string with the given allocator.
             ///
+            /// @param alloc is used as the allocator.
+            ///
             constexpr explicit UNI_CPP_IMPL_CONSTRUCTOR(const allocator_type& alloc) noexcept;
+
+            /// @brief Copy constructor. Constructs the string with a copy of the contents of `other`.
+            ///
+            /// The allocator is obtained as if by calling
+            /// `std::allocator_traits<allocator_type>::select_on_container_copy_construction(other.get_allocator())`.
+            ///
+            /// @par Exception Safety
+            /// If an exception is thrown for any reason, this function has no effect (strong exception safety guarantee).
+            ///
+            constexpr UNI_CPP_IMPL_CONSTRUCTOR(const UNI_CPP_IMPL_CURRENT_CLASS_NAME& other);
+
+            /// @brief Copy constructor. Constructs the string with a copy of the contents of `other`.
+            ///
+            /// @param alloc is used as the allocator.
+            ///
+            /// @par Exception Safety
+            /// If an exception is thrown for any reason, this function has no effect (strong exception safety guarantee).
+            ///
+            constexpr UNI_CPP_IMPL_CONSTRUCTOR(const UNI_CPP_IMPL_CURRENT_CLASS_NAME& other, const allocator_type& alloc);
+
+            /// @brief Move constructor. Constructs the string with the contents of `other` using move semantics.
+            ///
+            /// After the move, `other` is **guaranteed** to be empty.
+            ///
+            /// The allocator is obtained by move construction from `other.get_allocator()`.
+            ///
+            constexpr UNI_CPP_IMPL_CONSTRUCTOR(UNI_CPP_IMPL_CURRENT_CLASS_NAME&& other) noexcept;
+
+            /// @brief Move constructor. Constructs the string with the contents of `other` using move semantics.
+            ///
+            /// After the move, `other` is **guaranteed** to be empty.
+            ///
+            /// @param alloc is used as the allocator.
+            ///
+            /// @par Exceptions
+            /// Throws nothing if `alloc == other.get_allocator()` is `true`.
+            ///
+            /// @par Exception Safety
+            /// If an exception is thrown for any reason, this function has no effect (strong exception safety guarantee).
+            ///
+            constexpr UNI_CPP_IMPL_CONSTRUCTOR(UNI_CPP_IMPL_CURRENT_CLASS_NAME&& other, const allocator_type& alloc);
+
+            /// @brief Returns the allocator associated with the string.
+            ///
+            /// @return The associated allocator.
+            ///
+            [[nodiscard]] constexpr allocator_type get_allocator() const noexcept;
+
+            /// @brief Removes all characters from the string.
+            ///
+            /// All pointers, references, and iterators are invalidated.
+            ///
+            constexpr void clear() noexcept;
 
             // DOXYGEN-PREPROCESSOR: END basic_string_base
         protected:

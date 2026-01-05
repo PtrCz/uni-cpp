@@ -114,6 +114,15 @@ namespace upp
     using utf16_string = basic_utf16_string<>;
     using utf32_string = basic_utf32_string<>;
     using ustring      = basic_ustring<>;
+
+    namespace pmr
+    {
+        using ascii_string = basic_ascii_string<std::pmr::polymorphic_allocator<char>>;
+        using utf8_string  = basic_utf8_string<std::pmr::polymorphic_allocator<char8_t>>;
+        using utf16_string = basic_utf16_string<std::pmr::polymorphic_allocator<char16_t>>;
+        using utf32_string = basic_utf32_string<std::pmr::polymorphic_allocator<char32_t>>;
+        using ustring      = basic_ustring<std::pmr::polymorphic_allocator<char8_t>>;
+    } // namespace pmr
 } // namespace upp
 
 #endif // UNI_CPP_IMPL_STRING_FWD_HPP

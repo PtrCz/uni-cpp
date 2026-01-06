@@ -58,6 +58,13 @@ namespace upp
         }
 
         template<string_encoding Encoding, typename Allocator>
+        [[nodiscard]] constexpr const basic_string_base<Encoding, Allocator>::underlying_type& basic_string_base<Encoding, Allocator>::underlying()
+            const noexcept
+        {
+            return m_string;
+        }
+
+        template<string_encoding Encoding, typename Allocator>
         constexpr void basic_string_base<Encoding, Allocator>::clear() noexcept
         {
             m_string.clear();

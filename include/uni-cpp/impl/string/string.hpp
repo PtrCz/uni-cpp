@@ -90,6 +90,7 @@ namespace upp
             using size_type       = std::allocator_traits<Allocator>::size_type;
             using difference_type = std::allocator_traits<Allocator>::difference_type;
             using char_type       = traits::char_type;
+            using underlying_type = std::basic_string<code_unit_type, std::char_traits<code_unit_type>, allocator_type>;
 
             /// @brief Default constructor. Constructs an empty string.
             ///
@@ -156,6 +157,17 @@ namespace upp
             ///
             [[nodiscard]] constexpr allocator_type get_allocator() const noexcept;
 
+            /// @brief Returns a `const` reference to the underlying `std::basic_string`.
+            ///
+            /// Provides direct access to the underlying `std::basic_string` used by this type.
+            /// It is intended for interoperability with APIs that expect a `std::basic_string`.
+            ///
+            /// @note `std::basic_string` is not encoding-aware, so it is generally better
+            /// to access string contents through this class’s API rather than directly through
+            /// the underlying container.
+            ///
+            [[nodiscard]] constexpr const underlying_type& underlying() const noexcept;
+
             /// @brief Removes all characters from the string.
             ///
             /// All pointers, references, and iterators are invalidated.
@@ -164,7 +176,7 @@ namespace upp
 
             // DOXYGEN-PREPROCESSOR: END basic_string_base
         protected:
-            std::basic_string<code_unit_type, std::char_traits<code_unit_type>, Allocator> m_string;
+            underlying_type m_string;
         };
 
 #undef UNI_CPP_IMPL_CURRENT_CLASS_NAME

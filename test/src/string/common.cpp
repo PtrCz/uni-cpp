@@ -44,6 +44,8 @@ TEST_CASE("string constructors", "[string types]")
         StringType empty;
         StringType with_allocator{std::allocator<typename StringType::code_unit_type>()};
 
+        CHECK(empty.underlying().empty());
+
         StringType copy = empty;
         StringType copy_with_allocator{copy, std::allocator<typename StringType::code_unit_type>()};
 

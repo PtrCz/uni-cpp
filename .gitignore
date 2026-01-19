@@ -9,6 +9,7 @@ prefix/
 CMakeLists.txt.user
 CMakeUserPresets.json
 compile_commands.json
-dev/tools/unicode_data_generator/temp/
-dev/tools/unicode_data_generator/output/
-dev/tools/unicode_data_generator/__pycache__/
+dev/tools/**/temp/
+dev/tools/**/output/
+dev/tools/**/__pycache__/
+ignore/

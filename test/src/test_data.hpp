@@ -1,4 +1,7 @@
-#include <catch2/catch_test_macros.hpp>
+#ifndef TEST_TEST_DATA_HPP
+#define TEST_TEST_DATA_HPP
+
+#include "catch2.hpp"
 
 #include <uni-cpp/uchar.hpp>
 
@@ -101,3 +104,5 @@ namespace upp_test
         }
     }
 } // namespace upp_test
+
+#endif // TEST_TEST_DATA_HPP

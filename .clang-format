@@ -10,7 +10,7 @@ AlignOperands: 'true'
 AlignTrailingComments: 'true'
 AllowAllArgumentsOnNextLine: 'true'
 AllowAllParametersOfDeclarationOnNextLine: 'true'
-AllowShortBlocksOnASingleLine: 'true'
+AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: 'true'
 AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortIfStatementsOnASingleLine: Never
@@ -26,6 +26,7 @@ ConstructorInitializerIndentWidth: '4'
 FixNamespaceComments: 'true'
 IncludeBlocks: Preserve
 KeepEmptyLinesAtTheStartOfBlocks: 'true'
+LineEnding: LF
 MaxEmptyLinesToKeep: '1'
 NamespaceIndentation: All
 PointerAlignment: Left

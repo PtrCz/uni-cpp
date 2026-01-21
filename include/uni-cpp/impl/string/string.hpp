@@ -13,6 +13,7 @@
 
 #include <type_traits>
 #include <memory>
+#include <span>
 
 namespace upp
 {
@@ -122,6 +123,10 @@ namespace upp
         /// the underlying container.
         ///
         [[nodiscard]] constexpr const container_type& underlying() const noexcept { return m_container; }
+
+        /// @brief Returns a view of the underlying code units.
+        ///
+        [[nodiscard]] constexpr std::span<const code_unit_type> code_units() const noexcept { return std::span<const code_unit_type>{m_container}; }
 
         /// @brief Removes all characters from the string.
         ///
@@ -239,6 +244,10 @@ namespace upp
         /// the underlying container.
         ///
         [[nodiscard]] constexpr const container_type& underlying() const noexcept { return m_container; }
+
+        /// @brief Returns a view of the underlying code units.
+        ///
+        [[nodiscard]] constexpr std::span<const code_unit_type> code_units() const noexcept { return std::span<const code_unit_type>{m_container}; }
 
         /// @brief Removes all characters from the string.
         ///

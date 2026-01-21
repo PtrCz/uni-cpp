@@ -50,7 +50,7 @@ namespace upp
                                             std::constructible_from<C, typename C::iterator, typename C::iterator> &&
                                             std::constructible_from<C, std::initializer_list<typename C::value_type>> &&
 
-                                            requires(C c, typename C::size_type n, typename C::value_type v, typename C::iterator it,
+                                            requires(C c, const C cc, typename C::size_type n, typename C::value_type v, typename C::iterator it,
                                                      typename C::const_iterator cit, std::initializer_list<typename C::value_type> il) {
                                                 { c.assign(n, v) };
                                                 { c.assign(it, it) };
@@ -64,7 +64,12 @@ namespace upp
                                                 { c.erase(cit, cit) } -> std::same_as<typename C::iterator>;
 
                                                 { c.clear() };
+
                                                 { c[n] } -> std::same_as<typename C::value_type&>;
+                                                { cc[n] } -> std::same_as<const typename C::value_type&>;
+
+                                                { c.data() } -> std::same_as<typename C::value_type*>;
+                                                { cc.data() } -> std::same_as<const typename C::value_type*>;
                                             };
 
     /// @brief Concept for identifying container types that work with uni-cpp's string types.

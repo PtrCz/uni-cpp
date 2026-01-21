@@ -1,7 +1,7 @@
 // Configured using cmake.
 //
 // BEFORE YOU EDIT THIS FILE:
-// Make sure you are editing the file with the .in extenstion in the uni-cpp/cmake directory;
+// Make sure you are editing the file with the .in extension in the uni-cpp/cmake directory;
 // otherwise, everything you change will be overwritten the moment cmake is run!
 
 #ifndef UNI_CPP_VERSION_HPP

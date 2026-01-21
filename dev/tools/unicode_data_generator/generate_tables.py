@@ -86,7 +86,7 @@ def generate_tables(block_size: int, prop_value_list: list, prop_value_type_size
                                 will only be valid/safe if it is performed on a code point which properties were stored (i.e. for a list
                                 of properties covering the range [U+0000; U+0100], the lookup is only valid on code points in that range). 
         prop_value_type_size (int): The amount of bytes required to store each property value in the table.
-                                    For exmaple, if the properties are stored using `uint16_t`s, then the value would be 2.
+                                    For example, if the properties are stored using `uint16_t`s, then the value would be 2.
                                     This value is used to choose the most optimal optimizations.
 
     Returns:

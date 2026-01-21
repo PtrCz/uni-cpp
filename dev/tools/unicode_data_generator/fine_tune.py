@@ -15,7 +15,7 @@ def generate_fine_tuned_tables(prop_value_list: list, prop_value_type_size: int)
     step = 64
     greatest_block_size_initially_checked = 1024
 
-    # Length of the progess bar in the console
+    # Length of the progress bar in the console
     bar_len = 60
 
     # The total number of calls made to `generate_tables` function while fine-tuning.
@@ -25,7 +25,7 @@ def generate_fine_tuned_tables(prop_value_list: list, prop_value_type_size: int)
 
     block_sizes = [n * step for n in range(1, greatest_block_size_initially_checked // step + 1)]
 
-    # Forwards the call to `calc_total_size_for_given_block_size` and tracks the progess.
+    # Forwards the call to `calc_total_size_for_given_block_size` and tracks the progress.
     def counting_key(block_size):
         nonlocal current_check_count
         current_check_count += 1
@@ -51,7 +51,7 @@ def generate_fine_tuned_tables(prop_value_list: list, prop_value_type_size: int)
 
         best_block_size = min(block_sizes, key=counting_key)
 
-    print(' ' * 150, end='\r', flush=True) # clear the console line from the progess bar
+    print(' ' * 150, end='\r', flush=True) # clear the console line from the progress bar
 
     print(f'[+] Most optimal block size found: {best_block_size}')
     return generate_tables(best_block_size, prop_value_list, prop_value_type_size)

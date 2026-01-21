@@ -1,9 +1,11 @@
 #include "../catch2.hpp"
 
 #include <uni-cpp/string.hpp>
+#include <uni-cpp/encoding.hpp>
 
 #include <type_traits>
 #include <concepts>
+#include <string>
 
 #include "evil_allocator.hpp"
 
@@ -20,7 +22,7 @@ template<typename Callable>
 void run_for_each_string_type(const Callable& callable)
 {
     run_for_each_string_type_template([&]<template<typename> typename StringTemplate, typename CodeUnitType>() {
-        callable.template operator()<StringTemplate<std::allocator<CodeUnitType>>>();
+        callable.template operator()<StringTemplate<std::basic_string<CodeUnitType>>>();
     });
 }
 
@@ -39,7 +41,7 @@ TEST_CASE("string type traits", "[string types]")
 TEST_CASE("string constructors", "[string types]")
 {
     run_for_each_string_type_template([&]<template<typename> typename StringTemplate, typename CodeUnitType>() {
-        using StringType = StringTemplate<std::allocator<CodeUnitType>>;
+        using StringType = StringTemplate<std::basic_string<CodeUnitType>>;
 
         StringType empty;
         StringType with_allocator{std::allocator<typename StringType::code_unit_type>()};
@@ -52,7 +54,9 @@ TEST_CASE("string constructors", "[string types]")
         StringType move = std::move(copy);
         StringType move_with_allocator{std::move(empty), std::allocator<typename StringType::code_unit_type>()};
 
-        CHECK_THROWS(StringTemplate<upp_test::evil_allocator<CodeUnitType, true>>{});
-        CHECK_NOTHROW(StringTemplate<upp_test::evil_allocator<CodeUnitType, false>>{});
+        using evil_std_string = std::basic_string<CodeUnitType, std::char_traits<CodeUnitType>, upp_test::evil_allocator<CodeUnitType>>;
+
+        CHECK_THROWS(StringTemplate<evil_std_string>{});
+        STATIC_CHECK_FALSE(noexcept(StringTemplate<evil_std_string>{}));
     });
 }

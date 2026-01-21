@@ -15,6 +15,7 @@ namespace upp
 
 #include "version.hpp"
 #include "uchar.hpp"
+#include "encoding.hpp"
 #include "string.hpp"
 
 #endif // UNI_CPP_ALL_HPP

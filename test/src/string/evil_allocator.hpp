@@ -7,7 +7,7 @@
 namespace upp_test
 {
     /// Evil allocator type used for testing
-    template<typename T, bool ThrowFromConstructor>
+    template<typename T>
     struct evil_allocator
     {
         using value_type      = T;
@@ -19,23 +19,14 @@ namespace upp_test
         template<typename U>
         struct rebind
         {
-            using other = evil_allocator<U, ThrowFromConstructor>;
+            using other = evil_allocator<U>;
         };
 
-        evil_allocator()
+        evil_allocator() { throw std::runtime_error("evil_allocator constructor called"); }
+        template<typename U>
+        evil_allocator(const evil_allocator<U>&)
         {
-            if constexpr (ThrowFromConstructor)
-            {
-                throw std::runtime_error("evil_allocator constructor called");
-            }
-        }
-        template<typename U, bool OtherThrowFromConstructor>
-        evil_allocator(const evil_allocator<U, OtherThrowFromConstructor>&)
-        {
-            if constexpr (ThrowFromConstructor)
-            {
-                throw std::runtime_error("evil_allocator constructor called");
-            }
+            throw std::runtime_error("evil_allocator constructor called");
         }
 
         T*   allocate(std::size_t size) { return new T[size]; }

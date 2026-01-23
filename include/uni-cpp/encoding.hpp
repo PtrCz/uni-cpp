@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <utility>
+#include <concepts>
 
 namespace upp
 {
@@ -110,6 +111,13 @@ namespace upp
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = false;
     };
+
+    /// @brief Identifies types that could be used as a code unit type for a given encoding.
+    ///
+    /// @headerfile "" <uni-cpp/encoding.hpp>
+    ///
+    template<typename T, encoding E>
+    concept code_unit_type_for = std::integral<T> && sizeof(T) == sizeof(typename encoding_traits<E>::default_code_unit_type);
 } // namespace upp
 
 #endif // UNI_CPP_ENCODING_HPP

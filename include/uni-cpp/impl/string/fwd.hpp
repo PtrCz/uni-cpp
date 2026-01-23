@@ -77,8 +77,7 @@ namespace upp
     /// @headerfile "" <uni-cpp/string.hpp>
     ///
     template<typename C, encoding E>
-    concept string_compatible_container = contiguous_sequence_container<C> && std::integral<typename C::value_type> &&
-                                          sizeof(typename C::value_type) == sizeof(typename encoding_traits<E>::default_code_unit_type);
+    concept string_compatible_container = contiguous_sequence_container<C> && code_unit_type_for<typename C::value_type, E>;
 
     /// @brief ASCII string type.
     ///

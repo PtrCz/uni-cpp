@@ -1,0 +1,4 @@
+HeaderFilterRegex: 'include/uni-cpp/.*\.hpp$'
+Checks: '-*,bugprone-*,clang-analyzer-*,performance-*,-bugprone-throwing-static-initialization,-cert-err58-cpp,-clang-analyzer-optin.core.EnumCastOutOfRange'
+
+# -bugprone-throwing-static-initialization,-cert-err58-cpp,-clang-analyzer-optin.core.EnumCastOutOfRange is to avoid warnings from Catch2 macro expansions

@@ -20,7 +20,7 @@ namespace upp::impl::unicode_data::case_conversion
         };
     } // namespace impl
 
-    enum class case_mapping_type
+    enum class case_mapping_type : std::uint8_t
     {
         lowercase = 0,
         uppercase = 1,

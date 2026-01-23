@@ -202,11 +202,13 @@ TEST_CASE("upp::uchar is_ascii() & as_ascii()", "[upp::uchar]")
     CHECK_FALSE((0x80_uc).as_ascii().has_value());
     CHECK_FALSE((0xFFFD_uc).as_ascii().has_value());
 
-    REQUIRE(U'a'_uc.as_ascii().has_value());
-    CHECK(U'a'_uc.value() == static_cast<std::uint32_t>(U'a'_uc.as_ascii().value().value()));
+    const auto ascii_a = U'a'_uc.as_ascii();
+    REQUIRE(ascii_a.has_value());
+    CHECK(U'a'_uc.value() == static_cast<std::uint32_t>(ascii_a->value())); // NOLINT(bugprone-unchecked-optional-access)
 
-    REQUIRE((0x7F_uc).as_ascii().has_value());
-    CHECK((0x7F_uc).value() == static_cast<std::uint32_t>((0x7F_uc).as_ascii().value().value()));
+    const auto ascii_7f = (0x7F_uc).as_ascii();
+    REQUIRE(ascii_7f.has_value());
+    CHECK((0x7F_uc).value() == static_cast<std::uint32_t>(ascii_7f->value())); // NOLINT(bugprone-unchecked-optional-access)
 }
 
 TEST_CASE("upp::uchar length_utf8() & length_utf16()", "[upp::uchar]")

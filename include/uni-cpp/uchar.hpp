@@ -147,7 +147,7 @@ namespace upp
             using base::base;
         };
 
-        enum class to_case_enum
+        enum class to_case_enum : std::uint8_t
         {
             lower,
             upper,

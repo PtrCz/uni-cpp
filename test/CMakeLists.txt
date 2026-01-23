@@ -16,6 +16,14 @@ FetchContent_MakeAvailable(catch2)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE "uni-cpp" Catch2::Catch2WithMain)
 
+list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+include(Catch)
+catch_discover_tests(${PROJECT_NAME} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/test_data")
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    CXX_CLANG_TIDY "clang-tidy;--config-file=${CMAKE_CURRENT_SOURCE_DIR}/../.clang-tidy"
+)
+
 # Enable extra warnings
 
 if(MSVC)
@@ -23,6 +31,3 @@ if(MSVC)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
-
-add_test(NAME ${PROJECT_NAME} COMMAND ${PROJECT_NAME})
-set_tests_properties(${PROJECT_NAME} PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/test_data")

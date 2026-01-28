@@ -1,7 +1,7 @@
 ﻿---
 BasedOnStyle: Microsoft
 AccessModifierOffset: '-4'
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: 'true'
 AlignConsecutiveMacros: 'true'
 AlignConsecutiveAssignments: 'true'
 AlignConsecutiveDeclarations: 'true'
@@ -18,6 +18,8 @@ AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: 'false'
 AlwaysBreakBeforeMultilineStrings: 'false'
 AlwaysBreakTemplateDeclarations: 'Yes'
+BreakAfterOpenBracketBracedList: 'true'
+BreakBeforeCloseBracketBracedList: 'true'
 BreakBeforeTernaryOperators: 'true'
 BreakConstructorInitializers: BeforeComma
 ColumnLimit: '150'

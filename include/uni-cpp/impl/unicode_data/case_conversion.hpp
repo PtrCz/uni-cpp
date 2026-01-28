@@ -32,8 +32,9 @@ namespace upp::impl::unicode_data::case_conversion
         template<case_mapping_type MappingType>
         [[nodiscard]] consteval std::uint32_t greatest_code_point_with_mapping() noexcept
         {
-            static constexpr std::array values{greatest_code_point_with_lowercase_mapping, greatest_code_point_with_uppercase_mapping,
-                                               greatest_code_point_with_titlecase_mapping};
+            static constexpr std::array values{
+                greatest_code_point_with_lowercase_mapping, greatest_code_point_with_uppercase_mapping, greatest_code_point_with_titlecase_mapping
+            };
 
             return values[std::to_underlying(MappingType)];
         }

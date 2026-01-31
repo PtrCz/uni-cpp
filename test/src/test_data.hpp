@@ -1,8 +1,6 @@
 #ifndef TEST_TEST_DATA_HPP
 #define TEST_TEST_DATA_HPP
 
-#include "catch2.hpp"
-
 #include <uni-cpp/uchar.hpp>
 
 #include <string_view>
@@ -19,6 +17,7 @@
 #include <utility>
 #include <type_traits>
 #include <functional>
+#include <cassert>
 
 namespace upp_test
 {
@@ -31,7 +30,7 @@ namespace upp_test
 
             auto result = std::from_chars(str.data(), str.data() + str.size(), num, 16);
 
-            REQUIRE(result.ec == std::errc{});
+            assert(result.ec == std::errc{});
 
             return num;
         }
@@ -51,7 +50,7 @@ namespace upp_test
         std::println("Loading test data from file: {}", filepath.generic_string());
 
         std::ifstream file{filepath};
-        REQUIRE(file.is_open());
+        assert(file.is_open());
 
         std::unordered_map<std::uint32_t, std::vector<ValueType>> result;
 
@@ -62,7 +61,7 @@ namespace upp_test
                 continue;
 
             std::size_t colon_pos = line.find(':');
-            REQUIRE(colon_pos != std::string::npos);
+            assert(colon_pos != std::string::npos);
 
             std::string_view code_point_str{line.begin(), line.begin() + colon_pos};
             std::string_view values_str{line.begin() + colon_pos + 1, line.end()};
@@ -84,24 +83,6 @@ namespace upp_test
         }
 
         return result;
-    }
-
-    template<typename F>
-        requires std::invocable<F, upp::uchar> && std::ranges::range<std::invoke_result_t<F, upp::uchar>> &&
-                 std::unsigned_integral<std::ranges::range_value_t<std::invoke_result_t<F, upp::uchar>>>
-    void test_using_data_from_file(const std::filesystem::path& filepath, F func)
-    {
-        using integer_t = std::ranges::range_value_t<std::invoke_result_t<F, upp::uchar>>;
-
-        const auto test_data = load_test_data<integer_t>(filepath);
-
-        for (const auto& [code_point, data] : test_data)
-        {
-            const auto ch = upp::uchar::from(code_point);
-            REQUIRE(ch.has_value());
-
-            CHECK(std::ranges::equal(std::invoke(func, ch.value()), data));
-        }
     }
 } // namespace upp_test
 

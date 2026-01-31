@@ -1,4 +1,12 @@
 HeaderFilterRegex: 'include/uni-cpp/.*\.hpp$'
-Checks: '-*,bugprone-*,clang-analyzer-*,performance-*,-bugprone-throwing-static-initialization,-cert-err58-cpp,-clang-analyzer-optin.core.EnumCastOutOfRange'
+Checks: '-*,readability-identifier-naming,bugprone-*,clang-analyzer-*,performance-*'
 
-# -bugprone-throwing-static-initialization,-cert-err58-cpp,-clang-analyzer-optin.core.EnumCastOutOfRange is to avoid warnings from Catch2 macro expansions
+CheckOptions:
+  - key: readability-identifier-naming.DefaultCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: m_
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase

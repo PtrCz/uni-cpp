@@ -21,20 +21,22 @@ namespace upp
     /// @headerfile "" <uni-cpp/string.hpp>
     ///
     template<typename C>
-    concept container = requires(C c, const C cc) {
-        typename C::value_type;
-        typename C::iterator;
-        typename C::const_iterator;
-        typename C::size_type;
+    concept container =
+        requires(C c, const C cc) {
+            typename C::value_type;
+            typename C::iterator;
+            typename C::const_iterator;
+            typename C::size_type;
 
-        { c.begin() } -> std::same_as<typename C::iterator>;
-        { c.end() } -> std::same_as<typename C::iterator>;
-        { cc.begin() } -> std::same_as<typename C::const_iterator>;
-        { cc.end() } -> std::same_as<typename C::const_iterator>;
+            { c.begin() } -> std::same_as<typename C::iterator>;
+            { c.end() } -> std::same_as<typename C::iterator>;
+            { cc.begin() } -> std::same_as<typename C::const_iterator>;
+            { cc.end() } -> std::same_as<typename C::const_iterator>;
 
-        { c.size() } -> std::same_as<typename C::size_type>;
-        { c.empty() } -> std::same_as<bool>;
-    } && std::default_initializable<C> && std::copy_constructible<C> && std::assignable_from<C&, const C> && std::equality_comparable<C>;
+            { c.size() } -> std::same_as<typename C::size_type>;
+            { c.empty() } -> std::same_as<bool>;
+        } && std::unsigned_integral<typename C::size_type> && std::default_initializable<C> && std::copy_constructible<C> &&
+        std::assignable_from<C&, const C> && std::equality_comparable<C>;
 
     /// @brief Concept for identifying contiguous sequence container types.
     ///

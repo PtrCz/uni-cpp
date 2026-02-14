@@ -18,6 +18,7 @@
 #include <ranges>
 #include <utility>
 #include <concepts>
+#include <limits>
 #include <bit>
 
 namespace upp
@@ -31,6 +32,13 @@ namespace upp
 
         inline constexpr from_container_t from_container{};
     } // namespace impl
+
+    template<typename C>
+    concept reservable_container = container<C> && requires(C& c, const C& cc, typename C::size_type n) {
+        c.reserve(n);
+        { cc.capacity() } -> std::same_as<decltype(n)>;
+        { cc.max_size() } -> std::same_as<decltype(n)>;
+    };
 
     template<string_compatible_container<encoding::ascii> Container>
     class basic_ascii_string
@@ -143,6 +151,30 @@ namespace upp
         /// @brief Returns a view of the underlying code units.
         ///
         [[nodiscard]] constexpr std::span<const code_unit_type> code_units() const noexcept { return std::span<const code_unit_type>{m_container}; }
+
+        [[nodiscard]] constexpr size_type max_size() const noexcept
+            requires reservable_container<Container>
+        {
+            return m_container.max_size();
+        }
+
+        constexpr void reserve(size_type new_capacity)
+            requires reservable_container<Container>
+        {
+            m_container.reserve(new_capacity);
+        }
+
+        [[nodiscard]] constexpr size_type capacity() const noexcept
+            requires reservable_container<Container>
+        {
+            return m_container.capacity();
+        }
+
+        constexpr void shrink_to_fit()
+            requires requires(Container& c) { c.shrink_to_fit(); }
+        {
+            m_container.shrink_to_fit();
+        }
 
         /// @brief Removes all characters from the string.
         ///
@@ -317,6 +349,30 @@ namespace upp
         ///
         [[nodiscard]] constexpr std::span<const code_unit_type> code_units() const noexcept { return std::span<const code_unit_type>{m_container}; }
 
+        [[nodiscard]] constexpr size_type max_size() const noexcept
+            requires reservable_container<Container>
+        {
+            return m_container.max_size();
+        }
+
+        constexpr void reserve(size_type new_capacity)
+            requires reservable_container<Container>
+        {
+            m_container.reserve(new_capacity);
+        }
+
+        [[nodiscard]] constexpr size_type capacity() const noexcept
+            requires reservable_container<Container>
+        {
+            return m_container.capacity();
+        }
+
+        constexpr void shrink_to_fit()
+            requires requires(Container& c) { c.shrink_to_fit(); }
+        {
+            m_container.shrink_to_fit();
+        }
+
         /// @brief Removes all characters from the string.
         ///
         /// All pointers, references, and iterators are invalidated.
@@ -336,6 +392,64 @@ namespace upp
         constexpr basic_ustring(impl::from_container_t, Container&& other) noexcept(std::is_nothrow_move_constructible_v<Container>)
             : m_container{std::move(other)}
         {
+        }
+
+        template<unicode_encoding SourceEncoding, typename SizeType>
+        constexpr void reserve_for_transcoding_from(SizeType source_size)
+            requires reservable_container<Container>
+        {
+            // Note: In a lot of places this function caps overflowing values at their max value.
+            // This is done because the upper bound is very often severely over-allocating (which is intended).
+
+            size_type converted_source_size;
+
+            // Safely convert source_size to converted_source_size
+
+            if constexpr (std::is_signed_v<SizeType> || sizeof(SizeType) > sizeof(size_type))
+            {
+                if (std::in_range<size_type>(source_size))
+                    converted_source_size = static_cast<size_type>(source_size);
+                else
+                    converted_source_size = std::numeric_limits<size_type>::max();
+            }
+            else
+            {
+                converted_source_size = static_cast<size_type>(source_size);
+            }
+
+            // Calculate upper bound size
+
+            size_type upper_bound_size;
+
+            static constexpr size_type upper_bound_factor = impl::utf_transcoding_upper_bound_size_hint_factor<size_type, SourceEncoding, Encoding>;
+
+            if (converted_source_size > std::numeric_limits<size_type>::max() / upper_bound_factor) // check for multiplication overflow
+                upper_bound_size = std::numeric_limits<size_type>::max();
+            else
+                upper_bound_size = converted_source_size * upper_bound_factor;
+
+            // Check for upper_bound_size being greater than max_size()
+
+            const size_type max_s = max_size();
+
+            if (upper_bound_size > max_s)
+                upper_bound_size = max_s;
+
+            try
+            {
+                m_container.reserve(upper_bound_size);
+            }
+            catch (...)
+            {
+                // If the upper bound failed due to OOM, try the lower bound.
+                // If this fails too, let the exception propagate.
+
+                static constexpr auto lower_bound_divisor = impl::utf_transcoding_lower_bound_size_hint_divisor<size_type, SourceEncoding, Encoding>;
+
+                size_type lower_bound_size = converted_source_size / lower_bound_divisor;
+
+                m_container.reserve(lower_bound_size);
+            }
         }
 
         /// @brief Appends a single code unit to the end of the string.

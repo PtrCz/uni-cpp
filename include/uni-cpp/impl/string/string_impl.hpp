@@ -234,7 +234,6 @@ namespace upp
                 using result_type   = basic_ustring<Encoding, Container>;
                 using error_type    = utf8_error;
                 using expected_type = std::expected<result_type, error_type>;
-                using size_type     = result_type::size_type;
 
                 // If `Range` is the underlying `container_type`, then instead of inserting code units one by one in the loop,
                 // we push them all at once at the end. This allows us to move from an rvalue reference to the
@@ -247,11 +246,9 @@ namespace upp
                 std::conditional_t<!is_range_the_underlying_container_type, result_type, monostate> result;
 
                 // Don't reserve if Range is the underlying container type as this makes the potential move later pointless.
-                if constexpr (!is_range_the_underlying_container_type && ranges::approximately_sized_range<Range> &&
-                              requires(result_type& str, size_type n) { str.reserve(n); })
+                if constexpr (!is_range_the_underlying_container_type && ranges::approximately_sized_range<Range> && reservable_container<Container>)
                 {
-                    // FIXME: potentially over-allocating depending on the encoding
-                    result.reserve(static_cast<size_type>(ranges::reserve_hint(range)));
+                    result.template reserve_for_transcoding_from<unicode_encoding::utf8>(ranges::reserve_hint(range));
                 }
 
                 auto       it       = std::ranges::begin(range);
@@ -359,7 +356,14 @@ namespace upp
                 if constexpr (is_range_the_underlying_container_type)
                     return expected_type{std::in_place, result_type{from_container, std::forward<Range>(range)}};
                 else
+                {
+                    if constexpr (requires(Container& c) { c.shrink_to_fit(); })
+                    {
+                        result.shrink_to_fit();
+                    }
+
                     return expected_type{std::in_place, std::move(result)};
+                }
             }
 
             template<unicode_encoding Encoding, typename Container, typename Range>
@@ -367,14 +371,12 @@ namespace upp
             [[nodiscard]] static constexpr basic_ustring<Encoding, Container> transcode_from_utf8_unchecked(Range&& range)
             {
                 using result_type = basic_ustring<Encoding, Container>;
-                using size_type   = result_type::size_type;
 
                 result_type result;
 
-                if constexpr (ranges::approximately_sized_range<Range> && requires(result_type& str, size_type n) { str.reserve(n); })
+                if constexpr (ranges::approximately_sized_range<Range> && reservable_container<Container>)
                 {
-                    // FIXME: potentially over-allocating depending on the encoding
-                    result.reserve(static_cast<size_type>(ranges::reserve_hint(range)));
+                    result.template reserve_for_transcoding_from<unicode_encoding::utf8>(ranges::reserve_hint(range));
                 }
 
                 auto       it       = std::ranges::begin(range);
@@ -400,6 +402,11 @@ namespace upp
                     }
                 }
 
+                if constexpr (requires(Container& c) { c.shrink_to_fit(); })
+                {
+                    result.shrink_to_fit();
+                }
+
                 return result;
             }
 
@@ -413,7 +420,7 @@ namespace upp
 
                 result_type result;
 
-                if constexpr (ranges::approximately_sized_range<Range> && requires(result_type& str, size_type n) { str.reserve(n); })
+                if constexpr (ranges::approximately_sized_range<Range> && reservable_container<Container>)
                 {
                     result.reserve(static_cast<size_type>(ranges::reserve_hint(range)));
                 }

@@ -471,6 +471,13 @@ namespace upp
             std::array<char8_t, 4> arr;
             const std::size_t      size_utf8 = length_utf8();
 
+            if consteval
+            {
+                // In constant evaluation the array can't be partially uninitialized.
+                // At runtime it's fine, because the uninitialized part is never read.
+                arr.fill(0);
+            }
+
             switch (size_utf8)
             {
             case 1uz: {
@@ -511,6 +518,13 @@ namespace upp
         {
             std::array<char16_t, 2> arr;
             const std::size_t       size_utf16 = length_utf16();
+
+            if consteval
+            {
+                // In constant evaluation the array can't be partially uninitialized.
+                // At runtime it's fine, because the uninitialized part is never read.
+                arr.fill(0);
+            }
 
             switch (size_utf16)
             {

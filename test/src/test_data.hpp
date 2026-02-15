@@ -63,8 +63,10 @@ namespace upp_test
             std::size_t colon_pos = line.find(':');
             assert(colon_pos != std::string::npos);
 
-            std::string_view code_point_str{line.begin(), line.begin() + colon_pos};
-            std::string_view values_str{line.begin() + colon_pos + 1, line.end()};
+            using diff_t = std::string::difference_type;
+
+            std::string_view code_point_str{line.begin(), line.begin() + static_cast<diff_t>(colon_pos)};
+            std::string_view values_str{line.begin() + static_cast<diff_t>(colon_pos + 1), line.end()};
 
             std::uint32_t code_point = impl::parse_hex<std::uint32_t>(code_point_str);
 

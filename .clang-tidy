@@ -1,5 +1,5 @@
-HeaderFilterRegex: 'include/uni-cpp/.*\.hpp$'
-Checks: '-*,readability-identifier-naming,bugprone-*,clang-analyzer-*,performance-*'
+HeaderFilterRegex: 'test/src/.*\.hpp$|include/uni-cpp/.*\.hpp$'
+Checks: '-*,readability-identifier-naming,bugprone-*,-bugprone-throwing-static-initialization,clang-analyzer-*,performance-*'
 
 CheckOptions:
   - key: readability-identifier-naming.DefaultCase

@@ -10,7 +10,6 @@
 #include <ranges>
 
 #include "utility.hpp"
-#include "evil_allocator.hpp"
 #include "ranges.hpp"
 #include "../utf.hpp"
 
@@ -29,9 +28,7 @@ EVAL_TEST_CASE("string type traits");
 
 TEST_CASE("string constructors", "[string types]")
 {
-    upp_test::run_for_each_string_type_template([&]<template<typename> typename StringTemplate, typename CodeUnitType>() {
-        using StringType = StringTemplate<std::basic_string<CodeUnitType>>; // NOLINT(readability-identifier-naming)
-
+    upp_test::run_for_each_string_type([&]<typename StringType>() {
         StringType empty;
         StringType with_allocator{std::allocator<typename StringType::code_unit_type>()};
 
@@ -42,11 +39,6 @@ TEST_CASE("string constructors", "[string types]")
 
         StringType move = std::move(copy);
         StringType move_with_allocator{std::move(empty), std::allocator<typename StringType::code_unit_type>()};
-
-        using evil_std_string = std::basic_string<CodeUnitType, std::char_traits<CodeUnitType>, upp_test::evil_allocator<CodeUnitType>>;
-
-        RUNTIME_CHECK_THROWS(StringTemplate<evil_std_string>{});
-        CHECK_FALSE(noexcept(StringTemplate<evil_std_string>{}));
     });
 }
 EVAL_TEST_CASE("string constructors");

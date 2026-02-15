@@ -44,6 +44,8 @@ namespace upp
     class basic_ascii_string
     {
     public:
+        static constexpr encoding encoding_value = encoding::ascii;
+
         using traits_type    = encoding_traits<encoding::ascii>;
         using container_type = Container;
         using size_type      = Container::size_type;
@@ -210,7 +212,10 @@ namespace upp
     class basic_ustring
     {
     public:
-        using traits_type    = encoding_traits<static_cast<encoding>(Encoding)>;
+        static constexpr encoding         encoding_value         = static_cast<encoding>(Encoding);
+        static constexpr unicode_encoding unicode_encoding_value = Encoding;
+
+        using traits_type    = encoding_traits<encoding_value>;
         using container_type = Container;
         using size_type      = Container::size_type;
         using code_unit_type = Container::value_type;
@@ -455,7 +460,7 @@ namespace upp
         /// @brief Appends a single code unit to the end of the string.
         ///
         template<typename T>
-            requires code_unit_type_for<T, static_cast<encoding>(Encoding)>
+            requires code_unit_type_for<T, encoding_value>
         constexpr void push_back_code_unit(T code_unit)
         {
             const auto value = std::bit_cast<code_unit_type>(code_unit);
@@ -475,7 +480,7 @@ namespace upp
         /// @pre The `range` must not depend on the state of this string. For example, it cannot be a view into this string's underlying container.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, static_cast<encoding>(Encoding)>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding_value>
         constexpr void append_code_units_range(Range&& range)
         {
             using range_code_unit_t = std::remove_cvref_t<std::ranges::range_reference_t<Range>>;

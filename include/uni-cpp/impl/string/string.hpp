@@ -154,24 +154,36 @@ namespace upp
         ///
         [[nodiscard]] constexpr std::span<const code_unit_type> code_units() const noexcept { return std::span<const code_unit_type>{m_container}; }
 
+        /// @brief Returns the maximum number of characters the string is able to hold due to system or library implementation limitations.
+        ///
         [[nodiscard]] constexpr size_type max_size() const noexcept
             requires reservable_container<Container>
         {
             return m_container.max_size();
         }
 
+        /// @brief Informs a `upp::basic_ascii_string` object of a planned change in size, so that it can manage the storage allocation efficiently.
+        ///
+        /// If `new_capacity` is greater than the current `capacity()`, new storage is allocated, and `capacity()` is made equal or greater than `new_capacity`.
+        ///
+        /// @param new_capacity Number of characters to allocate space for.
+        ///
         constexpr void reserve(size_type new_capacity)
             requires reservable_container<Container>
         {
             m_container.reserve(new_capacity);
         }
 
+        /// @brief Returns the number of characters that the string has currently allocated space for.
+        ///
         [[nodiscard]] constexpr size_type capacity() const noexcept
             requires reservable_container<Container>
         {
             return m_container.capacity();
         }
 
+        /// @brief A non-binding request to reduce unused capacity to `size()`.
+        ///
         constexpr void shrink_to_fit()
             requires requires(Container& c) { c.shrink_to_fit(); }
         {
@@ -354,24 +366,36 @@ namespace upp
         ///
         [[nodiscard]] constexpr std::span<const code_unit_type> code_units() const noexcept { return std::span<const code_unit_type>{m_container}; }
 
+        /// @brief Returns the maximum number of code units the string is able to hold due to system or library implementation limitations.
+        ///
         [[nodiscard]] constexpr size_type max_size() const noexcept
             requires reservable_container<Container>
         {
             return m_container.max_size();
         }
 
+        /// @brief Informs a `upp::basic_ustring` object of a planned change in size, so that it can manage the storage allocation efficiently.
+        ///
+        /// If `new_capacity` is greater than the current `capacity()`, new storage is allocated, and `capacity()` is made equal or greater than `new_capacity`.
+        ///
+        /// @param new_capacity Number of code units to allocate space for.
+        ///
         constexpr void reserve(size_type new_capacity)
             requires reservable_container<Container>
         {
             m_container.reserve(new_capacity);
         }
 
+        /// @brief Returns the number of code units that the string has currently allocated space for.
+        ///
         [[nodiscard]] constexpr size_type capacity() const noexcept
             requires reservable_container<Container>
         {
             return m_container.capacity();
         }
 
+        /// @brief A non-binding request to reduce unused capacity to `size()`.
+        ///
         constexpr void shrink_to_fit()
             requires requires(Container& c) { c.shrink_to_fit(); }
         {
@@ -399,6 +423,18 @@ namespace upp
         {
         }
 
+        /// @brief Reserve space for transcoding from `SourceEncoding` input with `source_size` size.
+        ///
+        /// Reserves enough space to convert from `SourceEncoding` input with `source_size` code units to `Encoding` output with a single allocation.
+        ///
+        /// Tries to reserve the upper bound of the possible conversion size.
+        /// If that fails due to OOM, it then tries to allocate the lower bound of the possible conversion size.
+        /// If the lower bound allocation fails too, the exception propagates as the transcoding is guaranteed to fail at that point anyway.
+        ///
+        /// @tparam SizeType Type of the `source_size`.
+        /// @tparam SourceEncoding Encoding of the converted-from sequence.
+        /// @param source_size Count of code units that are in the source sequence.
+        ///
         template<unicode_encoding SourceEncoding, typename SizeType>
         constexpr void reserve_for_transcoding_from(SizeType source_size)
             requires reservable_container<Container>

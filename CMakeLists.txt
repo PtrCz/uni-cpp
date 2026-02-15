@@ -47,56 +47,19 @@ if (PROJECT_IS_TOP_LEVEL)
     endif()
 
     find_package(Doxygen)
-    find_package(Python COMPONENTS Interpreter)
 
-    if(DOXYGEN_FOUND AND Python_FOUND AND CLANG_FORMAT_PATH)
-        set(DOXYGEN_PREPROCESSED_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen_preprocessed)
-
+    if(DOXYGEN_FOUND)
         set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Doxyfile.in)
         set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 
         configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
 
-        set(DOXY_PREPROCESSED_FILES)
-
-        foreach(src ${UNI_CPP_SOURCES})
-            file(RELATIVE_PATH rel
-                ${CMAKE_CURRENT_SOURCE_DIR}/include
-                ${src})
-
-            set(out ${DOXYGEN_PREPROCESSED_DIR}/${rel})
-
-            get_filename_component(out_dir ${out} DIRECTORY)
-
-            add_custom_command(
-                OUTPUT ${out}
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${out_dir}
-                COMMAND ${Python_EXECUTABLE}
-                        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/preprocess-doxygen.py
-                        ${src}
-                        ${out}
-                COMMAND ${CLANG_FORMAT_PATH} -i --style=file:${CMAKE_CURRENT_SOURCE_DIR}/.clang-format ${out}
-                WORKING_DIRECTORY ${DOXYGEN_PREPROCESSED_DIR}
-                DEPENDS ${src} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/preprocess-doxygen.py
-                COMMENT "Preprocessing ${rel} for Doxygen"
-                VERBATIM
-            )
-
-            list(APPEND DOXY_PREPROCESSED_FILES ${out})
-        endforeach()
-
-        add_custom_target(doxygen_preprocess
-            DEPENDS ${DOXY_PREPROCESSED_FILES}
-        )
-
         add_custom_target(doxygen
             COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen_preprocessed
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             COMMENT "Generating documentation using Doxygen"
             VERBATIM)
-
-        add_dependencies(doxygen doxygen_preprocess)
     else()
-        message(WARNING "doxygen, python or clang-format not found! 'doxygen' target will not be available.")
+        message(WARNING "doxygen not found! 'doxygen' target will not be available.")
     endif()
 endif()

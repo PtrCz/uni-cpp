@@ -8,6 +8,7 @@
 
 #include "../../uchar.hpp"
 #include "../../encoding.hpp"
+#include "../utf8.hpp"
 
 #include "fwd.hpp"
 
@@ -211,14 +212,6 @@ namespace upp
         ///
         class basic_ustring_impl;
     } // namespace impl
-
-    struct utf8_error
-    {
-        std::size_t                 valid_up_to;
-        std::optional<std::uint8_t> error_length;
-
-        [[nodiscard]] constexpr bool operator==(const utf8_error&) const noexcept = default;
-    };
 
     template<unicode_encoding Encoding, string_compatible_container<static_cast<encoding>(Encoding)> Container>
     class basic_ustring

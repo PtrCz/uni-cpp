@@ -8,9 +8,18 @@
 
 #include "uchar.hpp"
 
+#include "impl/encoding/ascii.hpp"
+#include "impl/encoding/utf8.hpp"
+#include "impl/encoding/utf16.hpp"
+#include "impl/encoding/utf32.hpp"
+
 #include <cstdint>
 #include <utility>
 #include <concepts>
+#include <bit>
+#include <ranges>
+#include <expected>
+#include <functional>
 
 namespace upp
 {
@@ -57,8 +66,89 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char;
 
+        using error_type = ascii_error;
+
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = false;
+
+        template<typename T>
+        static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
+
+        template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
+        {
+            using expected_type = std::expected<void, ascii_error>;
+
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            std::size_t index = 0;
+
+            for (; it != sentinel; ++index, ++it)
+            {
+                const std::uint8_t code_unit = std::bit_cast<std::uint8_t>(*it);
+
+                if (!is_valid_ascii(code_unit))
+                {
+                    return expected_type{std::unexpect, ascii_error{.valid_up_to = index}};
+                }
+
+                std::invoke(code_unit_callback, std::bit_cast<char>(code_unit));
+            }
+
+            return expected_type{};
+        }
+
+        template<std::ranges::input_range Range>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
+        {
+            return validate_range(std::forward<Range>(range), [](char) static {});
+        }
+
+        template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
+        {
+            using expected_type = std::expected<void, ascii_error>;
+
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            std::size_t index = 0;
+
+            for (; it != sentinel; ++index, ++it)
+            {
+                const std::uint8_t code_unit = std::bit_cast<std::uint8_t>(*it);
+
+                const std::optional<ascii_char> code_point = ascii_char::from(code_unit);
+
+                if (!code_point.has_value())
+                {
+                    return expected_type{std::unexpect, ascii_error{.valid_up_to = index}};
+                }
+
+                std::invoke(code_point_callback, *code_point);
+            }
+
+            return expected_type{};
+        }
+
+        template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
+        {
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            for (; it != sentinel; ++it)
+            {
+                const auto code_point = ascii_char::from_unchecked(std::bit_cast<std::uint8_t>(*it));
+
+                std::invoke(code_point_callback, code_point);
+            }
+        }
     };
 
     /// @copydoc encoding_traits
@@ -74,8 +164,165 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char8_t;
 
+        using error_type = utf8_error;
+
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = true;
+
+        template<typename T>
+        static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
+
+        template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
+        {
+            using expected_type = std::expected<void, utf8_error>;
+
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            std::uint32_t state       = impl::utf8::dfa::state::accept;
+            std::size_t   valid_up_to = 0;
+
+            impl::utf8::previous_code_units_buffer previous_code_units;
+
+            for (std::size_t index = 0; it != sentinel; ++index, ++it)
+            {
+                const char8_t current_code_unit = std::bit_cast<char8_t>(*it);
+
+                const std::uint32_t type = impl::utf8::dfa::character_class_from_byte[current_code_unit];
+
+                state = impl::utf8::dfa::state_transition_table[state + type];
+
+                if (state == impl::utf8::dfa::state::reject)
+                {
+                    const std::size_t invalid_code_units_length = index - valid_up_to + 1;
+
+                    std::array<char8_t, 4> invalid_code_units = previous_code_units.get_n(invalid_code_units_length - 1);
+
+                    invalid_code_units[invalid_code_units_length - 1] = current_code_unit;
+
+                    const std::uint8_t error_length =
+                        impl::utf8::get_error_length(std::span<char8_t>{invalid_code_units.data(), invalid_code_units_length});
+
+                    return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = error_length}};
+                }
+
+                if (state == impl::utf8::dfa::state::accept)
+                {
+                    valid_up_to = index + 1;
+                }
+
+                std::invoke(code_unit_callback, current_code_unit);
+
+                previous_code_units.push(current_code_unit);
+            }
+
+            // Check if the range ended in the middle of a code point.
+
+            if (state != impl::utf8::dfa::state::accept)
+            {
+                return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = {std::nullopt}}};
+            }
+
+            return expected_type{};
+        }
+
+        template<std::ranges::input_range Range>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
+        {
+            return validate_range(std::forward<Range>(range), [](char8_t) static {});
+        }
+
+        template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
+        {
+            using expected_type = std::expected<void, utf8_error>;
+
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            std::uint32_t state       = impl::utf8::dfa::state::accept;
+            std::size_t   valid_up_to = 0;
+
+            std::uint32_t current_code_point;
+
+            impl::utf8::previous_code_units_buffer previous_code_units;
+
+            for (std::size_t index = 0; it != sentinel; ++index, ++it)
+            {
+                const char8_t current_code_unit = std::bit_cast<char8_t>(*it);
+
+                const std::uint32_t type = impl::utf8::dfa::character_class_from_byte[current_code_unit];
+
+                current_code_point = (state != impl::utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6)
+                                                                               : (0xFF >> type) & (current_code_unit);
+
+                state = impl::utf8::dfa::state_transition_table[state + type];
+
+                if (state == impl::utf8::dfa::state::reject)
+                {
+                    const std::size_t invalid_code_units_length = index - valid_up_to + 1;
+
+                    std::array<char8_t, 4> invalid_code_units = previous_code_units.get_n(invalid_code_units_length - 1);
+
+                    invalid_code_units[invalid_code_units_length - 1] = current_code_unit;
+
+                    const std::uint8_t error_length =
+                        impl::utf8::get_error_length(std::span<char8_t>{invalid_code_units.data(), invalid_code_units_length});
+
+                    return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = error_length}};
+                }
+
+                if (state == impl::utf8::dfa::state::accept)
+                {
+                    valid_up_to = index + 1;
+
+                    std::invoke(code_point_callback, uchar::from_unchecked(current_code_point));
+                }
+
+                previous_code_units.push(current_code_unit);
+            }
+
+            // Check if the range ended in the middle of a code point.
+
+            if (state != impl::utf8::dfa::state::accept)
+            {
+                return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = {std::nullopt}}};
+            }
+
+            return expected_type{};
+        }
+
+        template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
+        {
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            std::uint32_t state = impl::utf8::dfa::state::accept;
+            std::uint32_t current_code_point;
+
+            for (; it != sentinel; ++it)
+            {
+                const char8_t current_code_unit = std::bit_cast<char8_t>(*it);
+
+                std::uint32_t type = impl::utf8::dfa::character_class_from_byte[current_code_unit];
+
+                current_code_point = (state != impl::utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6)
+                                                                               : (0xFF >> type) & (current_code_unit);
+
+                state = impl::utf8::dfa::state_transition_table[state + type];
+
+                if (state == impl::utf8::dfa::state::accept)
+                {
+                    std::invoke(code_point_callback, uchar::from_unchecked(current_code_point));
+                }
+            }
+        }
     };
 
     /// @copydoc encoding_traits
@@ -91,8 +338,136 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char16_t;
 
+        using error_type = utf16_error;
+
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = true;
+
+        template<typename T>
+        static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
+
+        template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
+        {
+            using expected_type = std::expected<void, utf16_error>;
+
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            std::size_t index = 0;
+
+            while (it != sentinel)
+            {
+                const std::size_t valid_up_to = index;
+
+                const char16_t first_code_unit = std::bit_cast<char16_t>(*it);
+                ++index, ++it;
+
+                std::invoke(code_unit_callback, first_code_unit);
+
+                if (impl::utf16::is_surrogate(first_code_unit))
+                {
+                    if (first_code_unit >= 0xDC00U)
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+
+                    if (it == sentinel)
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+
+                    const char16_t second_code_unit = std::bit_cast<char16_t>(*it);
+                    ++index, ++it;
+
+                    if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU)
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+
+                    std::invoke(code_unit_callback, second_code_unit);
+                }
+            }
+
+            return expected_type{};
+        }
+
+        template<std::ranges::input_range Range>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
+        {
+            return validate_range(std::forward<Range>(range), [](char16_t) static {});
+        }
+
+        template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
+        {
+            using expected_type = std::expected<void, utf16_error>;
+
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            std::size_t index = 0;
+
+            while (it != sentinel)
+            {
+                const std::size_t valid_up_to = index;
+
+                const char16_t first_code_unit = std::bit_cast<char16_t>(*it);
+                ++index, ++it;
+
+                if (impl::utf16::is_surrogate(first_code_unit))
+                {
+                    if (first_code_unit >= 0xDC00U)
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+
+                    if (it == sentinel)
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+
+                    const char16_t second_code_unit = std::bit_cast<char16_t>(*it);
+                    ++index, ++it;
+
+                    if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU)
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+
+                    std::uint32_t code_point =
+                        ((static_cast<std::uint32_t>(first_code_unit & 0x3FFU) << 10) | static_cast<std::uint32_t>(second_code_unit & 0x3FFU)) +
+                        0x10'000U;
+
+                    std::invoke(code_point_callback, uchar::from_unchecked(code_point));
+                }
+                else
+                {
+                    std::invoke(code_point_callback, uchar::from_unchecked(static_cast<std::uint32_t>(first_code_unit)));
+                }
+            }
+
+            return expected_type{};
+        }
+
+        template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
+        {
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            while (it != sentinel)
+            {
+                const char16_t first_code_unit = std::bit_cast<char16_t>(*it);
+                ++it;
+
+                if (impl::utf16::is_surrogate(first_code_unit))
+                {
+                    const char16_t second_code_unit = std::bit_cast<char16_t>(*it);
+                    ++it;
+
+                    std::uint32_t code_point =
+                        ((static_cast<std::uint32_t>(first_code_unit & 0x3FFU) << 10) | static_cast<std::uint32_t>(second_code_unit & 0x3FFU)) +
+                        0x10'000;
+
+                    std::invoke(code_point_callback, uchar::from_unchecked(code_point));
+                }
+                else
+                    std::invoke(code_point_callback, uchar::from_unchecked(static_cast<std::uint32_t>(first_code_unit)));
+            }
+        }
     };
 
     /// @copydoc encoding_traits
@@ -108,8 +483,89 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char32_t;
 
+        using error_type = utf32_error;
+
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = false;
+
+        template<typename T>
+        static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
+
+        template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
+        {
+            using expected_type = std::expected<void, utf32_error>;
+
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            std::size_t index = 0;
+
+            for (; it != sentinel; ++index, ++it)
+            {
+                const std::uint32_t code_unit = std::bit_cast<std::uint32_t>(*it);
+
+                if (!is_valid_usv(code_unit))
+                {
+                    return expected_type{std::unexpect, utf32_error{.valid_up_to = index}};
+                }
+
+                std::invoke(code_unit_callback, std::bit_cast<char32_t>(code_unit));
+            }
+
+            return expected_type{};
+        }
+
+        template<std::ranges::input_range Range>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
+        {
+            return validate_range(std::forward<Range>(range), [](char32_t) static {});
+        }
+
+        template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
+        {
+            using expected_type = std::expected<void, utf32_error>;
+
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            std::size_t index = 0;
+
+            for (; it != sentinel; ++index, ++it)
+            {
+                const std::uint32_t code_unit = std::bit_cast<std::uint32_t>(*it);
+
+                const std::optional<uchar> code_point = uchar::from(code_unit);
+
+                if (!code_point.has_value())
+                {
+                    return expected_type{std::unexpect, utf32_error{.valid_up_to = index}};
+                }
+
+                std::invoke(code_point_callback, *code_point);
+            }
+
+            return expected_type{};
+        }
+
+        template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
+            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+        static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
+        {
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            for (; it != sentinel; ++it)
+            {
+                const auto code_point = uchar::from_unchecked(std::bit_cast<std::uint32_t>(*it));
+
+                std::invoke(code_point_callback, code_point);
+            }
+        }
     };
 
     /// @brief Identifies types that could be used as a code unit type for a given encoding.

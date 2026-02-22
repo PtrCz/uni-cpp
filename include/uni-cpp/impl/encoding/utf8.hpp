@@ -3,20 +3,14 @@
 
 /// @file
 ///
-/// @brief UTF-8 validating and decoding.
+/// @brief UTF-8 validating and decoding helper functions.
 ///
-
-#include "../uchar.hpp"
-#include "../encoding.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <array>
 #include <bit>
 #include <span>
-#include <ranges>
-#include <expected>
-#include <functional>
 
 namespace upp
 {
@@ -96,14 +90,14 @@ namespace upp
 
         /// @return `0` on an invalid `leading_byte`, otherwise the byte length of a UTF-8-encoded code point starting with `leading_byte`.
         ///
-        [[nodiscard]] constexpr std::uint8_t char_width_from_leading_byte(std::uint8_t leading_byte) noexcept
+        [[nodiscard]] constexpr std::uint8_t char_width_from_leading_byte(char8_t leading_byte) noexcept
         {
             return char_width_from_leading_byte_table[static_cast<std::size_t>(leading_byte)];
         }
 
         /// @brief Checks whether `byte` is a UTF-8 leading byte (a code unit starting a new code point).
         ///
-        [[nodiscard]] constexpr bool is_leading_byte(std::uint8_t byte) noexcept
+        [[nodiscard]] constexpr bool is_leading_byte(char8_t byte) noexcept
         {
             return std::bit_cast<std::int8_t>(byte) >= -64;
         }
@@ -132,7 +126,7 @@ namespace upp
         ///
         /// @warning This function heavily relies on it's preconditions. Make sure they are properly followed.
         ///
-        [[nodiscard]] constexpr std::uint8_t get_error_length(std::span<std::uint8_t> code_units) noexcept
+        [[nodiscard]] constexpr std::uint8_t get_error_length(std::span<char8_t> code_units) noexcept
         {
             const auto leading_byte = code_units.front();
             const auto width        = char_width_from_leading_byte(leading_byte);
@@ -228,9 +222,9 @@ namespace upp
         class previous_code_units_buffer
         {
         public:
-            [[nodiscard]] constexpr std::array<std::uint8_t, 4> get_n(std::size_t n) const noexcept
+            [[nodiscard]] constexpr std::array<char8_t, 4> get_n(std::size_t n) const noexcept
             {
-                std::array<std::uint8_t, 4> result;
+                std::array<char8_t, 4> result;
 
                 if consteval
                 {
@@ -241,173 +235,22 @@ namespace upp
 
                 for (std::size_t iteration = 0, index = n; (index--) > 0; ++iteration)
                 {
-                    result[index] = buffer[iteration];
+                    result[index] = m_buffer[iteration];
                 }
 
                 return result;
             }
 
-            constexpr void push(std::uint8_t code_unit) noexcept
+            constexpr void push(char8_t code_unit) noexcept
             {
-                buffer[2] = buffer[1];
-                buffer[1] = buffer[0];
-                buffer[0] = code_unit;
+                m_buffer[2] = m_buffer[1];
+                m_buffer[1] = m_buffer[0];
+                m_buffer[0] = code_unit;
             }
 
         private:
-            std::array<std::uint8_t, 3> buffer{0, 0, 0};
+            std::array<char8_t, 3> m_buffer{0, 0, 0};
         };
-
-        template<std::ranges::input_range Range, std::invocable<std::uint8_t> CodeUnitCallback>
-            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>
-        [[nodiscard]] constexpr std::expected<void, utf8_error> validate_utf8(Range&& range, const CodeUnitCallback& code_unit_callback)
-        {
-            using expected_type = std::expected<void, utf8_error>;
-
-            auto       it       = std::ranges::begin(range);
-            const auto sentinel = std::ranges::end(range);
-
-            std::uint32_t state       = utf8::dfa::state::accept;
-            std::size_t   valid_up_to = 0;
-
-            previous_code_units_buffer previous_code_units;
-
-            for (std::size_t index = 0; it != sentinel; ++index, ++it)
-            {
-                const std::uint8_t current_code_unit = std::bit_cast<std::uint8_t>(*it);
-
-                const std::uint32_t type = utf8::dfa::character_class_from_byte[current_code_unit];
-
-                state = utf8::dfa::state_transition_table[state + type];
-
-                if (state == utf8::dfa::state::reject)
-                {
-                    const std::size_t invalid_code_units_length = index - valid_up_to + 1;
-
-                    std::array<std::uint8_t, 4> invalid_code_units = previous_code_units.get_n(invalid_code_units_length - 1);
-
-                    invalid_code_units[invalid_code_units_length - 1] = current_code_unit;
-
-                    const std::uint8_t error_length =
-                        utf8::get_error_length(std::span<std::uint8_t>{invalid_code_units.data(), invalid_code_units_length});
-
-                    return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = error_length}};
-                }
-
-                if (state == utf8::dfa::state::accept)
-                {
-                    valid_up_to = index + 1;
-                }
-
-                std::invoke(code_unit_callback, current_code_unit);
-
-                previous_code_units.push(current_code_unit);
-            }
-
-            // Check if the range ended in the middle of a code point.
-
-            if (state != utf8::dfa::state::accept)
-            {
-                return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = {std::nullopt}}};
-            }
-
-            return expected_type{};
-        }
-        template<std::ranges::input_range Range>
-            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>
-        [[nodiscard]] constexpr std::expected<void, utf8_error> validate_utf8(Range&& range)
-        {
-            return validate_utf8(std::forward<Range>(range), [](std::uint8_t) static {});
-        }
-
-        template<std::ranges::input_range Range, std::invocable<uchar> CodePointCallback>
-            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>
-        [[nodiscard]] constexpr std::expected<void, utf8_error> decode_utf8(Range&& range, const CodePointCallback& code_point_callback)
-        {
-            using expected_type = std::expected<void, utf8_error>;
-
-            auto       it       = std::ranges::begin(range);
-            const auto sentinel = std::ranges::end(range);
-
-            std::uint32_t state       = utf8::dfa::state::accept;
-            std::size_t   valid_up_to = 0;
-
-            std::uint32_t current_code_point;
-
-            previous_code_units_buffer previous_code_units;
-
-            for (std::size_t index = 0; it != sentinel; ++index, ++it)
-            {
-                const std::uint8_t current_code_unit = std::bit_cast<std::uint8_t>(*it);
-
-                const std::uint32_t type = utf8::dfa::character_class_from_byte[current_code_unit];
-
-                current_code_point = (state != utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6)
-                                                                         : (0xFF >> type) & (current_code_unit);
-
-                state = utf8::dfa::state_transition_table[state + type];
-
-                if (state == utf8::dfa::state::reject)
-                {
-                    const std::size_t invalid_code_units_length = index - valid_up_to + 1;
-
-                    std::array<std::uint8_t, 4> invalid_code_units = previous_code_units.get_n(invalid_code_units_length - 1);
-
-                    invalid_code_units[invalid_code_units_length - 1] = current_code_unit;
-
-                    const std::uint8_t error_length =
-                        utf8::get_error_length(std::span<std::uint8_t>{invalid_code_units.data(), invalid_code_units_length});
-
-                    return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = error_length}};
-                }
-
-                if (state == utf8::dfa::state::accept)
-                {
-                    valid_up_to = index + 1;
-
-                    std::invoke(code_point_callback, uchar::from_unchecked(current_code_point));
-                }
-
-                previous_code_units.push(current_code_unit);
-            }
-
-            // Check if the range ended in the middle of a code point.
-
-            if (state != utf8::dfa::state::accept)
-            {
-                return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = {std::nullopt}}};
-            }
-
-            return expected_type{};
-        }
-
-        template<std::ranges::input_range Range, std::invocable<uchar> CodePointCallback>
-            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>
-        constexpr void decode_utf8_unchecked(Range&& range, const CodePointCallback& code_point_callback)
-        {
-            auto       it       = std::ranges::begin(range);
-            const auto sentinel = std::ranges::end(range);
-
-            std::uint32_t state = utf8::dfa::state::accept;
-            std::uint32_t current_code_point;
-
-            for (; it != sentinel; ++it)
-            {
-                const std::uint8_t current_code_unit = std::bit_cast<std::uint8_t>(*it);
-
-                std::uint32_t type = utf8::dfa::character_class_from_byte[current_code_unit];
-
-                current_code_point = (state != utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6)
-                                                                         : (0xFF >> type) & (current_code_unit);
-
-                state = utf8::dfa::state_transition_table[state + type];
-
-                if (state == utf8::dfa::state::accept)
-                {
-                    std::invoke(code_point_callback, uchar::from_unchecked(current_code_point));
-                }
-            }
-        }
     } // namespace impl::utf8
 } // namespace upp
 

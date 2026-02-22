@@ -8,7 +8,6 @@
 
 #include "../../uchar.hpp"
 #include "../../encoding.hpp"
-#include "../utf8.hpp"
 
 #include "fwd.hpp"
 
@@ -344,6 +343,68 @@ namespace upp
         template<std::ranges::input_range Range>
             requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>
         [[nodiscard]] static constexpr basic_ustring from_utf8_unchecked(Range&& range);
+
+        /// @brief Constructs a `basic_ustring` from UTF-16 encoded data with error checking.
+        ///
+        /// @return `std::expected` containing the string on success, or a `utf16_error` on failure.
+        ///
+        /// If you are absolutely certain that `range` is valid UTF-16, you can use `from_utf16_unchecked` instead.
+        ///
+        /// @see from_utf16_unchecked
+        ///
+        /// @tparam Range Input range of UTF-16 code units. Needs to satisfy `std::ranges::input_range` and
+        /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf16>`.
+        ///
+        template<std::ranges::input_range Range>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf16>
+        [[nodiscard]] static constexpr std::expected<basic_ustring, utf16_error> from_utf16(Range&& range);
+
+        /// @brief Constructs a `basic_ustring` from UTF-16 encoded data without error checking.
+        ///
+        /// @pre `range` MUST be valid UTF-16.
+        ///
+        /// @warning If the precondition of this function isn't met, the behavior is undefined.
+        /// Use `from_utf16` as a safe alternative that performs validation.
+        ///
+        /// @see from_utf16
+        ///
+        /// @tparam Range Input range of UTF-16 code units. Needs to satisfy `std::ranges::input_range` and
+        /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf16>`.
+        ///
+        template<std::ranges::input_range Range>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf16>
+        [[nodiscard]] static constexpr basic_ustring from_utf16_unchecked(Range&& range);
+
+        /// @brief Constructs a `basic_ustring` from UTF-32 encoded data with error checking.
+        ///
+        /// @return `std::expected` containing the string on success, or a `utf32_error` on failure.
+        ///
+        /// If you are absolutely certain that `range` is valid UTF-32, you can use `from_utf32_unchecked` instead.
+        ///
+        /// @see from_utf32_unchecked
+        ///
+        /// @tparam Range Input range of UTF-32 code units. Needs to satisfy `std::ranges::input_range` and
+        /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf32>`.
+        ///
+        template<std::ranges::input_range Range>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf32>
+        [[nodiscard]] static constexpr std::expected<basic_ustring, utf32_error> from_utf32(Range&& range);
+
+        /// @brief Constructs a `basic_ustring` from UTF-32 encoded data without error checking.
+        ///
+        /// @pre `range` MUST be valid UTF-32.
+        ///
+        /// @warning If the precondition of this function isn't met, the behavior is undefined.
+        /// Use `from_utf32` as a safe alternative that performs validation.
+        ///
+        /// @see from_utf32
+        ///
+        /// @tparam Range Input range of UTF-32 code units. Needs to satisfy `std::ranges::input_range` and
+        /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf32>`.
+        ///
+        template<std::ranges::input_range Range>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf32>
+        [[nodiscard]] static constexpr basic_ustring from_utf32_unchecked(Range&& range);
 
         /// @brief Returns a `const` reference to the underlying container.
         ///

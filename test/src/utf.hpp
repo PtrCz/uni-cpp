@@ -150,25 +150,25 @@ namespace upp_test::utf
 
         return std::to_array<test_case>({
                {.input          = {0xD800}, // Isolated high surrogate (at the end)
-                .expected_error = {.valid_up_to = 0}
+                .expected_error = {.valid_up_to = 0, .error_length = std::nullopt}
 
             }, {.input          = {0xD800, u'A'}, // Isolated high surrogate (in the middle)
-                .expected_error = {.valid_up_to = 0}
+                .expected_error = {.valid_up_to = 0, .error_length = 1}
 
             }, {.input          = {0xDC00}, // Isolated low surrogate
-                .expected_error = {.valid_up_to = 0}
+                .expected_error = {.valid_up_to = 0, .error_length = 1}
 
             }, {.input          = {u'A', 0xDC00}, // Isolated low surrogate
-                .expected_error = {.valid_up_to = 1}
+                .expected_error = {.valid_up_to = 1, .error_length = 1}
 
             }, {.input          = {0xDC00, 0xD800}, // Reversed surrogate pair
-                .expected_error = {.valid_up_to = 0}
+                .expected_error = {.valid_up_to = 0, .error_length = 1}
 
             }, {.input          = {0xD800, 0xD801}, // High surrogate followed by high surrogate
-                .expected_error = {.valid_up_to = 0}
+                .expected_error = {.valid_up_to = 0, .error_length = 1}
 
             }, {.input          = {0xD83D, 0xDE00, 0xDC00}, // Valid surrogate pair followed by an isolated low surrogate
-                .expected_error = {.valid_up_to = 2}
+                .expected_error = {.valid_up_to = 2, .error_length = 1}
             },
         });
     }

@@ -11,6 +11,7 @@
 #include <array>
 #include <bit>
 #include <span>
+#include <optional>
 
 namespace upp
 {

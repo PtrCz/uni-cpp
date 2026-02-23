@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <utility>
 #include <concepts>
+#include <optional>
 #include <bit>
 #include <ranges>
 #include <expected>
@@ -467,16 +468,16 @@ namespace upp
                 if (impl::utf16::is_surrogate(first_code_unit))
                 {
                     if (first_code_unit >= 0xDC00U)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = 1}};
 
                     if (it == sentinel)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = std::nullopt}};
 
                     const char16_t second_code_unit = std::bit_cast<char16_t>(*it);
                     ++index, ++it;
 
                     if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = 1}};
 
                     std::invoke(code_unit_callback, second_code_unit);
                 }
@@ -532,16 +533,16 @@ namespace upp
                 if (impl::utf16::is_surrogate(first_code_unit))
                 {
                     if (first_code_unit >= 0xDC00U)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = 1}};
 
                     if (it == sentinel)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = std::nullopt}};
 
                     const char16_t second_code_unit = std::bit_cast<char16_t>(*it);
                     ++index, ++it;
 
                     if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to}};
+                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = 1}};
 
                     std::uint32_t code_point =
                         ((static_cast<std::uint32_t>(first_code_unit & 0x3FFU) << 10) | static_cast<std::uint32_t>(second_code_unit & 0x3FFU)) +

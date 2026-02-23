@@ -8,12 +8,14 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 namespace upp
 {
     struct utf16_error
     {
-        std::size_t valid_up_to;
+        std::size_t                 valid_up_to;
+        std::optional<std::uint8_t> error_length;
 
         [[nodiscard]] constexpr bool operator==(const utf16_error&) const noexcept = default;
     };

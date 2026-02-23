@@ -35,6 +35,23 @@ namespace upp_test
             callable.template operator()<StringTemplate<std::basic_string<CodeUnitType>>>();
         });
     }
+
+    template<typename Callable>
+    constexpr void run_for_each_encoding(const Callable& callable)
+    {
+        callable.template operator()<upp::encoding::ascii>();
+        callable.template operator()<upp::encoding::utf8>();
+        callable.template operator()<upp::encoding::utf16>();
+        callable.template operator()<upp::encoding::utf32>();
+    }
+
+    template<typename Callable>
+    constexpr void run_for_each_unicode_encoding(const Callable& callable)
+    {
+        callable.template operator()<upp::unicode_encoding::utf8>();
+        callable.template operator()<upp::unicode_encoding::utf16>();
+        callable.template operator()<upp::unicode_encoding::utf32>();
+    }
 } // namespace upp_test
 
 #endif // TEST_STRING_UTILITY_HPP

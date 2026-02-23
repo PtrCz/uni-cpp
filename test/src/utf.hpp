@@ -30,10 +30,12 @@ namespace upp_test::utf
 
     [[nodiscard]] constexpr auto valid_sequences()
     {
-#define TEST_UTF_SEQ(literal)                                                     \
-    utf_sequences                                                                 \
-    {                                                                             \
-        .utf8_seq = u8##literal, .utf16_seq = u##literal, .utf32_seq = U##literal \
+        using namespace std::string_literals;
+
+#define TEST_UTF_SEQ(literal)                                                              \
+    utf_sequences                                                                          \
+    {                                                                                      \
+        .utf8_seq = u8##literal##s, .utf16_seq = u##literal##s, .utf32_seq = U##literal##s \
     }
 
         return std::to_array<utf_sequences>(
@@ -134,6 +136,69 @@ namespace upp_test::utf
 
             }, {.input          = {0xED, 0xA1, 0xB4}, // Surrogate (0xD874)
                 .expected_error = {.valid_up_to = 0, .error_length = 1}
+            },
+        });
+    }
+
+    [[nodiscard]] constexpr auto invalid_utf16_test_cases()
+    {
+        struct test_case
+        {
+            std::u16string   input;
+            upp::utf16_error expected_error;
+        };
+
+        return std::to_array<test_case>({
+               {.input          = {0xD800}, // Isolated high surrogate (at the end)
+                .expected_error = {.valid_up_to = 0}
+
+            }, {.input          = {0xD800, u'A'}, // Isolated high surrogate (in the middle)
+                .expected_error = {.valid_up_to = 0}
+
+            }, {.input          = {0xDC00}, // Isolated low surrogate
+                .expected_error = {.valid_up_to = 0}
+
+            }, {.input          = {u'A', 0xDC00}, // Isolated low surrogate
+                .expected_error = {.valid_up_to = 1}
+
+            }, {.input          = {0xDC00, 0xD800}, // Reversed surrogate pair
+                .expected_error = {.valid_up_to = 0}
+
+            }, {.input          = {0xD800, 0xD801}, // High surrogate followed by high surrogate
+                .expected_error = {.valid_up_to = 0}
+
+            }, {.input          = {0xD83D, 0xDE00, 0xDC00}, // Valid surrogate pair followed by an isolated low surrogate
+                .expected_error = {.valid_up_to = 2}
+            },
+        });
+    }
+
+    [[nodiscard]] constexpr auto invalid_utf32_test_cases()
+    {
+        struct test_case
+        {
+            std::u32string   input;
+            upp::utf32_error expected_error;
+        };
+
+        return std::to_array<test_case>({
+               {.input          = {0xD800}, // Surrogate (high surrogate range)
+                .expected_error = {.valid_up_to = 0}
+
+            }, {.input          = {0xDFFF}, // Surrogate (low surrogate range)
+                .expected_error = {.valid_up_to = 0}
+
+            }, {.input          = {0x110000}, // Too Large
+                .expected_error = {.valid_up_to = 0}
+
+            }, {.input          = {0xFFFFFFFF}, // Too Large
+                .expected_error = {.valid_up_to = 0}
+
+            }, {.input          = {0x0041, 0xD834}, // Valid code point followed by a surrogate
+                .expected_error = {.valid_up_to = 1}
+
+            }, {.input          = {0x1F600, 0x110000}, // Valid code point followed by an out-of-range value
+                .expected_error = {.valid_up_to = 1}
             },
         });
     }

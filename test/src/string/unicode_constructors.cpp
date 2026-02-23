@@ -9,64 +9,112 @@
 #include "ranges.hpp"
 #include "../utf.hpp"
 
-TEST_CASE("upp::basic_ustring from_utf8()", "[UTF encoding][string types][Unicode string types]")
+TEST_CASE("upp::basic_ustring from_utf()", "[UTF encoding][string types][Unicode string types]")
 {
-    // `from_utf8` differs slightly in implementation depending on whether the argument is a bidirectional_range or not.
-    // Here we're testing it on both kinds of ranges.
+    auto from_utf = []<upp::unicode_encoding Encoding, typename StringType>(auto&& range) {
+        if constexpr (Encoding == upp::unicode_encoding::utf8)
+        {
+            return StringType::from_utf8(std::forward<decltype(range)>(range));
+        }
+        else if constexpr (Encoding == upp::unicode_encoding::utf16)
+        {
+            return StringType::from_utf16(std::forward<decltype(range)>(range));
+        }
+        else if constexpr (Encoding == upp::unicode_encoding::utf32)
+        {
+            return StringType::from_utf32(std::forward<decltype(range)>(range));
+        }
+    };
 
     SECTION("Correct transcoding")
     {
-        upp_test::run_for_each_unicode_string_type([&]<typename StringType>() {
-            for (const auto& sequences : upp_test::utf::valid_sequences())
-            {
-                upp_test::string_input_range<char8_t> input_range{std::u8string_view{sequences.utf8_seq}};
+        upp_test::run_for_each_unicode_encoding([&]<upp::unicode_encoding Encoding>() {
+            upp_test::run_for_each_unicode_string_type([&]<typename StringType>() {
+                using code_unit_type = upp::encoding_traits<static_cast<upp::encoding>(Encoding)>::default_code_unit_type;
 
-                const auto result             = StringType::from_utf8(sequences.utf8_seq);
-                const auto input_range_result = StringType::from_utf8(input_range);
+                for (const auto& sequences : upp_test::utf::valid_sequences())
+                {
+                    const auto& input_sequence = sequences.template encoded_with<Encoding>();
 
-                REQUIRE(result.has_value());
-                REQUIRE(input_range_result.has_value());
+                    upp_test::string_input_range<code_unit_type> input_range{std::basic_string_view<code_unit_type>{input_sequence}};
 
-                auto&& expected = sequences.template encoded_with<StringType::unicode_encoding_value>();
+                    const auto result             = from_utf.template operator()<Encoding, StringType>(input_sequence);
+                    const auto input_range_result = from_utf.template operator()<Encoding, StringType>(input_range);
 
-                CHECK(result->underlying() == expected);
-                CHECK(input_range_result->underlying() == expected);
-            }
+                    REQUIRE(result.has_value());
+                    REQUIRE(input_range_result.has_value());
+
+                    auto&& expected = sequences.template encoded_with<StringType::unicode_encoding_value>();
+
+                    CHECK(result->underlying() == expected);
+                    CHECK(input_range_result->underlying() == expected);
+                }
+            });
         });
     }
 
     SECTION("Detecting errors")
     {
-        upp_test::run_for_each_unicode_string_type([&]<typename StringType>() {
-            for (const auto& test_case : upp_test::utf::invalid_utf8_test_cases())
-            {
-                upp_test::string_input_range<char8_t> input_range{std::u8string_view{test_case.input}};
+        upp_test::run_for_each_unicode_encoding([&]<upp::unicode_encoding Encoding>() {
+            upp_test::run_for_each_unicode_string_type([&]<typename StringType>() {
+                using code_unit_type = upp::encoding_traits<static_cast<upp::encoding>(Encoding)>::default_code_unit_type;
 
-                const auto result             = StringType::from_utf8(test_case.input);
-                const auto input_range_result = StringType::from_utf8(input_range);
+                auto invalid_test_cases = []() {
+                    if constexpr (Encoding == upp::unicode_encoding::utf8)
+                        return upp_test::utf::invalid_utf8_test_cases();
+                    else if constexpr (Encoding == upp::unicode_encoding::utf16)
+                        return upp_test::utf::invalid_utf16_test_cases();
+                    else if constexpr (Encoding == upp::unicode_encoding::utf32)
+                        return upp_test::utf::invalid_utf32_test_cases();
+                };
 
-                REQUIRE_FALSE(result.has_value());
-                REQUIRE_FALSE(input_range_result.has_value());
+                for (const auto& test_case : invalid_test_cases())
+                {
+                    upp_test::string_input_range<code_unit_type> input_range{std::basic_string_view<code_unit_type>{test_case.input}};
 
-                CHECK(result.error() == test_case.expected_error);
-                CHECK(input_range_result.error() == test_case.expected_error);
-            }
+                    const auto result             = from_utf.template operator()<Encoding, StringType>(test_case.input);
+                    const auto input_range_result = from_utf.template operator()<Encoding, StringType>(input_range);
+
+                    REQUIRE(!result.has_value());
+                    REQUIRE(!input_range_result.has_value());
+
+                    CHECK(result.error() == test_case.expected_error);
+                    CHECK(input_range_result.error() == test_case.expected_error);
+                }
+            });
         });
     }
 }
-EVAL_TEST_CASE("upp::basic_ustring from_utf8()");
+EVAL_TEST_CASE("upp::basic_ustring from_utf()");
 
-TEST_CASE("upp::basic_ustring from_utf8_unchecked()", "[UTF encoding][string types][Unicode string types]")
+TEST_CASE("upp::basic_ustring from_utf_unchecked()", "[UTF encoding][string types][Unicode string types]")
 {
-    upp_test::run_for_each_unicode_string_type([&]<typename StringType>() {
-        for (const auto& sequences : upp_test::utf::valid_sequences())
-        {
-            const StringType result = StringType::from_utf8_unchecked(sequences.utf8_seq);
+    upp_test::run_for_each_unicode_encoding([&]<upp::unicode_encoding Encoding>() {
+        upp_test::run_for_each_unicode_string_type([&]<typename StringType>() {
+            auto from_unchecked = [](const auto& sequences) {
+                if constexpr (Encoding == upp::unicode_encoding::utf8)
+                {
+                    return StringType::from_utf8_unchecked(sequences.utf8_seq);
+                }
+                else if constexpr (Encoding == upp::unicode_encoding::utf16)
+                {
+                    return StringType::from_utf16_unchecked(sequences.utf16_seq);
+                }
+                else if constexpr (Encoding == upp::unicode_encoding::utf32)
+                {
+                    return StringType::from_utf32_unchecked(sequences.utf32_seq);
+                }
+            };
 
-            const auto& expected = sequences.template encoded_with<StringType::unicode_encoding_value>();
+            for (const auto& sequences : upp_test::utf::valid_sequences())
+            {
+                const StringType result = from_unchecked(sequences);
 
-            CHECK(result.underlying() == expected);
-        }
+                const auto& expected = sequences.template encoded_with<StringType::unicode_encoding_value>();
+
+                CHECK(result.underlying() == expected);
+            }
+        });
     });
 }
-EVAL_TEST_CASE("upp::basic_ustring from_utf8_unchecked()");
+EVAL_TEST_CASE("upp::basic_ustring from_utf_unchecked()");

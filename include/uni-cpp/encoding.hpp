@@ -66,14 +66,28 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char;
 
+        /// Error type returned by ASCII validating, decoding and transcoding functions.
         using error_type = ascii_error;
 
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = false;
 
+        /// `true` iff type `T` could be used as a code unit type for the ASCII encoding.
         template<typename T>
         static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
 
+        /// @brief Validates a range of ASCII.
+        ///
+        /// @param range Range of ASCII code units (ASCII character codes) to verify.
+        ///
+        /// @param code_unit_callback Callback function called with every code unit (character code) of the range (unless the range is invalid ASCII).
+        /// It should have exactly one parameter of type `char`.
+        /// This makes it possible to use this function with single-pass ranges while also getting the code units out of that range.
+        ///
+        /// @return `std::expected<void, ascii_error>` containing: `void` if the range is valid ASCII, otherwise `ascii_error`.
+        ///
+        /// @see decode_range, decode_range_unchecked
+        ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
@@ -100,6 +114,14 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Validates a range of ASCII.
+        ///
+        /// @param range Range of ASCII code units (ASCII character codes) to verify.
+        ///
+        /// @return `std::expected<void, ascii_error>` containing: `void` if the range is valid ASCII, otherwise `ascii_error`.
+        ///
+        /// @see decode_range, decode_range_unchecked
+        ///
         template<std::ranges::input_range Range>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
@@ -107,6 +129,17 @@ namespace upp
             return validate_range(std::forward<Range>(range), [](char) static {});
         }
 
+        /// @brief Decodes a range of ASCII with error checking.
+        ///
+        /// @param range Range of ASCII code units (ASCII character codes) to decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded ASCII character.
+        /// It should have exactly one parameter of type `upp::ascii_char`.
+        ///
+        /// @return `std::expected<void, ascii_error>` containing: `void` if no error occurs, otherwise `ascii_error`.
+        ///
+        /// @see decode_range_unchecked, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
@@ -135,6 +168,15 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Decodes a range of ASCII without error checking.
+        ///
+        /// @param range Range of ASCII code units (ASCII character codes) to decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded ASCII character.
+        /// It should have exactly one parameter of type `upp::ascii_char`.
+        ///
+        /// @see decode_range, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
@@ -164,14 +206,28 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char8_t;
 
+        /// Error type returned by UTF-8 validating, decoding and transcoding functions.
         using error_type = utf8_error;
 
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = true;
 
+        /// `true` iff type `T` could be used as a code unit type for the UTF-8 encoding.
         template<typename T>
         static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
 
+        /// @brief Validates a range of UTF-8.
+        ///
+        /// @param range Range of UTF-8 code units to verify.
+        ///
+        /// @param code_unit_callback Callback function called with every code unit of the range (unless the range is invalid UTF-8).
+        /// It should have exactly one parameter of type `char8_t`.
+        /// This makes it possible to use this function with single-pass ranges while also getting the code units out of that range.
+        ///
+        /// @return `std::expected<void, utf8_error>` containing: `void` if the range is valid UTF-8, otherwise `utf8_error`.
+        ///
+        /// @see decode_range, decode_range_unchecked
+        ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
@@ -228,6 +284,14 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Validates a range of UTF-8.
+        ///
+        /// @param range Range of UTF-8 code units to verify.
+        ///
+        /// @return `std::expected<void, utf8_error>` containing: `void` if the range is valid UTF-8, otherwise `utf8_error`.
+        ///
+        /// @see decode_range, decode_range_unchecked
+        ///
         template<std::ranges::input_range Range>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
@@ -235,6 +299,17 @@ namespace upp
             return validate_range(std::forward<Range>(range), [](char8_t) static {});
         }
 
+        /// @brief Decodes a range of UTF-8 with error checking.
+        ///
+        /// @param range Range of UTF-8 code units to decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded code point.
+        /// It should have exactly one parameter of type `upp::uchar`.
+        ///
+        /// @return `std::expected<void, utf8_error>` containing: `void` if no error occurs, otherwise `utf8_error`.
+        ///
+        /// @see decode_range_unchecked, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
@@ -296,6 +371,15 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Decodes a range of UTF-8 without error checking.
+        ///
+        /// @param range Range of UTF-8 code units to decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded code point.
+        /// It should have exactly one parameter of type `upp::uchar`.
+        ///
+        /// @see decode_range, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
@@ -338,14 +422,28 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char16_t;
 
+        /// Error type returned by UTF-16 validating, decoding and transcoding functions.
         using error_type = utf16_error;
 
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = true;
 
+        /// `true` iff type `T` could be used as a code unit type for the UTF-16 encoding.
         template<typename T>
         static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
 
+        /// @brief Validates a range of UTF-16.
+        ///
+        /// @param range Range of UTF-16 code units to verify.
+        ///
+        /// @param code_unit_callback Callback function called with every code unit of the range (unless the range is invalid UTF-16).
+        /// It should have exactly one parameter of type `char16_t`.
+        /// This makes it possible to use this function with single-pass ranges while also getting the code units out of that range.
+        ///
+        /// @return `std::expected<void, utf16_error>` containing: `void` if the range is valid UTF-16, otherwise `utf16_error`.
+        ///
+        /// @see decode_range, decode_range_unchecked
+        ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
@@ -387,6 +485,14 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Validates a range of UTF-16.
+        ///
+        /// @param range Range of UTF-16 code units to verify.
+        ///
+        /// @return `std::expected<void, utf16_error>` containing: `void` if the range is valid UTF-16, otherwise `utf16_error`.
+        ///
+        /// @see decode_range, decode_range_unchecked
+        ///
         template<std::ranges::input_range Range>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
@@ -394,6 +500,17 @@ namespace upp
             return validate_range(std::forward<Range>(range), [](char16_t) static {});
         }
 
+        /// @brief Decodes a range of UTF-16 with error checking.
+        ///
+        /// @param range Range of UTF-16 code units to decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded code point.
+        /// It should have exactly one parameter of type `upp::uchar`.
+        ///
+        /// @return `std::expected<void, utf16_error>` containing: `void` if no error occurs, otherwise `utf16_error`.
+        ///
+        /// @see decode_range_unchecked, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
@@ -441,6 +558,15 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Decodes a range of UTF-16 without error checking.
+        ///
+        /// @param range Range of UTF-16 code units to decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded code point.
+        /// It should have exactly one parameter of type `upp::uchar`.
+        ///
+        /// @see decode_range, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
@@ -483,14 +609,28 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char32_t;
 
+        /// Error type returned by UTF-32 validating, decoding and transcoding functions.
         using error_type = utf32_error;
 
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = false;
 
+        /// `true` iff type `T` could be used as a code unit type for the UTF-32 encoding.
         template<typename T>
         static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
 
+        /// @brief Validates a range of UTF-32.
+        ///
+        /// @param range Range of UTF-32 code units to verify.
+        ///
+        /// @param code_unit_callback Callback function called with every code unit of the range (unless the range is invalid UTF-32).
+        /// It should have exactly one parameter of type `char32_t`.
+        /// This makes it possible to use this function with single-pass ranges while also getting the code units out of that range.
+        ///
+        /// @return `std::expected<void, utf32_error>` containing: `void` if the range is valid UTF-32, otherwise `utf32_error`.
+        ///
+        /// @see decode_range, decode_range_unchecked
+        ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
@@ -517,6 +657,14 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Validates a range of UTF-32.
+        ///
+        /// @param range Range of UTF-32 code units to verify.
+        ///
+        /// @return `std::expected<void, utf32_error>` containing: `void` if the range is valid UTF-32, otherwise `utf32_error`.
+        ///
+        /// @see decode_range, decode_range_unchecked
+        ///
         template<std::ranges::input_range Range>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
@@ -524,6 +672,17 @@ namespace upp
             return validate_range(std::forward<Range>(range), [](char32_t) static {});
         }
 
+        /// @brief Decodes a range of UTF-32 with error checking.
+        ///
+        /// @param range Range of UTF-32 code units to decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded code point.
+        /// It should have exactly one parameter of type `upp::uchar`.
+        ///
+        /// @return `std::expected<void, utf32_error>` containing: `void` if no error occurs, otherwise `utf32_error`.
+        ///
+        /// @see decode_range_unchecked, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
@@ -552,6 +711,15 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Decodes a range of UTF-32 without error checking.
+        ///
+        /// @param range Range of UTF-32 code units to decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded code point.
+        /// It should have exactly one parameter of type `upp::uchar`.
+        ///
+        /// @see decode_range, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)

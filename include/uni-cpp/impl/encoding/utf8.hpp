@@ -129,101 +129,25 @@ namespace upp
         ///
         [[nodiscard]] constexpr std::uint8_t get_error_length(std::span<char8_t> code_units) noexcept
         {
-            const auto leading_byte = code_units.front();
-            const auto width        = char_width_from_leading_byte(leading_byte);
+            // Every error in UTF-8 other than 'Too Short' can be detected either in the first or the second byte of a code point.
+            // Since the last byte of `code_units` is the first byte to cause the error, if there is less than 3 bytes,
+            // the error was detected in either the first or the second byte (which includes all errors other than 'Too Short').
+            // For all errors other than 'Too Short', the error length is 1.
+            // For all 'Too Short' errors caused by all continuation bytes missing, the error length is 1 too, and all such sequences would have exactly 2 bytes.
 
-            // Note: many of the branches are omitted because of the preconditions that `code_units` have to be invalid in a specific way.
+            // For the left 'Too Short' errors, the error length can always be calculated by subtracting the byte that caused the error.
+            // This works, because the result is the length of the sequence that unexpectedly ended, which is the error length for the 'Too Short' errors.
 
-            switch (width)
-            {
-            // case 1 should never trigger under the specified preconditions
-            // case 2 is handled by the default case already
-            case 3: {
-                const auto second_byte = code_units[1uz];
-
-                switch (leading_byte)
-                {
-                case 0xE0: {
-                    return (second_byte >= 0xA0U && second_byte <= 0xBFU) ? 2 : 1;
-                }
-                case 0xE1: [[fallthrough]];
-                case 0xE2: [[fallthrough]];
-                case 0xE3: [[fallthrough]];
-                case 0xE4: [[fallthrough]];
-                case 0xE5: [[fallthrough]];
-                case 0xE6: [[fallthrough]];
-                case 0xE7: [[fallthrough]];
-                case 0xE8: [[fallthrough]];
-                case 0xE9: [[fallthrough]];
-                case 0xEA: [[fallthrough]];
-                case 0xEB: [[fallthrough]];
-                case 0xEC: {
-                    return (second_byte >= 0x80U && second_byte <= 0xBFU) ? 2 : 1;
-                }
-                case 0xED: {
-                    return (second_byte >= 0x80U && second_byte <= 0x9FU) ? 2 : 1;
-                }
-                case 0xEE: [[fallthrough]];
-                case 0xEF: {
-                    return (second_byte >= 0x80U && second_byte <= 0xBFU) ? 2 : 1;
-                }
-                default: {
-                    return 1;
-                }
-                }
-            }
-            case 4: {
-                const auto second_byte = code_units[1uz];
-
-                switch (leading_byte)
-                {
-                case 0xF0: {
-                    if (second_byte < 0x90U || second_byte > 0xBFU)
-                        return 1;
-                    else
-                        break;
-                }
-                case 0xF1: [[fallthrough]];
-                case 0xF2: [[fallthrough]];
-                case 0xF3: {
-                    if (second_byte < 0x80U || second_byte > 0xBFU)
-                        return 1;
-                    else
-                        break;
-                }
-                case 0xF4: {
-                    if (second_byte < 0x80U || second_byte > 0x8FU)
-                        return 1;
-                    else
-                        break;
-                }
-                default: {
-                    return 1;
-                }
-                }
-
-                if (is_leading_byte(code_units[2uz]))
-                    return 2;
-
-                return 3;
-            }
-            default: {
-                // Handles invalid leading bytes and invalid 2-byte-long sequences.
-
-                // Note: invalid 2-byte-long sequences are always caused by
-                // either the leading byte being invalid (overlong error being detected early),
-                // or the second byte not being a continuation byte.
-                // In both of these cases the number of bytes to skip would be 1.
-
+            if (code_units.size() < 3uz)
                 return 1;
-            }
-            }
+            else
+                return static_cast<std::uint8_t>(code_units.size() - 1uz);
         }
 
-        class previous_code_units_buffer
+        class small_code_unit_container
         {
         public:
-            [[nodiscard]] constexpr std::array<char8_t, 4> get_n(std::size_t n) const noexcept
+            [[nodiscard]] constexpr std::array<char8_t, 4> get_buffer() const noexcept
             {
                 std::array<char8_t, 4> result;
 
@@ -234,23 +158,57 @@ namespace upp
                     result.fill(0);
                 }
 
-                for (std::size_t iteration = 0, index = n; (index--) > 0; ++iteration)
-                {
-                    result[index] = m_buffer[iteration];
-                }
+                for (std::size_t i = 0uz; i < max_buffer_size; ++i)
+                    result[i] = m_buffer[i];
 
                 return result;
             }
 
-            constexpr void push(char8_t code_unit) noexcept
+            [[nodiscard]] constexpr std::size_t size() const noexcept { return static_cast<std::size_t>(m_size); }
+
+            [[nodiscard]] constexpr bool empty() const noexcept { return m_size == 0; }
+
+            [[nodiscard]] constexpr decltype(auto) operator[](this auto&& self, std::size_t index) noexcept
             {
-                m_buffer[2] = m_buffer[1];
-                m_buffer[1] = m_buffer[0];
-                m_buffer[0] = code_unit;
+                return std::forward<decltype(self)>(self).m_buffer[index];
             }
 
+            constexpr void push_front(char8_t code_unit) noexcept
+            {
+                for (std::size_t index = m_size; (index--) > 0;)
+                {
+                    m_buffer[index + 1] = m_buffer[index];
+                }
+                m_buffer.front() = code_unit;
+
+                ++m_size;
+            }
+
+            constexpr void push_back(char8_t code_unit) noexcept { m_buffer[m_size++] = code_unit; }
+
+            constexpr char8_t pop_front() noexcept
+            {
+                const char8_t front_value = m_buffer.front();
+
+                for (std::size_t i = 1; i < m_size; ++i)
+                {
+                    m_buffer[i - 1] = m_buffer[i];
+                }
+
+                --m_size;
+                return front_value;
+            }
+
+            constexpr char8_t pop_back() noexcept { return m_buffer[--m_size]; }
+
+            constexpr void clear() noexcept { m_size = 0; }
+
         private:
-            std::array<char8_t, 3> m_buffer{0, 0, 0};
+            static constexpr std::size_t max_buffer_size = 3;
+
+        private:
+            std::array<char8_t, max_buffer_size> m_buffer{};
+            std::uint8_t                         m_size{0};
         };
     } // namespace impl::utf8
 } // namespace upp

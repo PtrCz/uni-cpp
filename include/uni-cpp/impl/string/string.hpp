@@ -319,7 +319,7 @@ namespace upp
         ///
         /// If you are absolutely certain that `range` is valid UTF-8, you can use `from_utf8_unchecked` instead.
         ///
-        /// @see from_utf8_unchecked
+        /// @see from_utf8_lossy, from_utf8_unchecked
         ///
         /// @tparam Range Input range of UTF-8 code units. Needs to satisfy `std::ranges::input_range` and
         /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf8>`.
@@ -328,6 +328,17 @@ namespace upp
             requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>
         [[nodiscard]] static constexpr std::expected<basic_ustring, utf8_error> from_utf8(Range&& range);
 
+        /// @brief Constructs a `basic_ustring` from UTF-8 encoded data, replacing decoding errors with `uchar::replacement_character()`s.
+        ///
+        /// @see from_utf8, from_utf8_unchecked
+        ///
+        /// @tparam Range Input range of UTF-8 code units. Needs to satisfy `std::ranges::input_range` and
+        /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf8>`.
+        ///
+        template<std::ranges::input_range Range>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>
+        [[nodiscard]] static constexpr basic_ustring from_utf8_lossy(Range&& range);
+
         /// @brief Constructs a `basic_ustring` from UTF-8 encoded data without error checking.
         ///
         /// @pre `range` MUST be valid UTF-8.
@@ -335,7 +346,7 @@ namespace upp
         /// @warning If the precondition of this function isn't met, the behavior is undefined.
         /// Use `from_utf8` as a safe alternative that performs validation.
         ///
-        /// @see from_utf8
+        /// @see from_utf8, from_utf8_lossy
         ///
         /// @tparam Range Input range of UTF-8 code units. Needs to satisfy `std::ranges::input_range` and
         /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf8>`.
@@ -350,7 +361,7 @@ namespace upp
         ///
         /// If you are absolutely certain that `range` is valid UTF-16, you can use `from_utf16_unchecked` instead.
         ///
-        /// @see from_utf16_unchecked
+        /// @see from_utf16_lossy, from_utf16_unchecked
         ///
         /// @tparam Range Input range of UTF-16 code units. Needs to satisfy `std::ranges::input_range` and
         /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf16>`.
@@ -359,6 +370,17 @@ namespace upp
             requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf16>
         [[nodiscard]] static constexpr std::expected<basic_ustring, utf16_error> from_utf16(Range&& range);
 
+        /// @brief Constructs a `basic_ustring` from UTF-16 encoded data, replacing decoding errors with `uchar::replacement_character()`s.
+        ///
+        /// @see from_utf16, from_utf16_unchecked
+        ///
+        /// @tparam Range Input range of UTF-16 code units. Needs to satisfy `std::ranges::input_range` and
+        /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf16>`.
+        ///
+        template<std::ranges::input_range Range>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf16>
+        [[nodiscard]] static constexpr basic_ustring from_utf16_lossy(Range&& range);
+
         /// @brief Constructs a `basic_ustring` from UTF-16 encoded data without error checking.
         ///
         /// @pre `range` MUST be valid UTF-16.
@@ -366,7 +388,7 @@ namespace upp
         /// @warning If the precondition of this function isn't met, the behavior is undefined.
         /// Use `from_utf16` as a safe alternative that performs validation.
         ///
-        /// @see from_utf16
+        /// @see from_utf16, from_utf16_lossy
         ///
         /// @tparam Range Input range of UTF-16 code units. Needs to satisfy `std::ranges::input_range` and
         /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf16>`.
@@ -381,7 +403,7 @@ namespace upp
         ///
         /// If you are absolutely certain that `range` is valid UTF-32, you can use `from_utf32_unchecked` instead.
         ///
-        /// @see from_utf32_unchecked
+        /// @see from_utf32_lossy, from_utf32_unchecked
         ///
         /// @tparam Range Input range of UTF-32 code units. Needs to satisfy `std::ranges::input_range` and
         /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf32>`.
@@ -390,6 +412,17 @@ namespace upp
             requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf32>
         [[nodiscard]] static constexpr std::expected<basic_ustring, utf32_error> from_utf32(Range&& range);
 
+        /// @brief Constructs a `basic_ustring` from UTF-32 encoded data, replacing decoding errors with `uchar::replacement_character()`s.
+        ///
+        /// @see from_utf32, from_utf32_unchecked
+        ///
+        /// @tparam Range Input range of UTF-32 code units. Needs to satisfy `std::ranges::input_range` and
+        /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf32>`.
+        ///
+        template<std::ranges::input_range Range>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf32>
+        [[nodiscard]] static constexpr basic_ustring from_utf32_lossy(Range&& range);
+
         /// @brief Constructs a `basic_ustring` from UTF-32 encoded data without error checking.
         ///
         /// @pre `range` MUST be valid UTF-32.
@@ -397,7 +430,7 @@ namespace upp
         /// @warning If the precondition of this function isn't met, the behavior is undefined.
         /// Use `from_utf32` as a safe alternative that performs validation.
         ///
-        /// @see from_utf32
+        /// @see from_utf32, from_utf32_lossy
         ///
         /// @tparam Range Input range of UTF-32 code units. Needs to satisfy `std::ranges::input_range` and
         /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::utf32>`.

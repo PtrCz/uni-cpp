@@ -59,16 +59,7 @@ TEST_CASE("upp::basic_ustring from_utf()", "[UTF encoding][string types][Unicode
             upp_test::run_for_each_unicode_string_type([&]<typename StringType>() {
                 using code_unit_type = upp::encoding_traits<static_cast<upp::encoding>(Encoding)>::default_code_unit_type;
 
-                auto invalid_test_cases = []() {
-                    if constexpr (Encoding == upp::unicode_encoding::utf8)
-                        return upp_test::utf::invalid_utf8_test_cases();
-                    else if constexpr (Encoding == upp::unicode_encoding::utf16)
-                        return upp_test::utf::invalid_utf16_test_cases();
-                    else if constexpr (Encoding == upp::unicode_encoding::utf32)
-                        return upp_test::utf::invalid_utf32_test_cases();
-                };
-
-                for (const auto& test_case : invalid_test_cases())
+                for (const auto& test_case : upp_test::utf::invalid_test_cases_for_encoding<Encoding>())
                 {
                     upp_test::string_input_range<code_unit_type> input_range{std::basic_string_view<code_unit_type>{test_case.input}};
 
@@ -86,6 +77,44 @@ TEST_CASE("upp::basic_ustring from_utf()", "[UTF encoding][string types][Unicode
     }
 }
 EVAL_TEST_CASE("upp::basic_ustring from_utf()");
+
+TEST_CASE("upp::basic_ustring from_utf_lossy()", "[UTF encoding][string types][Unicode string types]")
+{
+    auto from_utf_lossy = []<upp::unicode_encoding SourceEncoding, typename StringType>(auto&& range) {
+        if constexpr (SourceEncoding == upp::unicode_encoding::utf8)
+        {
+            return StringType::from_utf8_lossy(std::forward<decltype(range)>(range));
+        }
+        else if constexpr (SourceEncoding == upp::unicode_encoding::utf16)
+        {
+            return StringType::from_utf16_lossy(std::forward<decltype(range)>(range));
+        }
+        else if constexpr (SourceEncoding == upp::unicode_encoding::utf32)
+        {
+            return StringType::from_utf32_lossy(std::forward<decltype(range)>(range));
+        }
+    };
+
+    upp_test::run_for_each_unicode_encoding([&]<upp::unicode_encoding SourceEncoding>() {
+        upp_test::run_for_each_unicode_string_type([&]<typename StringType>() {
+            using code_unit_type = upp::encoding_traits<static_cast<upp::encoding>(SourceEncoding)>::default_code_unit_type;
+
+            for (const auto& test_case : upp_test::utf::invalid_test_cases_for_encoding<SourceEncoding>())
+            {
+                upp_test::string_input_range<code_unit_type> input_range{std::basic_string_view<code_unit_type>{test_case.input}};
+
+                const auto result             = from_utf_lossy.template operator()<SourceEncoding, StringType>(test_case.input);
+                const auto input_range_result = from_utf_lossy.template operator()<SourceEncoding, StringType>(input_range);
+
+                auto&& expected = test_case.template encoded_lossily_with<StringType::unicode_encoding_value>();
+
+                CHECK(result.underlying() == expected);
+                CHECK(input_range_result.underlying() == expected);
+            }
+        });
+    });
+}
+EVAL_TEST_CASE("upp::basic_ustring from_utf_lossy()");
 
 TEST_CASE("upp::basic_ustring from_utf_unchecked()", "[UTF encoding][string types][Unicode string types]")
 {

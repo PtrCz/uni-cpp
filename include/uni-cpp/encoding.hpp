@@ -256,9 +256,6 @@ namespace upp
             std::uint32_t state       = impl::utf8::dfa::state::accept;
             std::size_t   valid_up_to = 0;
 
-            // Code units of the code point that is currently being decoded.
-            impl::utf8::small_code_unit_container current_code_point_units;
-
             for (std::size_t index = 0; it != sentinel; ++index, ++it)
             {
                 const char8_t current_code_unit = std::bit_cast<char8_t>(*it);
@@ -269,26 +266,15 @@ namespace upp
 
                 if (state == impl::utf8::dfa::state::reject)
                 {
-                    const std::size_t invalid_code_units_length = current_code_point_units.size() + 1uz; // add 1 for `current_code_unit`
+                    const std::size_t invalid_code_units_length = index - valid_up_to + 1uz;
 
-                    std::array<char8_t, 4> invalid_code_units = current_code_point_units.get_buffer();
-
-                    // `current_code_unit` wasn't added yet to `current_code_point_units`.
-                    invalid_code_units[invalid_code_units_length - 1] = current_code_unit;
-
-                    const std::uint8_t error_length =
-                        impl::utf8::get_error_length(std::span<char8_t>{invalid_code_units.data(), invalid_code_units_length});
+                    const std::uint8_t error_length = impl::utf8::get_error_length_from_invalid_code_units_length(invalid_code_units_length);
 
                     return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = error_length}};
                 }
 
                 if (state == impl::utf8::dfa::state::accept)
-                {
                     valid_up_to = index + 1;
-                    current_code_point_units.clear();
-                }
-                else
-                    current_code_point_units.push_back(current_code_unit);
 
                 std::invoke(code_unit_callback, current_code_unit);
             }
@@ -343,9 +329,6 @@ namespace upp
 
             std::uint32_t current_code_point;
 
-            // Code units of the code point that is currently being decoded.
-            impl::utf8::small_code_unit_container current_code_point_units;
-
             for (std::size_t index = 0; it != sentinel; ++index, ++it)
             {
                 const char8_t current_code_unit = std::bit_cast<char8_t>(*it);
@@ -359,14 +342,9 @@ namespace upp
 
                 if (state == impl::utf8::dfa::state::reject)
                 {
-                    const std::size_t invalid_code_units_length = current_code_point_units.size() + 1uz;
+                    const std::size_t invalid_code_units_length = index - valid_up_to + 1uz;
 
-                    std::array<char8_t, 4> invalid_code_units = current_code_point_units.get_buffer();
-
-                    invalid_code_units[invalid_code_units_length - 1] = current_code_unit;
-
-                    const std::uint8_t error_length =
-                        impl::utf8::get_error_length(std::span<char8_t>{invalid_code_units.data(), invalid_code_units_length});
+                    const std::uint8_t error_length = impl::utf8::get_error_length_from_invalid_code_units_length(invalid_code_units_length);
 
                     return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = error_length}};
                 }
@@ -374,12 +352,9 @@ namespace upp
                 if (state == impl::utf8::dfa::state::accept)
                 {
                     valid_up_to = index + 1;
-                    current_code_point_units.clear();
 
                     std::invoke(code_point_callback, uchar::from_unchecked(current_code_point));
                 }
-                else
-                    current_code_point_units.push_back(current_code_unit);
             }
 
             // Check if the range ended in the middle of a code point.
@@ -403,27 +378,23 @@ namespace upp
 
             std::uint32_t current_code_point;
 
-            // Code units of the code point that is currently being decoded.
-            // Keep track of them to calculate error length and reuse them if an error occurs.
-            impl::utf8::small_code_unit_container current_code_point_units;
+            std::uint8_t code_units_since_last_state_accept = 1;
 
-            // Code unit to reuse due to an error that happened.
-            std::optional<char8_t> code_unit_to_reuse;
+            // Reuse the previous code unit due to an error that happened.
+            // Note: there is no error under which multiple code units would need to be reused.
+            bool reuse_previous_code_unit = false;
 
-            while (code_unit_to_reuse.has_value() || it != sentinel)
+            char8_t current_code_unit;
+
+            for (; reuse_previous_code_unit || it != sentinel; ++code_units_since_last_state_accept)
             {
-                char8_t current_code_unit;
-
-                if (code_unit_to_reuse.has_value())
-                {
-                    current_code_unit = *code_unit_to_reuse;
-                    code_unit_to_reuse.reset();
-                }
-                else
+                if (!reuse_previous_code_unit)
                 {
                     current_code_unit = std::bit_cast<char8_t>(*it);
                     ++it;
                 }
+                else
+                    reuse_previous_code_unit = false;
 
                 const std::uint32_t type = impl::utf8::dfa::character_class_from_byte[current_code_unit];
 
@@ -434,32 +405,22 @@ namespace upp
 
                 if (state == impl::utf8::dfa::state::reject)
                 {
-                    const std::size_t invalid_code_units_length = current_code_point_units.size() + 1uz;
-
-                    std::array<char8_t, 4> invalid_code_units = current_code_point_units.get_buffer();
-
-                    invalid_code_units[invalid_code_units_length - 1] = current_code_unit;
-
-                    const std::uint8_t error_length =
-                        impl::utf8::get_error_length(std::span<char8_t>{invalid_code_units.data(), invalid_code_units_length});
+                    const std::uint8_t error_length = impl::utf8::get_error_length_from_invalid_code_units_length(code_units_since_last_state_accept);
 
                     std::invoke(code_point_callback, uchar::replacement_character());
 
-                    state = impl::utf8::dfa::state::accept;
+                    if (error_length < code_units_since_last_state_accept)
+                        reuse_previous_code_unit = true;
 
-                    if (error_length < invalid_code_units_length)
-                        code_unit_to_reuse.emplace(invalid_code_units[error_length]);
-
-                    current_code_point_units.clear();
+                    state                              = impl::utf8::dfa::state::accept;
+                    code_units_since_last_state_accept = 0;
                 }
                 else if (state == impl::utf8::dfa::state::accept)
                 {
-                    current_code_point_units.clear();
+                    code_units_since_last_state_accept = 0;
 
                     std::invoke(code_point_callback, uchar::from_unchecked(current_code_point));
                 }
-                else
-                    current_code_point_units.push_back(current_code_unit);
             }
 
             // Check if the range ended in the middle of a code point.
@@ -664,24 +625,24 @@ namespace upp
             auto       it       = std::ranges::begin(range);
             const auto sentinel = std::ranges::end(range);
 
-            // Code unit to reuse due to an error that happened.
-            // If the second code unit of a code point is found to be invalid, then it needs to be processed again (reused).
-            // Note that the range may be a single-pass range meaning it is neither bidirectional nor `reusable`.
-            std::optional<char16_t> code_unit_to_reuse{std::nullopt};
+            // Reuse the previous code unit due to an error that happened.
+            bool reuse_previous_code_unit = false;
 
-            while (code_unit_to_reuse.has_value() || it != sentinel)
+            char16_t previous_code_unit;
+
+            while (reuse_previous_code_unit || it != sentinel)
             {
                 char16_t first_code_unit;
 
-                if (code_unit_to_reuse.has_value())
-                {
-                    first_code_unit = *code_unit_to_reuse;
-                    code_unit_to_reuse.reset();
-                }
-                else
+                if (!reuse_previous_code_unit)
                 {
                     first_code_unit = std::bit_cast<char16_t>(*it);
                     ++it;
+                }
+                else
+                {
+                    first_code_unit          = previous_code_unit;
+                    reuse_previous_code_unit = false;
                 }
 
                 if (impl::utf16::is_surrogate(first_code_unit))
@@ -704,7 +665,8 @@ namespace upp
                     if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU)
                     {
                         std::invoke(code_point_callback, uchar::replacement_character());
-                        code_unit_to_reuse.emplace(second_code_unit);
+                        reuse_previous_code_unit = true;
+                        previous_code_unit       = second_code_unit;
                         continue;
                     }
 

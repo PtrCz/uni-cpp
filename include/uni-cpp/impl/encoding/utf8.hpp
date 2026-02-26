@@ -10,7 +10,6 @@
 #include <cstdint>
 #include <array>
 #include <bit>
-#include <span>
 #include <optional>
 
 namespace upp
@@ -103,113 +102,34 @@ namespace upp
             return std::bit_cast<std::int8_t>(byte) >= -64;
         }
 
-        /// @brief Get the number of bytes to skip in a lossy decoding of UTF-8 when decoding `code_units`.
+        /// @brief Get the number of bytes to skip in a lossy decoding of UTF-8.
         ///
-        /// The `code_units` are supposed to be the code units of a single invalidly-encoded code point.
-        /// If the first byte isn't a valid leading byte then it should be the only byte.
-        /// The last byte in `code_units` should be the first byte that triggered a decoding error.
+        /// @param invalid_code_units_length Length of the invalid code unit sequence of a single code point that failed to decode.
         ///
-        /// In general this function would be used like this:
-        /// A decoder decodes a UTF-8 sequence, for example using the DFA.
-        /// On the first byte to cause the state to be `reject` the decoder would note the index of this byte
-        /// and go back to the first byte of the current code point, i.e., the first byte that occurred after the last time
-        /// the state was `accept` (or in the case of the current byte being such byte, the decoder would not move).
-        /// Then, it would use this function with `code_units` being the code units in between and including the first byte
-        /// of the current code point and the first byte to cause the error.
+        /// The code units mentioned in this function are supposed to be only of a single code point that was found to be invalid.
+        /// The first code unit should be a leading byte (a byte starting a new code point), and the last byte of the mentioned code unit sequence
+        /// should be the first byte to cause a decoding error.
         ///
-        /// @pre `code_units.front()` has to be a valid expression. It must be a code unit starting an invalid sequence of UTF-8
-        /// (which doesn't mean it has to be invalid itself).
-        /// There **must not** be any decodable code points before reaching a decoding error while decoding `code_units`.
+        /// That is, the length is supposed to be the number of code units the decoder has processed since the last time it has fully decoded a valid code point.
+        /// The length should include the byte that caused the error.
         ///
-        /// @pre `code_units` have to be invalid UTF-8. Moreover, `code_units` have to invalid in such a way
-        /// that the decoder is able to tell they're invalid before running out of the `code_units` to consume,
-        /// i.e., the error cannot be caused by unexpectedly reaching the end of the input.
+        /// It's also important that the last byte of the invalid code unit sequence must be the FIRST byte that caused a decoding error.
         ///
-        /// @warning This function heavily relies on it's preconditions. Make sure they are properly followed.
-        ///
-        [[nodiscard]] constexpr std::uint8_t get_error_length(std::span<char8_t> code_units) noexcept
+        [[nodiscard]] constexpr std::uint8_t get_error_length_from_invalid_code_units_length(std::uint8_t invalid_code_units_length) noexcept
         {
             // Every error in UTF-8 other than 'Too Short' can be detected either in the first or the second byte of a code point.
-            // Since the last byte of `code_units` is the first byte to cause the error, if there is less than 3 bytes,
-            // the error was detected in either the first or the second byte (which includes all errors other than 'Too Short').
+            // If `invalid_code_units_length` is less than 3, the error was detected in either the first or the second byte (which includes all errors other than 'Too Short').
             // For all errors other than 'Too Short', the error length is 1.
-            // For all 'Too Short' errors caused by all continuation bytes missing, the error length is 1 too, and all such sequences would have exactly 2 bytes.
+            // For all 'Too Short' errors caused by all continuation bytes missing, the error length is 1 too, and all such sequences would have a length of 2.
 
-            // For the left 'Too Short' errors, the error length can always be calculated by subtracting the byte that caused the error.
+            // For the left 'Too Short' errors, the error length can always be calculated by subtracting the byte that caused the error from the sequence length.
             // This works, because the result is the length of the sequence that unexpectedly ended, which is the error length for the 'Too Short' errors.
 
-            if (code_units.size() < 3uz)
+            if (invalid_code_units_length < 3)
                 return 1;
             else
-                return static_cast<std::uint8_t>(code_units.size() - 1uz);
+                return invalid_code_units_length - 1;
         }
-
-        class small_code_unit_container
-        {
-        public:
-            [[nodiscard]] constexpr std::array<char8_t, 4> get_buffer() const noexcept
-            {
-                std::array<char8_t, 4> result;
-
-                if consteval
-                {
-                    // In constant evaluation the array can't be partially uninitialized.
-                    // At runtime it's fine, because the uninitialized part is never read.
-                    result.fill(0);
-                }
-
-                for (std::size_t i = 0uz; i < max_buffer_size; ++i)
-                    result[i] = m_buffer[i];
-
-                return result;
-            }
-
-            [[nodiscard]] constexpr std::size_t size() const noexcept { return static_cast<std::size_t>(m_size); }
-
-            [[nodiscard]] constexpr bool empty() const noexcept { return m_size == 0; }
-
-            [[nodiscard]] constexpr decltype(auto) operator[](this auto&& self, std::size_t index) noexcept
-            {
-                return std::forward<decltype(self)>(self).m_buffer[index];
-            }
-
-            constexpr void push_front(char8_t code_unit) noexcept
-            {
-                for (std::size_t index = m_size; (index--) > 0;)
-                {
-                    m_buffer[index + 1] = m_buffer[index];
-                }
-                m_buffer.front() = code_unit;
-
-                ++m_size;
-            }
-
-            constexpr void push_back(char8_t code_unit) noexcept { m_buffer[m_size++] = code_unit; }
-
-            constexpr char8_t pop_front() noexcept
-            {
-                const char8_t front_value = m_buffer.front();
-
-                for (std::size_t i = 1; i < m_size; ++i)
-                {
-                    m_buffer[i - 1] = m_buffer[i];
-                }
-
-                --m_size;
-                return front_value;
-            }
-
-            constexpr char8_t pop_back() noexcept { return m_buffer[--m_size]; }
-
-            constexpr void clear() noexcept { m_size = 0; }
-
-        private:
-            static constexpr std::size_t max_buffer_size = 3;
-
-        private:
-            std::array<char8_t, max_buffer_size> m_buffer{};
-            std::uint8_t                         m_size{0};
-        };
     } // namespace impl::utf8
 } // namespace upp
 

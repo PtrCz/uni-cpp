@@ -87,7 +87,7 @@ namespace upp
         ///
         /// @return `std::expected<void, ascii_error>` containing: `void` if the range is valid ASCII, otherwise `ascii_error`.
         ///
-        /// @see decode_range, decode_range_unchecked
+        /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -121,7 +121,7 @@ namespace upp
         ///
         /// @return `std::expected<void, ascii_error>` containing: `void` if the range is valid ASCII, otherwise `ascii_error`.
         ///
-        /// @see decode_range, decode_range_unchecked
+        /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -139,7 +139,7 @@ namespace upp
         ///
         /// @return `std::expected<void, ascii_error>` containing: `void` if no error occurs, otherwise `ascii_error`.
         ///
-        /// @see decode_range_unchecked, validate_range
+        /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -169,6 +169,17 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Lossily decodes a range of ASCII.
+        ///
+        /// Decodes a range of ASCII while replacing invalid character codes with `ascii_char::substitute_character()`.
+        ///
+        /// @param range Range of ASCII code units (ASCII character codes) to lossily decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded ASCII character, including the substitute characters.
+        /// It should have exactly one parameter of type `upp::ascii_char`.
+        ///
+        /// @see decode_range, decode_range_unchecked, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         static constexpr void decode_range_lossy(Range&& range, const CodePointCallback& code_point_callback)
@@ -191,7 +202,7 @@ namespace upp
         /// @param code_point_callback Callback function called with every decoded ASCII character.
         /// It should have exactly one parameter of type `upp::ascii_char`.
         ///
-        /// @see decode_range, validate_range
+        /// @see decode_range, decode_range_lossy, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -242,7 +253,7 @@ namespace upp
         ///
         /// @return `std::expected<void, utf8_error>` containing: `void` if the range is valid UTF-8, otherwise `utf8_error`.
         ///
-        /// @see decode_range, decode_range_unchecked
+        /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -295,7 +306,7 @@ namespace upp
         ///
         /// @return `std::expected<void, utf8_error>` containing: `void` if the range is valid UTF-8, otherwise `utf8_error`.
         ///
-        /// @see decode_range, decode_range_unchecked
+        /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -313,7 +324,7 @@ namespace upp
         ///
         /// @return `std::expected<void, utf8_error>` containing: `void` if no error occurs, otherwise `utf8_error`.
         ///
-        /// @see decode_range_unchecked, validate_range
+        /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -367,6 +378,17 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Lossily decodes a range of UTF-8.
+        ///
+        /// Decodes a range of UTF-8 while replacing invalid subsequences with `uchar::replacement_character()`.
+        ///
+        /// @param range Range of UTF-8 code units to lossily decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded code point, including the replacement characters.
+        /// It should have exactly one parameter of type `upp::uchar`.
+        ///
+        /// @see decode_range, decode_range_unchecked, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         static constexpr void decode_range_lossy(Range&& range, const CodePointCallback& code_point_callback)
@@ -438,7 +460,7 @@ namespace upp
         /// @param code_point_callback Callback function called with every decoded code point.
         /// It should have exactly one parameter of type `upp::uchar`.
         ///
-        /// @see decode_range, validate_range
+        /// @see decode_range, decode_range_lossy, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -502,7 +524,7 @@ namespace upp
         ///
         /// @return `std::expected<void, utf16_error>` containing: `void` if the range is valid UTF-16, otherwise `utf16_error`.
         ///
-        /// @see decode_range, decode_range_unchecked
+        /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -551,7 +573,7 @@ namespace upp
         ///
         /// @return `std::expected<void, utf16_error>` containing: `void` if the range is valid UTF-16, otherwise `utf16_error`.
         ///
-        /// @see decode_range, decode_range_unchecked
+        /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -569,7 +591,7 @@ namespace upp
         ///
         /// @return `std::expected<void, utf16_error>` containing: `void` if no error occurs, otherwise `utf16_error`.
         ///
-        /// @see decode_range_unchecked, validate_range
+        /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -618,6 +640,17 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Lossily decodes a range of UTF-16.
+        ///
+        /// Decodes a range of UTF-16 while replacing invalid subsequences with `uchar::replacement_character()`.
+        ///
+        /// @param range Range of UTF-16 code units to lossily decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded code point, including the replacement characters.
+        /// It should have exactly one parameter of type `upp::uchar`.
+        ///
+        /// @see decode_range, decode_range_unchecked, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         static constexpr void decode_range_lossy(Range&& range, const CodePointCallback& code_point_callback)
@@ -690,7 +723,7 @@ namespace upp
         /// @param code_point_callback Callback function called with every decoded code point.
         /// It should have exactly one parameter of type `upp::uchar`.
         ///
-        /// @see decode_range, validate_range
+        /// @see decode_range, decode_range_lossy, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -754,7 +787,7 @@ namespace upp
         ///
         /// @return `std::expected<void, utf32_error>` containing: `void` if the range is valid UTF-32, otherwise `utf32_error`.
         ///
-        /// @see decode_range, decode_range_unchecked
+        /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -788,7 +821,7 @@ namespace upp
         ///
         /// @return `std::expected<void, utf32_error>` containing: `void` if the range is valid UTF-32, otherwise `utf32_error`.
         ///
-        /// @see decode_range, decode_range_unchecked
+        /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -806,7 +839,7 @@ namespace upp
         ///
         /// @return `std::expected<void, utf32_error>` containing: `void` if no error occurs, otherwise `utf32_error`.
         ///
-        /// @see decode_range_unchecked, validate_range
+        /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
@@ -836,6 +869,17 @@ namespace upp
             return expected_type{};
         }
 
+        /// @brief Lossily decodes a range of UTF-32.
+        ///
+        /// Decodes a range of UTF-32 while replacing invalid code units with `uchar::replacement_character()`.
+        ///
+        /// @param range Range of UTF-32 code units to lossily decode.
+        ///
+        /// @param code_point_callback Callback function called with every decoded code point, including the replacement characters.
+        /// It should have exactly one parameter of type `upp::uchar`.
+        ///
+        /// @see decode_range, decode_range_unchecked, validate_range
+        ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
         static constexpr void decode_range_lossy(Range&& range, const CodePointCallback& code_point_callback)
@@ -858,7 +902,7 @@ namespace upp
         /// @param code_point_callback Callback function called with every decoded code point.
         /// It should have exactly one parameter of type `upp::uchar`.
         ///
-        /// @see decode_range, validate_range
+        /// @see decode_range, decode_range_lossy, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>

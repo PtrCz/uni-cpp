@@ -10,6 +10,7 @@
 #include "../../encoding.hpp"
 
 #include "fwd.hpp"
+#include "string_literal.hpp"
 
 #include <type_traits>
 #include <memory>
@@ -654,6 +655,87 @@ namespace upp
 
         friend impl::basic_ustring_impl;
     };
+
+    namespace impl
+    {
+        template<impl::string_literal_char8_t Str>
+        [[nodiscard]] constexpr utf8_string utf8_ud_string_literal_impl() noexcept
+        {
+            if constexpr (Str.length == 0uz)
+            {
+                return utf8_string{};
+            }
+            else
+            {
+                using traits_type = encoding_traits<encoding::utf8>;
+
+                static_assert(traits_type::validate_range(Str.value).has_value(), "utf8_string literal must be valid UTF-8");
+
+                return utf8_string::from_utf8_unchecked(Str.value);
+            }
+        }
+    } // namespace impl
+
+    inline namespace literals
+    {
+        /// Inline namespace containing user-defined literals for uni-cpp string types.
+        inline namespace string_literals
+        {
+            /// @brief User-defined literal for creating a `utf8_string` from a UTF-8 string literal.
+            ///
+            template<impl::string_literal_char8_t Str>
+            [[nodiscard]] constexpr utf8_string operator""_us() noexcept
+            {
+                return impl::utf8_ud_string_literal_impl<Str>();
+            }
+
+            /// @brief User-defined literal for creating a `utf8_string` from a UTF-8 string literal.
+            ///
+            template<impl::string_literal_char8_t Str>
+            [[nodiscard]] constexpr utf8_string operator""_utf8s() noexcept
+            {
+                return impl::utf8_ud_string_literal_impl<Str>();
+            }
+
+            /// @brief User-defined literal for creating a `utf16_string` from a UTF-16 string literal.
+            ///
+            template<impl::string_literal_char16_t Str>
+            [[nodiscard]] constexpr utf16_string operator""_utf16s() noexcept
+            {
+                if constexpr (Str.length == 0uz)
+                {
+                    return utf16_string{};
+                }
+                else
+                {
+                    using traits_type = encoding_traits<encoding::utf16>;
+
+                    static_assert(traits_type::validate_range(Str.value).has_value(), "utf16_string literal must be valid UTF-16");
+
+                    return utf16_string::from_utf16_unchecked(Str.value);
+                }
+            }
+
+            /// @brief User-defined literal for creating a `utf32_string` from a UTF-32 string literal.
+            ///
+            template<impl::string_literal_char32_t Str>
+            [[nodiscard]] constexpr utf32_string operator""_utf32s() noexcept
+            {
+                if constexpr (Str.length == 0uz)
+                {
+                    return utf32_string{};
+                }
+                else
+                {
+                    using traits_type = encoding_traits<encoding::utf32>;
+
+                    static_assert(traits_type::validate_range(Str.value).has_value(), "utf32_string literal must be valid UTF-32");
+
+                    return utf32_string::from_utf32_unchecked(Str.value);
+                }
+            }
+        } // namespace string_literals
+    } // namespace literals
 } // namespace upp
 
 #endif // UNI_CPP_IMPL_STRING_STRING_HPP

@@ -184,6 +184,91 @@ namespace upp
     // Doxygen doesn't handle well static method definitions outside of class definitions
     /// @cond
 
+    template<string_compatible_container<encoding::ascii> Container>
+    template<std::ranges::input_range Range>
+        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::ascii>
+    [[nodiscard]] constexpr std::expected<basic_ascii_string<Container>, ascii_error> basic_ascii_string<Container>::from_ascii(Range&& range)
+    {
+        using expected_type = std::expected<basic_ascii_string<Container>, ascii_error>;
+
+        if constexpr (std::same_as<Container, std::remove_cvref_t<Range>>)
+        {
+            // Use the underlying container's copy/move constructor.
+
+            auto expected = traits_type::validate_range(range);
+
+            if (!expected.has_value())
+            {
+                return expected_type{std::unexpect, std::move(expected).error()};
+            }
+
+            return expected_type{std::in_place, basic_ascii_string{impl::from_container, std::forward<Range>(range)}};
+        }
+        else
+        {
+            basic_ascii_string result;
+
+            if constexpr (impl::ranges::approximately_sized_range<Range> && reservable_container<Container>)
+            {
+                result.reserve(static_cast<size_type>(impl::ranges::reserve_hint(range)));
+            }
+
+            auto expected = traits_type::validate_range(std::forward<Range>(range), [&](char ch) { result.push_back_code_unit(ch); });
+
+            if (!expected.has_value())
+            {
+                return expected_type{std::unexpect, std::move(expected).error()};
+            }
+
+            return expected_type{std::in_place, std::move(result)};
+        }
+    }
+
+    template<string_compatible_container<encoding::ascii> Container>
+    template<std::ranges::input_range Range>
+        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::ascii>
+    [[nodiscard]] constexpr basic_ascii_string<Container> basic_ascii_string<Container>::from_ascii_lossy(Range&& range)
+    {
+        basic_ascii_string result;
+
+        if constexpr (impl::ranges::approximately_sized_range<Range> && reservable_container<Container>)
+        {
+            result.reserve(static_cast<size_type>(impl::ranges::reserve_hint(range)));
+        }
+
+        traits_type::decode_range_lossy(std::forward<Range>(range), [&](ascii_char ch) { result.push_back(ch); });
+
+        return result;
+    }
+
+    template<string_compatible_container<encoding::ascii> Container>
+    template<std::ranges::input_range Range>
+        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::ascii>
+    [[nodiscard]] constexpr basic_ascii_string<Container> basic_ascii_string<Container>::from_ascii_unchecked(Range&& range)
+    {
+        if constexpr (std::same_as<Container, std::remove_cvref_t<Range>>)
+        {
+            return {impl::from_container, std::forward<Range>(range)};
+        }
+        else
+        {
+            basic_ascii_string result;
+
+            if constexpr (impl::ranges::approximately_sized_range<Range> && reservable_container<Container>)
+            {
+                result.reserve(static_cast<size_type>(impl::ranges::reserve_hint(range)));
+            }
+
+            auto       it       = std::ranges::begin(range);
+            const auto sentinel = std::ranges::end(range);
+
+            for (; it != sentinel; ++it)
+                result.push_back_code_unit(*it);
+
+            return result;
+        }
+    }
+
     template<unicode_encoding E, string_compatible_container<static_cast<encoding>(E)> C>
     template<std::ranges::input_range Range>
         requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>

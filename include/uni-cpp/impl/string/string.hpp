@@ -141,6 +141,48 @@ namespace upp
             other.clear();
         }
 
+        /// @brief Constructs a `basic_ascii_string` from ASCII encoded data with error checking.
+        ///
+        /// @return `std::expected` containing the string on success, or an `ascii_error` on failure.
+        ///
+        /// If you are absolutely certain that `range` is valid ASCII, you can use `from_ascii_unchecked` instead.
+        ///
+        /// @see from_ascii_lossy, from_ascii_unchecked
+        ///
+        /// @tparam Range Input range of ASCII code units (character codes). Needs to satisfy `std::ranges::input_range` and
+        /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::ascii>`.
+        ///
+        template<std::ranges::input_range Range>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::ascii>
+        [[nodiscard]] static constexpr std::expected<basic_ascii_string, ascii_error> from_ascii(Range&& range);
+
+        /// @brief Constructs a `basic_ascii_string` from ASCII encoded data, replacing decoding errors with `ascii_char::substitute_character()`s.
+        ///
+        /// @see from_ascii, from_ascii_unchecked
+        ///
+        /// @tparam Range Input range of ASCII code units (character codes). Needs to satisfy `std::ranges::input_range` and
+        /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::ascii>`.
+        ///
+        template<std::ranges::input_range Range>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::ascii>
+        [[nodiscard]] static constexpr basic_ascii_string from_ascii_lossy(Range&& range);
+
+        /// @brief Constructs a `basic_ascii_string` from ASCII encoded data without error checking.
+        ///
+        /// @pre `range` MUST be valid ASCII.
+        ///
+        /// @warning If the precondition of this function isn't met, the behavior is undefined.
+        /// Use `from_ascii` as a safe alternative that performs validation.
+        ///
+        /// @see from_ascii, from_ascii_lossy
+        ///
+        /// @tparam Range Input range of ASCII code units (character codes). Needs to satisfy `std::ranges::input_range` and
+        /// `upp::code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::encoding::ascii>`.
+        ///
+        template<std::ranges::input_range Range>
+            requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::ascii>
+        [[nodiscard]] static constexpr basic_ascii_string from_ascii_unchecked(Range&& range);
+
         /// @brief Returns a `const` reference to the underlying container.
         ///
         /// It is intended for interoperability with APIs that expect the underlying container as an input.
@@ -196,6 +238,43 @@ namespace upp
         /// All pointers, references, and iterators are invalidated.
         ///
         constexpr void clear() noexcept { m_container.clear(); }
+
+    private:
+        /// @brief Constructs the string directly from the underlying container type.
+        ///
+        constexpr basic_ascii_string(impl::from_container_t, const Container& other) noexcept(std::is_nothrow_copy_constructible_v<Container>)
+            : m_container{other}
+        {
+        }
+
+        /// @brief Constructs the string directly from the underlying container type.
+        ///
+        constexpr basic_ascii_string(impl::from_container_t, Container&& other) noexcept(std::is_nothrow_move_constructible_v<Container>)
+            : m_container{std::move(other)}
+        {
+        }
+
+        /// @brief Appends a single code unit to the end of the string.
+        ///
+        template<typename T>
+            requires code_unit_type_for<T, encoding::ascii>
+        constexpr void push_back_code_unit(T code_unit)
+        {
+            const auto value = std::bit_cast<code_unit_type>(code_unit);
+
+            if constexpr (requires(container_type& c, code_unit_type v) { c.push_back(v); })
+            {
+                m_container.push_back(value);
+            }
+            else
+            {
+                m_container.insert(std::as_const(m_container).end(), value);
+            }
+        }
+
+        /// @brief Appends a single character to the end of the string.
+        ///
+        constexpr void push_back(const ascii_char ch) { push_back_code_unit(ch.value()); }
 
     private:
         Container m_container;

@@ -621,7 +621,18 @@ namespace upp
 
     inline namespace literals
     {
-        /// Inline namespace containing user-defined literals for uni-cpp character types.
+        /// @brief Inline namespace containing user-defined literals for uni-cpp character types.
+        ///
+        /// Contains the following user-defined literals:
+        ///
+        /// - `_ac` for creating `upp::ascii_char` from:
+        ///     - an integer literal (example: `0x41_ac`),
+        ///     - a UTF-8 character literal (example: ``u8'A'_ac``),
+        ///
+        /// - `_uc` for creating `upp::uchar` from:
+        ///     - an integer literal (example: `0xFFFD_uc`),
+        ///     - a UTF-32 character literal (example: ``U'a'_uc``).
+        ///
         inline namespace char_literals
         {
             /// @brief User-defined literal for creating an `ascii_char` from an integer literal.

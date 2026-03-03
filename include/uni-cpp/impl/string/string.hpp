@@ -757,7 +757,16 @@ namespace upp
 
     inline namespace literals
     {
-        /// Inline namespace containing user-defined literals for uni-cpp string types.
+        /// @brief Inline namespace containing user-defined literals for uni-cpp string types.
+        ///
+        /// Contains the following user-defined literals:
+        /// - `_as` for creating `upp::ascii_string` from an ordinary string literal (example: `"Hello"_as`),
+        /// - `_a8s` for creating `upp::basic_ascii_string<std::u8string>` from a UTF-8 string literal (example: `u8"Hello"_a8s`),
+        /// - `_us` for creating `upp::ustring` from a UTF-8 string literal (example: `u8"你好"_us`),
+        /// - `_utf8s` for creating `upp::utf8_string` from a UTF-8 string literal (example: `u8"¿Qué tal?"_utf8s`),
+        /// - `_utf16s` for creating `upp::utf16_string` from a UTF-16 string literal (example: `u"Γειά σας"_utf16s`),
+        /// - `_utf32s` for creating `upp::utf32_string` from a UTF-32 string literal (example: `U"नमस्ते"_utf32s`).
+        ///
         inline namespace string_literals
         {
             /// @brief User-defined literal for creating an `ascii_string` from an ordinary string literal.

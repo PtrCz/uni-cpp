@@ -737,20 +737,20 @@ namespace upp
 
     namespace impl
     {
-        template<impl::string_literal_char8_t Str>
-        [[nodiscard]] constexpr utf8_string utf8_ud_string_literal_impl() noexcept
+        template<encoding Encoding, typename StringType, typename FromUnchecked, auto StringLiteral>
+        [[nodiscard]] constexpr StringType ud_string_literal_impl()
         {
-            if constexpr (Str.length == 0uz)
+            if constexpr (StringLiteral.length == 0uz)
             {
-                return utf8_string{};
+                return StringType{};
             }
             else
             {
-                using traits_type = encoding_traits<encoding::utf8>;
+                using traits_type = encoding_traits<Encoding>;
 
-                static_assert(traits_type::validate_range(Str.value).has_value(), "utf8_string literal must be valid UTF-8");
+                static_assert(traits_type::validate_range(StringLiteral.value).has_value(), "String literal must be valid ASCII / UTF");
 
-                return utf8_string::from_utf8_unchecked(Str.value);
+                return FromUnchecked{}(StringLiteral.value);
             }
         }
     } // namespace impl
@@ -760,58 +760,73 @@ namespace upp
         /// Inline namespace containing user-defined literals for uni-cpp string types.
         inline namespace string_literals
         {
-            /// @brief User-defined literal for creating a `utf8_string` from a UTF-8 string literal.
+            /// @brief User-defined literal for creating an `ascii_string` from an ordinary string literal.
             ///
-            template<impl::string_literal_char8_t Str>
-            [[nodiscard]] constexpr utf8_string operator""_us() noexcept
+            /// This user-defined literal participates in overload resolution only if the ordinary string literal encoding is ASCII.
+            ///
+            /// @see operator""_a8s
+            ///
+            template<impl::string_literal_char StringLiteral>
+            [[nodiscard]] constexpr ascii_string operator""_as()
+                requires(impl::ascii::ordinary_string_literal_is_ascii())
             {
-                return impl::utf8_ud_string_literal_impl<Str>();
+                using from_unchecked = decltype([](auto&& rg) static { return ascii_string::from_ascii_unchecked(std::forward<decltype(rg)>(rg)); });
+
+                return impl::ud_string_literal_impl<encoding::ascii, ascii_string, from_unchecked, StringLiteral>();
+            }
+
+            /// @brief User-defined literal for creating a `basic_ascii_string<std::u8string>` from a UTF-8 string literal.
+            ///
+            /// @see operator""_as
+            ///
+            template<impl::string_literal_char8_t StringLiteral>
+            [[nodiscard]] constexpr basic_ascii_string<std::u8string> operator""_a8s()
+            {
+                using string_type = basic_ascii_string<std::u8string>;
+
+                using from_unchecked = decltype([](auto&& rg) static { return string_type::from_ascii_unchecked(std::forward<decltype(rg)>(rg)); });
+
+                return impl::ud_string_literal_impl<encoding::ascii, string_type, from_unchecked, StringLiteral>();
+            }
+
+            /// @brief User-defined literal for creating a `ustring` from a UTF-8 string literal.
+            ///
+            template<impl::string_literal_char8_t StringLiteral>
+            [[nodiscard]] constexpr ustring operator""_us()
+            {
+                using from_unchecked = decltype([](auto&& rg) static { return ustring::from_utf8_unchecked(std::forward<decltype(rg)>(rg)); });
+
+                return impl::ud_string_literal_impl<encoding::utf8, ustring, from_unchecked, StringLiteral>();
             }
 
             /// @brief User-defined literal for creating a `utf8_string` from a UTF-8 string literal.
             ///
-            template<impl::string_literal_char8_t Str>
-            [[nodiscard]] constexpr utf8_string operator""_utf8s() noexcept
+            template<impl::string_literal_char8_t StringLiteral>
+            [[nodiscard]] constexpr utf8_string operator""_utf8s()
             {
-                return impl::utf8_ud_string_literal_impl<Str>();
+                using from_unchecked = decltype([](auto&& rg) static { return utf8_string::from_utf8_unchecked(std::forward<decltype(rg)>(rg)); });
+
+                return impl::ud_string_literal_impl<encoding::utf8, utf8_string, from_unchecked, StringLiteral>();
             }
 
             /// @brief User-defined literal for creating a `utf16_string` from a UTF-16 string literal.
             ///
-            template<impl::string_literal_char16_t Str>
-            [[nodiscard]] constexpr utf16_string operator""_utf16s() noexcept
+            template<impl::string_literal_char16_t StringLiteral>
+            [[nodiscard]] constexpr utf16_string operator""_utf16s()
             {
-                if constexpr (Str.length == 0uz)
-                {
-                    return utf16_string{};
-                }
-                else
-                {
-                    using traits_type = encoding_traits<encoding::utf16>;
+                using from_unchecked = decltype([](auto&& rg) static { return utf16_string::from_utf16_unchecked(std::forward<decltype(rg)>(rg)); });
 
-                    static_assert(traits_type::validate_range(Str.value).has_value(), "utf16_string literal must be valid UTF-16");
-
-                    return utf16_string::from_utf16_unchecked(Str.value);
-                }
+                return impl::ud_string_literal_impl<encoding::utf16, utf16_string, from_unchecked, StringLiteral>();
             }
 
             /// @brief User-defined literal for creating a `utf32_string` from a UTF-32 string literal.
             ///
-            template<impl::string_literal_char32_t Str>
-            [[nodiscard]] constexpr utf32_string operator""_utf32s() noexcept
+            template<impl::string_literal_char32_t StringLiteral>
+            [[nodiscard]] constexpr utf32_string operator""_utf32s()
             {
-                if constexpr (Str.length == 0uz)
-                {
-                    return utf32_string{};
-                }
-                else
-                {
-                    using traits_type = encoding_traits<encoding::utf32>;
+                using from_unchecked = decltype([](auto&& rg) static { return utf32_string::from_utf32_unchecked(std::forward<decltype(rg)>(rg)); });
 
-                    static_assert(traits_type::validate_range(Str.value).has_value(), "utf32_string literal must be valid UTF-32");
-
-                    return utf32_string::from_utf32_unchecked(Str.value);
-                }
+                return impl::ud_string_literal_impl<encoding::utf32, utf32_string, from_unchecked, StringLiteral>();
             }
         } // namespace string_literals
     } // namespace literals

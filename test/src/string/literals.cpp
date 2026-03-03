@@ -9,7 +9,7 @@
 #define TEST_ASCII_LITERAL(literal)                               \
     do                                                            \
     {                                                             \
-        CHECK(literal##_as.underlying() == literal##sv);          \
+        CHECK(u8##literal##_as.underlying() == literal##sv);      \
         CHECK(u8##literal##_a8s.underlying() == u8##literal##sv); \
     } while (false)
 

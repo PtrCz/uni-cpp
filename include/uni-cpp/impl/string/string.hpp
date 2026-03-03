@@ -760,7 +760,7 @@ namespace upp
         /// @brief Inline namespace containing user-defined literals for uni-cpp string types.
         ///
         /// Contains the following user-defined literals:
-        /// - `_as` for creating `upp::ascii_string` from an ordinary string literal (example: `"Hello"_as`),
+        /// - `_as` for creating `upp::ascii_string` from a UTF-8 string literal (example: `u8"Hello"_as`),
         /// - `_a8s` for creating `upp::basic_ascii_string<std::u8string>` from a UTF-8 string literal (example: `u8"Hello"_a8s`),
         /// - `_us` for creating `upp::ustring` from a UTF-8 string literal (example: `u8"你好"_us`),
         /// - `_utf8s` for creating `upp::utf8_string` from a UTF-8 string literal (example: `u8"¿Qué tal?"_utf8s`),
@@ -769,15 +769,12 @@ namespace upp
         ///
         inline namespace string_literals
         {
-            /// @brief User-defined literal for creating an `ascii_string` from an ordinary string literal.
-            ///
-            /// This user-defined literal participates in overload resolution only if the ordinary string literal encoding is ASCII.
+            /// @brief User-defined literal for creating an `ascii_string` from a UTF-8 string literal.
             ///
             /// @see operator""_a8s
             ///
-            template<impl::string_literal_char StringLiteral>
+            template<impl::string_literal_ascii StringLiteral>
             [[nodiscard]] constexpr ascii_string operator""_as()
-                requires(impl::ascii::ordinary_string_literal_is_ascii())
             {
                 using from_unchecked = decltype([](auto&& rg) static { return ascii_string::from_ascii_unchecked(std::forward<decltype(rg)>(rg)); });
 

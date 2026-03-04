@@ -760,12 +760,21 @@ namespace upp
         /// @brief Inline namespace containing user-defined literals for uni-cpp string types.
         ///
         /// Contains the following user-defined literals:
-        /// - `_as` for creating `upp::ascii_string` from a UTF-8 string literal (example: `u8"Hello"_as`),
-        /// - `_a8s` for creating `upp::basic_ascii_string<std::u8string>` from a UTF-8 string literal (example: `u8"Hello"_a8s`),
-        /// - `_us` for creating `upp::ustring` from a UTF-8 string literal (example: `u8"你好"_us`),
-        /// - `_utf8s` for creating `upp::utf8_string` from a UTF-8 string literal (example: `u8"¿Qué tal?"_utf8s`),
-        /// - `_utf16s` for creating `upp::utf16_string` from a UTF-16 string literal (example: `u"Γειά σας"_utf16s`),
-        /// - `_utf32s` for creating `upp::utf32_string` from a UTF-32 string literal (example: `U"नमस्ते"_utf32s`).
+        ///
+        /// - ASCII string literals:
+        ///     - `_as` for creating `upp::ascii_string` from a UTF-8 string literal (example: `u8"Hello"_as`),
+        ///     - `_a8s` for creating `upp::basic_ascii_string<std::u8string>` from a UTF-8 string literal (example: `u8"Hello"_a8s`),
+        ///
+        /// - Unicode string literals:
+        ///     - UTF-8 string literals:
+        ///         - `_us` for creating `upp::ustring` from a UTF-8 string literal (example: `u8"你好"_us`),
+        ///         - `_uls` for creating `upp::basic_utf8_string<std::string>` from a UTF-8 string literal (example: `u8"你好"_uls`),
+        ///         - `_utf8s` for creating `upp::utf8_string` from a UTF-8 string literal (example: `u8"¿Qué tal?"_utf8s`),
+        ///         - `_utf8ls` for creating `upp::basic_utf8_string<std::string>` from a UTF-8 string literal (example: `u8"¿Qué tal?"_utf8ls`),
+        ///
+        ///     - UTF-16/32 string literals:
+        ///         - `_utf16s` for creating `upp::utf16_string` from a UTF-16 string literal (example: `u"Γειά σας"_utf16s`),
+        ///         - `_utf32s` for creating `upp::utf32_string` from a UTF-32 string literal (example: `U"नमस्ते"_utf32s`).
         ///
         inline namespace string_literals
         {
@@ -773,7 +782,7 @@ namespace upp
             ///
             /// @see operator""_a8s
             ///
-            template<impl::string_literal_ascii StringLiteral>
+            template<impl::string_literal_utf8_as_char StringLiteral>
             [[nodiscard]] constexpr ascii_string operator""_as()
             {
                 using from_unchecked = decltype([](auto&& rg) static { return ascii_string::from_ascii_unchecked(std::forward<decltype(rg)>(rg)); });
@@ -788,14 +797,16 @@ namespace upp
             template<impl::string_literal_char8_t StringLiteral>
             [[nodiscard]] constexpr basic_ascii_string<std::u8string> operator""_a8s()
             {
-                using string_type = basic_ascii_string<std::u8string>;
+                using from_unchecked = decltype([](auto&& rg) static {
+                    return basic_ascii_string<std::u8string>::from_ascii_unchecked(std::forward<decltype(rg)>(rg));
+                });
 
-                using from_unchecked = decltype([](auto&& rg) static { return string_type::from_ascii_unchecked(std::forward<decltype(rg)>(rg)); });
-
-                return impl::ud_string_literal_impl<encoding::ascii, string_type, from_unchecked, StringLiteral>();
+                return impl::ud_string_literal_impl<encoding::ascii, basic_ascii_string<std::u8string>, from_unchecked, StringLiteral>();
             }
 
             /// @brief User-defined literal for creating a `ustring` from a UTF-8 string literal.
+            ///
+            /// @see operator""_uls
             ///
             template<impl::string_literal_char8_t StringLiteral>
             [[nodiscard]] constexpr ustring operator""_us()
@@ -805,7 +816,22 @@ namespace upp
                 return impl::ud_string_literal_impl<encoding::utf8, ustring, from_unchecked, StringLiteral>();
             }
 
+            /// @brief User-defined literal for creating a `basic_utf8_string<std::string>` from a UTF-8 string literal.
+            ///
+            /// @see operator""_us
+            ///
+            template<impl::string_literal_utf8_as_char StringLiteral>
+            [[nodiscard]] constexpr basic_utf8_string<std::string> operator""_uls()
+            {
+                using from_unchecked =
+                    decltype([](auto&& rg) static { return basic_utf8_string<std::string>::from_utf8_unchecked(std::forward<decltype(rg)>(rg)); });
+
+                return impl::ud_string_literal_impl<encoding::utf8, basic_utf8_string<std::string>, from_unchecked, StringLiteral>();
+            }
+
             /// @brief User-defined literal for creating a `utf8_string` from a UTF-8 string literal.
+            ///
+            /// @see operator""_utf8ls
             ///
             template<impl::string_literal_char8_t StringLiteral>
             [[nodiscard]] constexpr utf8_string operator""_utf8s()
@@ -813,6 +839,19 @@ namespace upp
                 using from_unchecked = decltype([](auto&& rg) static { return utf8_string::from_utf8_unchecked(std::forward<decltype(rg)>(rg)); });
 
                 return impl::ud_string_literal_impl<encoding::utf8, utf8_string, from_unchecked, StringLiteral>();
+            }
+
+            /// @brief User-defined literal for creating a `basic_utf8_string<std::string>` from a UTF-8 string literal.
+            ///
+            /// @see operator""_utf8s
+            ///
+            template<impl::string_literal_utf8_as_char StringLiteral>
+            [[nodiscard]] constexpr basic_utf8_string<std::string> operator""_utf8ls()
+            {
+                using from_unchecked =
+                    decltype([](auto&& rg) static { return basic_utf8_string<std::string>::from_utf8_unchecked(std::forward<decltype(rg)>(rg)); });
+
+                return impl::ud_string_literal_impl<encoding::utf8, basic_utf8_string<std::string>, from_unchecked, StringLiteral>();
             }
 
             /// @brief User-defined literal for creating a `utf16_string` from a UTF-16 string literal.

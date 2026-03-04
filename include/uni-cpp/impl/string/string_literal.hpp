@@ -40,7 +40,7 @@ namespace upp::impl
     };
 
     template<std::size_t N>
-    using string_literal_ascii = string_literal<char8_t, char, N>;
+    using string_literal_utf8_as_char = string_literal<char8_t, char, N>;
 
     template<std::size_t N>
     using string_literal_char8_t = string_literal<char8_t, char8_t, N>;

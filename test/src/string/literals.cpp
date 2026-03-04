@@ -2,7 +2,15 @@
 
 #include <uni-cpp/string.hpp>
 
+#include <ranges>
 #include <string_view>
+#include <span>
+#include <bit>
+
+[[nodiscard]] static constexpr bool code_units_equal(std::span<const char> char_span, std::u8string_view u8_view)
+{
+    return std::ranges::equal(u8_view, char_span, [](char8_t a, char b) { return a == std::bit_cast<char8_t>(b); });
+}
 
 #define TEST_LITERAL(prefix, literal, suffix) CHECK(prefix##literal##suffix.underlying() == prefix##literal##sv)
 
@@ -13,13 +21,17 @@
         CHECK(u8##literal##_a8s.underlying() == u8##literal##sv); \
     } while (false)
 
-#define TEST_UNICODE_LITERAL(literal)      \
-    do                                     \
-    {                                      \
-        TEST_LITERAL(u8, literal, _us);    \
-        TEST_LITERAL(u8, literal, _utf8s); \
-        TEST_LITERAL(u, literal, _utf16s); \
-        TEST_LITERAL(U, literal, _utf32s); \
+#define TEST_UNICODE_LITERAL(literal)                                                \
+    do                                                                               \
+    {                                                                                \
+        TEST_LITERAL(u8, literal, _us);                                              \
+        TEST_LITERAL(u8, literal, _utf8s);                                           \
+        TEST_LITERAL(u, literal, _utf16s);                                           \
+        TEST_LITERAL(U, literal, _utf32s);                                           \
+                                                                                     \
+        CHECK(code_units_equal(u8##literal##_uls.code_units(), u8##literal##sv));    \
+        CHECK(code_units_equal(u8##literal##_utf8ls.code_units(), u8##literal##sv)); \
+                                                                                     \
     } while (false)
 
 TEST_CASE("User-defined ASCII string literals", "[string types]")

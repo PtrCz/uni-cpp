@@ -23,7 +23,7 @@ namespace upp
         public:
             template<unicode_encoding SourceEncoding, typename ErrorType, unicode_encoding TargetEncoding, typename Container,
                      std::ranges::input_range Range>
-                requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, static_cast<encoding>(SourceEncoding)>
+                requires code_unit_range<Range, static_cast<encoding>(SourceEncoding)>
             [[nodiscard]] static constexpr std::expected<basic_ustring<TargetEncoding, Container>, ErrorType> from_utf(Range&& range)
             {
                 using string_type            = basic_ustring<TargetEncoding, Container>;
@@ -93,7 +93,7 @@ namespace upp
             }
 
             template<unicode_encoding SourceEncoding, unicode_encoding TargetEncoding, typename Container, std::ranges::input_range Range>
-                requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, static_cast<encoding>(SourceEncoding)>
+                requires code_unit_range<Range, static_cast<encoding>(SourceEncoding)>
             [[nodiscard]] static constexpr basic_ustring<TargetEncoding, Container> from_utf_lossy(Range&& range)
             {
                 using string_type = basic_ustring<TargetEncoding, Container>;
@@ -117,7 +117,7 @@ namespace upp
             }
 
             template<unicode_encoding SourceEncoding, unicode_encoding TargetEncoding, typename Container, std::ranges::input_range Range>
-                requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, static_cast<encoding>(SourceEncoding)>
+                requires code_unit_range<Range, static_cast<encoding>(SourceEncoding)>
             [[nodiscard]] static constexpr basic_ustring<TargetEncoding, Container> from_utf_unchecked(Range&& range)
             {
                 using string_type = basic_ustring<TargetEncoding, Container>;
@@ -148,7 +148,7 @@ namespace upp
             }
 
             template<unicode_encoding Encoding, typename Container, typename Range>
-                requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, static_cast<encoding>(Encoding)> &&
+                requires code_unit_range<Range, static_cast<encoding>(Encoding)> &&
                          (!std::same_as<Container, std::remove_cvref_t<Range>>) // there is another overload for this case below
             [[nodiscard]] static constexpr basic_ustring<Encoding, Container> utfx_from_utfx_unchecked(Range&& range)
             {
@@ -186,7 +186,7 @@ namespace upp
 
     template<string_compatible_container<encoding::ascii> Container>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::ascii>
+        requires code_unit_range<Range, encoding::ascii>
     [[nodiscard]] constexpr std::expected<basic_ascii_string<Container>, ascii_error> basic_ascii_string<Container>::from_ascii(Range&& range)
     {
         using expected_type = std::expected<basic_ascii_string<Container>, ascii_error>;
@@ -226,7 +226,7 @@ namespace upp
 
     template<string_compatible_container<encoding::ascii> Container>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::ascii>
+        requires code_unit_range<Range, encoding::ascii>
     [[nodiscard]] constexpr basic_ascii_string<Container> basic_ascii_string<Container>::from_ascii_lossy(Range&& range)
     {
         basic_ascii_string result;
@@ -243,7 +243,7 @@ namespace upp
 
     template<string_compatible_container<encoding::ascii> Container>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::ascii>
+        requires code_unit_range<Range, encoding::ascii>
     [[nodiscard]] constexpr basic_ascii_string<Container> basic_ascii_string<Container>::from_ascii_unchecked(Range&& range)
     {
         if constexpr (std::same_as<Container, std::remove_cvref_t<Range>>)
@@ -271,7 +271,7 @@ namespace upp
 
     template<unicode_encoding E, string_compatible_container<static_cast<encoding>(E)> C>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>
+        requires code_unit_range<Range, encoding::utf8>
     [[nodiscard]] constexpr std::expected<basic_ustring<E, C>, utf8_error> basic_ustring<E, C>::from_utf8(Range&& range)
     {
         return impl::basic_ustring_impl::from_utf<unicode_encoding::utf8, utf8_error, E, C>(std::forward<Range>(range));
@@ -279,7 +279,7 @@ namespace upp
 
     template<unicode_encoding E, string_compatible_container<static_cast<encoding>(E)> C>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>
+        requires code_unit_range<Range, encoding::utf8>
     [[nodiscard]] constexpr basic_ustring<E, C> basic_ustring<E, C>::from_utf8_lossy(Range&& range)
     {
         return impl::basic_ustring_impl::from_utf_lossy<unicode_encoding::utf8, E, C>(std::forward<Range>(range));
@@ -287,7 +287,7 @@ namespace upp
 
     template<unicode_encoding E, string_compatible_container<static_cast<encoding>(E)> C>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf8>
+        requires code_unit_range<Range, encoding::utf8>
     [[nodiscard]] constexpr basic_ustring<E, C> basic_ustring<E, C>::from_utf8_unchecked(Range&& range)
     {
         return impl::basic_ustring_impl::from_utf_unchecked<unicode_encoding::utf8, E, C>(std::forward<Range>(range));
@@ -295,7 +295,7 @@ namespace upp
 
     template<unicode_encoding E, string_compatible_container<static_cast<encoding>(E)> C>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf16>
+        requires code_unit_range<Range, encoding::utf16>
     [[nodiscard]] constexpr std::expected<basic_ustring<E, C>, utf16_error> basic_ustring<E, C>::from_utf16(Range&& range)
     {
         return impl::basic_ustring_impl::from_utf<unicode_encoding::utf16, utf16_error, E, C>(std::forward<Range>(range));
@@ -303,7 +303,7 @@ namespace upp
 
     template<unicode_encoding E, string_compatible_container<static_cast<encoding>(E)> C>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf16>
+        requires code_unit_range<Range, encoding::utf16>
     [[nodiscard]] constexpr basic_ustring<E, C> basic_ustring<E, C>::from_utf16_lossy(Range&& range)
     {
         return impl::basic_ustring_impl::from_utf_lossy<unicode_encoding::utf16, E, C>(std::forward<Range>(range));
@@ -311,7 +311,7 @@ namespace upp
 
     template<unicode_encoding E, string_compatible_container<static_cast<encoding>(E)> C>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf16>
+        requires code_unit_range<Range, encoding::utf16>
     [[nodiscard]] constexpr basic_ustring<E, C> basic_ustring<E, C>::from_utf16_unchecked(Range&& range)
     {
         return impl::basic_ustring_impl::from_utf_unchecked<unicode_encoding::utf16, E, C>(std::forward<Range>(range));
@@ -319,7 +319,7 @@ namespace upp
 
     template<unicode_encoding E, string_compatible_container<static_cast<encoding>(E)> C>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf32>
+        requires code_unit_range<Range, encoding::utf32>
     [[nodiscard]] constexpr std::expected<basic_ustring<E, C>, utf32_error> basic_ustring<E, C>::from_utf32(Range&& range)
     {
         return impl::basic_ustring_impl::from_utf<unicode_encoding::utf32, utf32_error, E, C>(std::forward<Range>(range));
@@ -327,7 +327,7 @@ namespace upp
 
     template<unicode_encoding E, string_compatible_container<static_cast<encoding>(E)> C>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf32>
+        requires code_unit_range<Range, encoding::utf32>
     [[nodiscard]] constexpr basic_ustring<E, C> basic_ustring<E, C>::from_utf32_lossy(Range&& range)
     {
         return impl::basic_ustring_impl::from_utf_lossy<unicode_encoding::utf32, E, C>(std::forward<Range>(range));
@@ -335,7 +335,7 @@ namespace upp
 
     template<unicode_encoding E, string_compatible_container<static_cast<encoding>(E)> C>
     template<std::ranges::input_range Range>
-        requires code_unit_type_for<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, encoding::utf32>
+        requires code_unit_range<Range, encoding::utf32>
     [[nodiscard]] constexpr basic_ustring<E, C> basic_ustring<E, C>::from_utf32_unchecked(Range&& range)
     {
         return impl::basic_ustring_impl::from_utf_unchecked<unicode_encoding::utf32, E, C>(std::forward<Range>(range));

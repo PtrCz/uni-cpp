@@ -77,6 +77,10 @@ namespace upp
         template<typename T>
         static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
 
+        /// `true` iff type `R` is a range of ASCII code units.
+        template<typename R>
+        static constexpr bool is_code_unit_range = std::ranges::range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+
         /// @brief Validates a range of ASCII.
         ///
         /// @param range Range of ASCII code units (ASCII character codes) to verify.
@@ -90,7 +94,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
         {
             using expected_type = std::expected<void, ascii_error>;
@@ -124,7 +128,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
         {
             return validate_range(std::forward<Range>(range), [](char) static {});
@@ -142,7 +146,7 @@ namespace upp
         /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
         {
             using expected_type = std::expected<void, ascii_error>;
@@ -181,7 +185,7 @@ namespace upp
         /// @see decode_range, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         static constexpr void decode_range_lossy(Range&& range, const CodePointCallback& code_point_callback)
         {
             auto       it       = std::ranges::begin(range);
@@ -205,7 +209,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
         {
             auto       it       = std::ranges::begin(range);
@@ -243,6 +247,10 @@ namespace upp
         template<typename T>
         static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
 
+        /// `true` iff type `R` is a range of UTF-8 code units.
+        template<typename R>
+        static constexpr bool is_code_unit_range = std::ranges::range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+
         /// @brief Validates a range of UTF-8.
         ///
         /// @param range Range of UTF-8 code units to verify.
@@ -256,7 +264,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
         {
             using expected_type = std::expected<void, utf8_error>;
@@ -309,7 +317,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
         {
             return validate_range(std::forward<Range>(range), [](char8_t) static {});
@@ -327,7 +335,7 @@ namespace upp
         /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
         {
             using expected_type = std::expected<void, utf8_error>;
@@ -390,7 +398,7 @@ namespace upp
         /// @see decode_range, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         static constexpr void decode_range_lossy(Range&& range, const CodePointCallback& code_point_callback)
         {
             auto       it       = std::ranges::begin(range);
@@ -463,7 +471,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
         {
             auto       it       = std::ranges::begin(range);
@@ -514,6 +522,10 @@ namespace upp
         template<typename T>
         static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
 
+        /// `true` iff type `R` is a range of UTF-16 code units.
+        template<typename R>
+        static constexpr bool is_code_unit_range = std::ranges::range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+
         /// @brief Validates a range of UTF-16.
         ///
         /// @param range Range of UTF-16 code units to verify.
@@ -527,7 +539,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
         {
             using expected_type = std::expected<void, utf16_error>;
@@ -576,7 +588,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
         {
             return validate_range(std::forward<Range>(range), [](char16_t) static {});
@@ -594,7 +606,7 @@ namespace upp
         /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
         {
             using expected_type = std::expected<void, utf16_error>;
@@ -652,7 +664,7 @@ namespace upp
         /// @see decode_range, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         static constexpr void decode_range_lossy(Range&& range, const CodePointCallback& code_point_callback)
         {
             auto       it       = std::ranges::begin(range);
@@ -726,7 +738,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
         {
             auto       it       = std::ranges::begin(range);
@@ -777,6 +789,10 @@ namespace upp
         template<typename T>
         static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
 
+        /// `true` iff type `R` is a range of UTF-32 code units.
+        template<typename R>
+        static constexpr bool is_code_unit_range = std::ranges::range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+
         /// @brief Validates a range of UTF-32.
         ///
         /// @param range Range of UTF-32 code units to verify.
@@ -790,7 +806,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
         {
             using expected_type = std::expected<void, utf32_error>;
@@ -824,7 +840,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
         {
             return validate_range(std::forward<Range>(range), [](char32_t) static {});
@@ -842,7 +858,7 @@ namespace upp
         /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
         {
             using expected_type = std::expected<void, utf32_error>;
@@ -881,7 +897,7 @@ namespace upp
         /// @see decode_range, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         static constexpr void decode_range_lossy(Range&& range, const CodePointCallback& code_point_callback)
         {
             auto       it       = std::ranges::begin(range);
@@ -905,7 +921,7 @@ namespace upp
         /// @see decode_range, decode_range_lossy, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
-            requires is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>
+            requires is_code_unit_range<Range>
         static constexpr void decode_range_unchecked(Range&& range, const CodePointCallback& code_point_callback)
         {
             auto       it       = std::ranges::begin(range);
@@ -924,8 +940,15 @@ namespace upp
     ///
     /// @headerfile "" <uni-cpp/encoding.hpp>
     ///
-    template<typename T, encoding E>
-    concept code_unit_type_for = std::integral<T> && sizeof(T) == sizeof(typename encoding_traits<E>::default_code_unit_type);
+    template<typename T, encoding Encoding>
+    concept code_unit_type_for = encoding_traits<Encoding>::template is_code_unit_type<T>;
+
+    /// @brief Identifies types that are ranges of code units of a given encoding.
+    ///
+    /// @headerfile "" <uni-cpp/encoding.hpp>
+    ///
+    template<typename R, encoding Encoding>
+    concept code_unit_range = encoding_traits<Encoding>::template is_code_unit_range<R>;
 
     namespace impl
     {

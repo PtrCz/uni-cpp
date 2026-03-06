@@ -3,7 +3,7 @@
 
 /// @file
 ///
-/// @brief Provides enumerations of text encodings and traits for those encodings.
+/// @brief Provides an enumeration of text encodings and traits for those encodings.
 ///
 
 #include "uchar.hpp"
@@ -26,8 +26,6 @@ namespace upp
 {
     /// @brief Enumeration of text encodings.
     ///
-    /// @see unicode_encoding
-    ///
     enum class encoding : std::uint8_t
     {
         ascii, ///< ASCII encoding
@@ -36,16 +34,19 @@ namespace upp
         utf32  ///< UTF-32 encoding
     };
 
-    /// @brief Enumeration of Unicode text encodings.
+    /// @brief Returns `true` if `enc` is a Unicode encoding (UTF-8/16/32), otherwise `false`.
     ///
-    /// @see encoding
-    ///
-    enum class unicode_encoding : std::uint8_t
+    [[nodiscard]] constexpr bool is_unicode_encoding(encoding enc) noexcept
     {
-        utf8  = std::to_underlying(encoding::utf8),  ///< UTF-8 encoding, equal to `encoding::utf8`
-        utf16 = std::to_underlying(encoding::utf16), ///< UTF-16 encoding, equal to `encoding::utf16`
-        utf32 = std::to_underlying(encoding::utf32)  ///< UTF-32 encoding, equal to `encoding::utf32`
-    };
+        return enc == encoding::utf8 || enc == encoding::utf16 || enc == encoding::utf32;
+    }
+
+    /// @brief Concept checking whether an encoding is a Unicode encoding.
+    ///
+    /// @headerfile "" <uni-cpp/encoding.hpp>
+    ///
+    template<encoding Enc>
+    concept unicode_encoding = is_unicode_encoding(Enc);
 
     /// @brief Provides traits for a given text encoding.
     ///
@@ -952,7 +953,8 @@ namespace upp
 
     namespace impl
     {
-        template<std::integral T, unicode_encoding SourceEncoding, unicode_encoding TargetEncoding>
+        template<std::integral T, encoding SourceEncoding, encoding TargetEncoding>
+            requires unicode_encoding<SourceEncoding> && unicode_encoding<TargetEncoding>
         inline constexpr T utf_transcoding_upper_bound_size_hint_factor = []() {
             // Each line after the "|||" has every case written out. The number in the parentheses is the calculated transcoding factor.
             // For a given source encoding and target encoding pair, the greatest transcoding factor is always chosen.
@@ -972,18 +974,19 @@ namespace upp
             //     8. to UTF-16: 2    |||    1 -> 1 (1)    or    1 -> 2 (2)
             //     9. to UTF-32: 1    |||    1 -> 1 (1)
 
-            if constexpr (SourceEncoding == TargetEncoding || TargetEncoding == unicode_encoding::utf32 ||
-                          SourceEncoding == unicode_encoding::utf8) // 1, 2, 3, 5, 6, 9
+            if constexpr (SourceEncoding == TargetEncoding || TargetEncoding == encoding::utf32 ||
+                          SourceEncoding == encoding::utf8) // 1, 2, 3, 5, 6, 9
                 return 1;
-            else if constexpr (SourceEncoding == unicode_encoding::utf16) // 4
+            else if constexpr (SourceEncoding == encoding::utf16) // 4
                 return 3;
-            else if constexpr (TargetEncoding == unicode_encoding::utf8) // 7
+            else if constexpr (TargetEncoding == encoding::utf8) // 7
                 return 4;
-            else if constexpr (TargetEncoding == unicode_encoding::utf16) // 8
+            else if constexpr (TargetEncoding == encoding::utf16) // 8
                 return 2;
         }();
 
-        template<std::integral T, unicode_encoding SourceEncoding, unicode_encoding TargetEncoding>
+        template<std::integral T, encoding SourceEncoding, encoding TargetEncoding>
+            requires unicode_encoding<SourceEncoding> && unicode_encoding<TargetEncoding>
         inline constexpr T utf_transcoding_lower_bound_size_hint_divisor = []() {
             // Look at all the cases written above. This time we choose the smallest factor.
             //

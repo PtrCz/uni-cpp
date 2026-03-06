@@ -292,14 +292,14 @@ namespace upp
         class basic_ustring_impl;
     } // namespace impl
 
-    template<unicode_encoding Encoding, string_compatible_container<static_cast<encoding>(Encoding)> Container>
+    template<encoding Encoding, string_compatible_container<Encoding> Container>
+        requires unicode_encoding<Encoding>
     class basic_ustring
     {
     public:
-        static constexpr encoding         encoding_value         = static_cast<encoding>(Encoding);
-        static constexpr unicode_encoding unicode_encoding_value = Encoding;
+        static constexpr encoding encoding_value = Encoding;
 
-        using traits_type    = encoding_traits<encoding_value>;
+        using traits_type    = encoding_traits<Encoding>;
         using container_type = Container;
         using size_type      = Container::size_type;
         using code_unit_type = Container::value_type;
@@ -602,7 +602,8 @@ namespace upp
         /// @tparam SourceEncoding Encoding of the converted-from sequence.
         /// @param source_size Count of code units that are in the source sequence.
         ///
-        template<unicode_encoding SourceEncoding, typename SizeType>
+        template<encoding SourceEncoding, typename SizeType>
+            requires unicode_encoding<SourceEncoding>
         constexpr void reserve_for_transcoding_from(SizeType source_size)
             requires reservable_container<Container>
         {
@@ -663,7 +664,7 @@ namespace upp
         /// @brief Appends a single code unit to the end of the string.
         ///
         template<typename T>
-            requires code_unit_type_for<T, encoding_value>
+            requires code_unit_type_for<T, Encoding>
         constexpr void push_back_code_unit(T code_unit)
         {
             const auto value = std::bit_cast<code_unit_type>(code_unit);
@@ -683,7 +684,7 @@ namespace upp
         /// @pre The `range` must not depend on the state of this string. For example, it cannot be a view into this string's underlying container.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding_value>
+            requires code_unit_range<Range, Encoding>
         constexpr void append_code_units_range(Range&& range)
         {
             using range_code_unit_t = std::remove_cvref_t<std::ranges::range_reference_t<Range>>;
@@ -715,15 +716,15 @@ namespace upp
         ///
         constexpr void push_back(const uchar code_point)
         {
-            if constexpr (Encoding == unicode_encoding::utf8)
+            if constexpr (Encoding == encoding::utf8)
             {
                 append_code_units_range(code_point.encode_utf8());
             }
-            else if constexpr (Encoding == unicode_encoding::utf16)
+            else if constexpr (Encoding == encoding::utf16)
             {
                 append_code_units_range(code_point.encode_utf16());
             }
-            else if constexpr (Encoding == unicode_encoding::utf32)
+            else if constexpr (Encoding == encoding::utf32)
             {
                 push_back_code_unit(code_point.value());
             }

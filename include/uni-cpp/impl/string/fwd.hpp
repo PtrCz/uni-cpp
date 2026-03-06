@@ -101,8 +101,9 @@ namespace upp
     ///
     /// @headerfile "" <uni-cpp/string.hpp>
     ///
-    template<unicode_encoding Encoding, string_compatible_container<static_cast<encoding>(Encoding)> Container =
-                                            std::basic_string<typename encoding_traits<static_cast<encoding>(Encoding)>::default_code_unit_type>>
+    template<encoding                              Encoding,
+             string_compatible_container<Encoding> Container = std::basic_string<typename encoding_traits<Encoding>::default_code_unit_type>>
+        requires unicode_encoding<Encoding>
     class basic_ustring;
 
     /// @brief UTF-8 string type.
@@ -112,7 +113,7 @@ namespace upp
     ///         Default value is `std::u8string`.
     ///
     template<string_compatible_container<encoding::utf8> Container = std::u8string>
-    using basic_utf8_string = basic_ustring<unicode_encoding::utf8, Container>;
+    using basic_utf8_string = basic_ustring<encoding::utf8, Container>;
 
     /// @brief UTF-16 string type.
     ///
@@ -121,7 +122,7 @@ namespace upp
     ///         Default value is `std::u16string`.
     ///
     template<string_compatible_container<encoding::utf16> Container = std::u16string>
-    using basic_utf16_string = basic_ustring<unicode_encoding::utf16, Container>;
+    using basic_utf16_string = basic_ustring<encoding::utf16, Container>;
 
     /// @brief UTF-32 string type.
     ///
@@ -130,7 +131,7 @@ namespace upp
     ///         Default value is `std::u32string`.
     ///
     template<string_compatible_container<encoding::utf32> Container = std::u32string>
-    using basic_utf32_string = basic_ustring<unicode_encoding::utf32, Container>;
+    using basic_utf32_string = basic_ustring<encoding::utf32, Container>;
 
     /// @brief Default ASCII string type.
     ///
@@ -150,7 +151,7 @@ namespace upp
 
     /// @brief Default Unicode string type. Uses the UTF-8 encoding.
     ///
-    using ustring = basic_ustring<unicode_encoding::utf8, std::u8string>;
+    using ustring = basic_ustring<encoding::utf8, std::u8string>;
 } // namespace upp
 
 #endif // UNI_CPP_IMPL_STRING_FWD_HPP

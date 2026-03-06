@@ -37,20 +37,18 @@ namespace upp_test
     }
 
     template<typename Callable>
-    constexpr void run_for_each_encoding(const Callable& callable)
+    constexpr void run_for_each_unicode_encoding(const Callable& callable)
     {
-        callable.template operator()<upp::encoding::ascii>();
         callable.template operator()<upp::encoding::utf8>();
         callable.template operator()<upp::encoding::utf16>();
         callable.template operator()<upp::encoding::utf32>();
     }
 
     template<typename Callable>
-    constexpr void run_for_each_unicode_encoding(const Callable& callable)
+    constexpr void run_for_each_encoding(const Callable& callable)
     {
-        callable.template operator()<upp::unicode_encoding::utf8>();
-        callable.template operator()<upp::unicode_encoding::utf16>();
-        callable.template operator()<upp::unicode_encoding::utf32>();
+        callable.template operator()<upp::encoding::ascii>();
+        run_for_each_unicode_encoding(callable);
     }
 } // namespace upp_test
 

@@ -15,14 +15,15 @@ namespace upp_test::utf
         std::u16string utf16_seq;
         std::u32string utf32_seq;
 
-        template<upp::unicode_encoding Encoding, typename Self>
+        template<upp::encoding Encoding, typename Self>
+            requires upp::unicode_encoding<Encoding>
         [[nodiscard]] constexpr auto&& encoded_with(this Self&& self) noexcept
         {
-            if constexpr (Encoding == upp::unicode_encoding::utf8)
+            if constexpr (Encoding == upp::encoding::utf8)
                 return std::forward<Self>(self).utf8_seq;
-            else if constexpr (Encoding == upp::unicode_encoding::utf16)
+            else if constexpr (Encoding == upp::encoding::utf16)
                 return std::forward<Self>(self).utf16_seq;
-            else if constexpr (Encoding == upp::unicode_encoding::utf32)
+            else if constexpr (Encoding == upp::encoding::utf32)
                 return std::forward<Self>(self).utf32_seq;
         }
     };
@@ -57,14 +58,15 @@ namespace upp_test::utf
         std::u16string utf16_lossy;
         std::u32string utf32_lossy;
 
-        template<upp::unicode_encoding Encoding, typename Self>
+        template<upp::encoding Encoding, typename Self>
+            requires upp::unicode_encoding<Encoding>
         [[nodiscard]] constexpr auto&& encoded_lossily_with(this Self&& self) noexcept
         {
-            if constexpr (Encoding == upp::unicode_encoding::utf8)
+            if constexpr (Encoding == upp::encoding::utf8)
                 return std::forward<Self>(self).utf8_lossy;
-            else if constexpr (Encoding == upp::unicode_encoding::utf16)
+            else if constexpr (Encoding == upp::encoding::utf16)
                 return std::forward<Self>(self).utf16_lossy;
-            else if constexpr (Encoding == upp::unicode_encoding::utf32)
+            else if constexpr (Encoding == upp::encoding::utf32)
                 return std::forward<Self>(self).utf32_lossy;
         }
     };
@@ -301,14 +303,15 @@ namespace upp_test::utf
 
 #undef TEST_INVALID_UTF_LOSSY
 
-    template<upp::unicode_encoding Encoding>
+    template<upp::encoding Encoding>
+        requires upp::unicode_encoding<Encoding>
     [[nodiscard]] constexpr auto invalid_test_cases_for_encoding()
     {
-        if constexpr (Encoding == upp::unicode_encoding::utf8)
+        if constexpr (Encoding == upp::encoding::utf8)
             return invalid_utf8_test_cases();
-        else if constexpr (Encoding == upp::unicode_encoding::utf16)
+        else if constexpr (Encoding == upp::encoding::utf16)
             return invalid_utf16_test_cases();
-        else if constexpr (Encoding == upp::unicode_encoding::utf32)
+        else if constexpr (Encoding == upp::encoding::utf32)
             return invalid_utf32_test_cases();
     }
 } // namespace upp_test::utf

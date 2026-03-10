@@ -944,13 +944,6 @@ namespace upp
     template<typename T, encoding Encoding>
     concept code_unit_type_for = encoding_traits<Encoding>::template is_code_unit_type<T>;
 
-    /// @brief Identifies types that are ranges of code units of a given encoding.
-    ///
-    /// @headerfile "" <uni-cpp/encoding.hpp>
-    ///
-    template<typename R, encoding Encoding>
-    concept code_unit_range = encoding_traits<Encoding>::template is_code_unit_range<R>;
-
     namespace impl
     {
         template<std::integral T, encoding SourceEncoding, encoding TargetEncoding>

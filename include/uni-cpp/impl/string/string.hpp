@@ -9,6 +9,9 @@
 #include "../../uchar.hpp"
 #include "../../encoding.hpp"
 
+#include "../ranges/base.hpp"
+#include "../ranges/approximately_sized_range.hpp"
+
 #include "fwd.hpp"
 #include "string_literal.hpp"
 
@@ -150,10 +153,10 @@ namespace upp
         /// @see from_ascii_lossy, from_ascii_unchecked
         ///
         /// @tparam Range Input range of ASCII code units (character codes). Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::ascii>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::ascii>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::ascii>
+            requires ranges::code_unit_range<Range, encoding::ascii>
         [[nodiscard]] static constexpr std::expected<basic_ascii_string, ascii_error> from_ascii(Range&& range);
 
         /// @brief Constructs a `basic_ascii_string` from ASCII encoded data, replacing decoding errors with `ascii_char::substitute_character()`s.
@@ -161,10 +164,10 @@ namespace upp
         /// @see from_ascii, from_ascii_unchecked
         ///
         /// @tparam Range Input range of ASCII code units (character codes). Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::ascii>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::ascii>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::ascii>
+            requires ranges::code_unit_range<Range, encoding::ascii>
         [[nodiscard]] static constexpr basic_ascii_string from_ascii_lossy(Range&& range);
 
         /// @brief Constructs a `basic_ascii_string` from ASCII encoded data without error checking.
@@ -177,10 +180,10 @@ namespace upp
         /// @see from_ascii, from_ascii_lossy
         ///
         /// @tparam Range Input range of ASCII code units (character codes). Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::ascii>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::ascii>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::ascii>
+            requires ranges::code_unit_range<Range, encoding::ascii>
         [[nodiscard]] static constexpr basic_ascii_string from_ascii_unchecked(Range&& range);
 
         /// @brief Returns a `const` reference to the underlying container.
@@ -402,10 +405,10 @@ namespace upp
         /// @see from_utf8_lossy, from_utf8_unchecked
         ///
         /// @tparam Range Input range of UTF-8 code units. Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::utf8>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::utf8>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::utf8>
+            requires ranges::code_unit_range<Range, encoding::utf8>
         [[nodiscard]] static constexpr std::expected<basic_ustring, utf8_error> from_utf8(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-8 encoded data, replacing decoding errors with `uchar::replacement_character()`s.
@@ -413,10 +416,10 @@ namespace upp
         /// @see from_utf8, from_utf8_unchecked
         ///
         /// @tparam Range Input range of UTF-8 code units. Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::utf8>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::utf8>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::utf8>
+            requires ranges::code_unit_range<Range, encoding::utf8>
         [[nodiscard]] static constexpr basic_ustring from_utf8_lossy(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-8 encoded data without error checking.
@@ -429,10 +432,10 @@ namespace upp
         /// @see from_utf8, from_utf8_lossy
         ///
         /// @tparam Range Input range of UTF-8 code units. Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::utf8>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::utf8>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::utf8>
+            requires ranges::code_unit_range<Range, encoding::utf8>
         [[nodiscard]] static constexpr basic_ustring from_utf8_unchecked(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-16 encoded data with error checking.
@@ -444,10 +447,10 @@ namespace upp
         /// @see from_utf16_lossy, from_utf16_unchecked
         ///
         /// @tparam Range Input range of UTF-16 code units. Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::utf16>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::utf16>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::utf16>
+            requires ranges::code_unit_range<Range, encoding::utf16>
         [[nodiscard]] static constexpr std::expected<basic_ustring, utf16_error> from_utf16(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-16 encoded data, replacing decoding errors with `uchar::replacement_character()`s.
@@ -455,10 +458,10 @@ namespace upp
         /// @see from_utf16, from_utf16_unchecked
         ///
         /// @tparam Range Input range of UTF-16 code units. Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::utf16>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::utf16>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::utf16>
+            requires ranges::code_unit_range<Range, encoding::utf16>
         [[nodiscard]] static constexpr basic_ustring from_utf16_lossy(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-16 encoded data without error checking.
@@ -471,10 +474,10 @@ namespace upp
         /// @see from_utf16, from_utf16_lossy
         ///
         /// @tparam Range Input range of UTF-16 code units. Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::utf16>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::utf16>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::utf16>
+            requires ranges::code_unit_range<Range, encoding::utf16>
         [[nodiscard]] static constexpr basic_ustring from_utf16_unchecked(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-32 encoded data with error checking.
@@ -486,10 +489,10 @@ namespace upp
         /// @see from_utf32_lossy, from_utf32_unchecked
         ///
         /// @tparam Range Input range of UTF-32 code units. Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::utf32>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::utf32>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::utf32>
+            requires ranges::code_unit_range<Range, encoding::utf32>
         [[nodiscard]] static constexpr std::expected<basic_ustring, utf32_error> from_utf32(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-32 encoded data, replacing decoding errors with `uchar::replacement_character()`s.
@@ -497,10 +500,10 @@ namespace upp
         /// @see from_utf32, from_utf32_unchecked
         ///
         /// @tparam Range Input range of UTF-32 code units. Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::utf32>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::utf32>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::utf32>
+            requires ranges::code_unit_range<Range, encoding::utf32>
         [[nodiscard]] static constexpr basic_ustring from_utf32_lossy(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-32 encoded data without error checking.
@@ -513,10 +516,10 @@ namespace upp
         /// @see from_utf32, from_utf32_lossy
         ///
         /// @tparam Range Input range of UTF-32 code units. Needs to satisfy `std::ranges::input_range` and
-        /// `upp::code_unit_range<Range, upp::encoding::utf32>`.
+        /// `upp::ranges::code_unit_range<Range, upp::encoding::utf32>`.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, encoding::utf32>
+            requires ranges::code_unit_range<Range, encoding::utf32>
         [[nodiscard]] static constexpr basic_ustring from_utf32_unchecked(Range&& range);
 
         /// @brief Returns a `const` reference to the underlying container.
@@ -684,7 +687,7 @@ namespace upp
         /// @pre The `range` must not depend on the state of this string. For example, it cannot be a view into this string's underlying container.
         ///
         template<std::ranges::input_range Range>
-            requires code_unit_range<Range, Encoding>
+            requires ranges::code_unit_range<Range, Encoding>
         constexpr void append_code_units_range(Range&& range)
         {
             using range_code_unit_t = std::remove_cvref_t<std::ranges::range_reference_t<Range>>;

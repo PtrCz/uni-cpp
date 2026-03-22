@@ -130,8 +130,17 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char;
 
-        /// Error type returned by ASCII validating, decoding and transcoding functions.
+        /// @brief Error type describing a decoding error in incremental decoding.
+        ///
+        /// @see from_error_type
+        ///
         using error_type = ascii_error;
+
+        /// @brief Error type describing a decoding failure when processing a full input sequence, including position.
+        ///
+        /// @see error_type
+        ///
+        using from_error_type = from_ascii_error;
 
         /// Instance of the ASCII encoding tag.
         static constexpr encoding_tag_type encoding_tag{};
@@ -155,15 +164,15 @@ namespace upp
         /// It should have exactly one parameter of type `char`.
         /// This makes it possible to use this function with single-pass ranges while also getting the code units out of that range.
         ///
-        /// @return `std::expected<void, ascii_error>` containing: `void` if the range is valid ASCII, otherwise `ascii_error`.
+        /// @return `std::expected<void, from_ascii_error>` containing: `void` if the range is valid ASCII, otherwise `from_ascii_error`.
         ///
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
         {
-            using expected_type = std::expected<void, ascii_error>;
+            using expected_type = std::expected<void, from_ascii_error>;
 
             auto       it       = std::ranges::begin(range);
             const auto sentinel = std::ranges::end(range);
@@ -176,7 +185,7 @@ namespace upp
 
                 if (!is_valid_ascii(code_unit))
                 {
-                    return expected_type{std::unexpect, ascii_error{.valid_up_to = index}};
+                    return expected_type{std::unexpect, from_ascii_error{.valid_up_to = index, .error = ascii_error{}}};
                 }
 
                 std::invoke(code_unit_callback, std::bit_cast<char>(code_unit));
@@ -189,13 +198,13 @@ namespace upp
         ///
         /// @param range Range of ASCII code units (ASCII character codes) to verify.
         ///
-        /// @return `std::expected<void, ascii_error>` containing: `void` if the range is valid ASCII, otherwise `ascii_error`.
+        /// @return `std::expected<void, from_ascii_error>` containing: `void` if the range is valid ASCII, otherwise `from_ascii_error`.
         ///
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> validate_range(Range&& range)
         {
             return validate_range(std::forward<Range>(range), [](char) static {});
         }
@@ -207,15 +216,15 @@ namespace upp
         /// @param code_point_callback Callback function called with every decoded ASCII character.
         /// It should have exactly one parameter of type `upp::ascii_char`.
         ///
-        /// @return `std::expected<void, ascii_error>` containing: `void` if no error occurs, otherwise `ascii_error`.
+        /// @return `std::expected<void, from_ascii_error>` containing: `void` if no error occurs, otherwise `from_ascii_error`.
         ///
         /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
         {
-            using expected_type = std::expected<void, ascii_error>;
+            using expected_type = std::expected<void, from_ascii_error>;
 
             auto       it       = std::ranges::begin(range);
             const auto sentinel = std::ranges::end(range);
@@ -230,7 +239,7 @@ namespace upp
 
                 if (!code_point.has_value())
                 {
-                    return expected_type{std::unexpect, ascii_error{.valid_up_to = index}};
+                    return expected_type{std::unexpect, from_ascii_error{.valid_up_to = index, .error = ascii_error{}}};
                 }
 
                 std::invoke(code_point_callback, *code_point);
@@ -306,8 +315,17 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char8_t;
 
-        /// Error type returned by UTF-8 validating, decoding and transcoding functions.
+        /// @brief Error type describing a decoding error in incremental decoding.
+        ///
+        /// @see from_error_type
+        ///
         using error_type = utf8_error;
+
+        /// @brief Error type describing a decoding failure when processing a full input sequence, including position.
+        ///
+        /// @see error_type
+        ///
+        using from_error_type = from_utf8_error;
 
         /// Instance of the UTF-8 encoding tag.
         static constexpr encoding_tag_type encoding_tag{};
@@ -331,15 +349,15 @@ namespace upp
         /// It should have exactly one parameter of type `char8_t`.
         /// This makes it possible to use this function with single-pass ranges while also getting the code units out of that range.
         ///
-        /// @return `std::expected<void, utf8_error>` containing: `void` if the range is valid UTF-8, otherwise `utf8_error`.
+        /// @return `std::expected<void, from_utf8_error>` containing: `void` if the range is valid UTF-8, otherwise `from_utf8_error`.
         ///
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
         {
-            using expected_type = std::expected<void, utf8_error>;
+            using expected_type = std::expected<void, from_utf8_error>;
 
             auto       it       = std::ranges::begin(range);
             const auto sentinel = std::ranges::end(range);
@@ -353,7 +371,8 @@ namespace upp
 
                 const std::uint32_t type = impl::utf8::dfa::character_class_from_byte[current_code_unit];
 
-                state = impl::utf8::dfa::state_transition_table[state + type];
+                const std::uint32_t previous_state = state;
+                state                              = impl::utf8::dfa::state_transition_table[state + type];
 
                 if (state == impl::utf8::dfa::state::reject)
                 {
@@ -361,7 +380,14 @@ namespace upp
 
                     const std::uint8_t error_length = impl::utf8::get_error_length_from_invalid_code_units_length(invalid_code_units_length);
 
-                    return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = error_length}};
+                    const utf8_error_code error_code = impl::utf8::get_error_code(previous_state, type);
+
+                    return expected_type{
+                        std::unexpect, from_utf8_error{
+                                           .valid_up_to = valid_up_to,
+                                           .error = utf8_error{.length = std::optional<std::uint8_t>{std::in_place, error_length}, .code = error_code}
+                                       }
+                    };
                 }
 
                 if (state == impl::utf8::dfa::state::accept)
@@ -374,7 +400,12 @@ namespace upp
 
             if (state != impl::utf8::dfa::state::accept)
             {
-                return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = {std::nullopt}}};
+                return expected_type{
+                    std::unexpect,
+                    from_utf8_error{
+                        .valid_up_to = valid_up_to, .error = utf8_error{.length = {std::nullopt}, .code = utf8_error_code::truncated_sequence}
+                    }
+                };
             }
 
             return expected_type{};
@@ -384,13 +415,13 @@ namespace upp
         ///
         /// @param range Range of UTF-8 code units to verify.
         ///
-        /// @return `std::expected<void, utf8_error>` containing: `void` if the range is valid UTF-8, otherwise `utf8_error`.
+        /// @return `std::expected<void, from_utf8_error>` containing: `void` if the range is valid UTF-8, otherwise `from_utf8_error`.
         ///
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> validate_range(Range&& range)
         {
             return validate_range(std::forward<Range>(range), [](char8_t) static {});
         }
@@ -402,15 +433,15 @@ namespace upp
         /// @param code_point_callback Callback function called with every decoded code point.
         /// It should have exactly one parameter of type `upp::uchar`.
         ///
-        /// @return `std::expected<void, utf8_error>` containing: `void` if no error occurs, otherwise `utf8_error`.
+        /// @return `std::expected<void, from_utf8_error>` containing: `void` if no error occurs, otherwise `from_utf8_error`.
         ///
         /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
         {
-            using expected_type = std::expected<void, utf8_error>;
+            using expected_type = std::expected<void, from_utf8_error>;
 
             auto       it       = std::ranges::begin(range);
             const auto sentinel = std::ranges::end(range);
@@ -429,7 +460,8 @@ namespace upp
                 current_code_point = (state != impl::utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6)
                                                                                : (0xFF >> type) & (current_code_unit);
 
-                state = impl::utf8::dfa::state_transition_table[state + type];
+                const std::uint32_t previous_state = state;
+                state                              = impl::utf8::dfa::state_transition_table[state + type];
 
                 if (state == impl::utf8::dfa::state::reject)
                 {
@@ -437,7 +469,14 @@ namespace upp
 
                     const std::uint8_t error_length = impl::utf8::get_error_length_from_invalid_code_units_length(invalid_code_units_length);
 
-                    return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = error_length}};
+                    const utf8_error_code error_code = impl::utf8::get_error_code(previous_state, type);
+
+                    return expected_type{
+                        std::unexpect, from_utf8_error{
+                                           .valid_up_to = valid_up_to,
+                                           .error = utf8_error{.length = std::optional<std::uint8_t>{std::in_place, error_length}, .code = error_code}
+                                       }
+                    };
                 }
 
                 if (state == impl::utf8::dfa::state::accept)
@@ -452,7 +491,12 @@ namespace upp
 
             if (state != impl::utf8::dfa::state::accept)
             {
-                return expected_type{std::unexpect, utf8_error{.valid_up_to = valid_up_to, .error_length = {std::nullopt}}};
+                return expected_type{
+                    std::unexpect,
+                    from_utf8_error{
+                        .valid_up_to = valid_up_to, .error = utf8_error{.length = {std::nullopt}, .code = utf8_error_code::truncated_sequence}
+                    }
+                };
             }
 
             return expected_type{};
@@ -587,8 +631,17 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char16_t;
 
-        /// Error type returned by UTF-16 validating, decoding and transcoding functions.
+        /// @brief Error type describing a decoding error in incremental decoding.
+        ///
+        /// @see from_error_type
+        ///
         using error_type = utf16_error;
+
+        /// @brief Error type describing a decoding failure when processing a full input sequence, including position.
+        ///
+        /// @see error_type
+        ///
+        using from_error_type = from_utf16_error;
 
         /// Instance of the UTF-16 encoding tag.
         static constexpr encoding_tag_type encoding_tag{};
@@ -612,15 +665,15 @@ namespace upp
         /// It should have exactly one parameter of type `char16_t`.
         /// This makes it possible to use this function with single-pass ranges while also getting the code units out of that range.
         ///
-        /// @return `std::expected<void, utf16_error>` containing: `void` if the range is valid UTF-16, otherwise `utf16_error`.
+        /// @return `std::expected<void, from_utf16_error>` containing: `void` if the range is valid UTF-16, otherwise `from_utf16_error`.
         ///
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
         {
-            using expected_type = std::expected<void, utf16_error>;
+            using expected_type = std::expected<void, from_utf16_error>;
 
             auto       it       = std::ranges::begin(range);
             const auto sentinel = std::ranges::end(range);
@@ -639,16 +692,43 @@ namespace upp
                 if (impl::utf16::is_surrogate(first_code_unit))
                 {
                     if (first_code_unit >= 0xDC00U)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = 1}};
+                    {
+                        return expected_type{
+                            std::unexpect,
+                            from_utf16_error{
+                                .valid_up_to = valid_up_to,
+                                .error       = utf16_error{
+                                    .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate
+                                }
+                            }
+                        };
+                    }
 
                     if (it == sentinel)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = std::nullopt}};
+                    {
+                        return expected_type{
+                            std::unexpect, from_utf16_error{
+                                               .valid_up_to = valid_up_to,
+                                               .error       = utf16_error{.length = {std::nullopt}, .code = utf16_error_code::unpaired_high_surrogate}
+                                           }
+                        };
+                    }
 
                     const char16_t second_code_unit = std::bit_cast<char16_t>(*it);
                     ++index, ++it;
 
                     if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = 1}};
+                    {
+                        return expected_type{
+                            std::unexpect,
+                            from_utf16_error{
+                                .valid_up_to = valid_up_to,
+                                .error       = utf16_error{
+                                    .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_high_surrogate
+                                }
+                            }
+                        };
+                    }
 
                     std::invoke(code_unit_callback, second_code_unit);
                 }
@@ -661,13 +741,13 @@ namespace upp
         ///
         /// @param range Range of UTF-16 code units to verify.
         ///
-        /// @return `std::expected<void, utf16_error>` containing: `void` if the range is valid UTF-16, otherwise `utf16_error`.
+        /// @return `std::expected<void, from_utf16_error>` containing: `void` if the range is valid UTF-16, otherwise `from_utf16_error`.
         ///
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> validate_range(Range&& range)
         {
             return validate_range(std::forward<Range>(range), [](char16_t) static {});
         }
@@ -679,15 +759,15 @@ namespace upp
         /// @param code_point_callback Callback function called with every decoded code point.
         /// It should have exactly one parameter of type `upp::uchar`.
         ///
-        /// @return `std::expected<void, utf16_error>` containing: `void` if no error occurs, otherwise `utf16_error`.
+        /// @return `std::expected<void, from_utf16_error>` containing: `void` if no error occurs, otherwise `from_utf16_error`.
         ///
         /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
         {
-            using expected_type = std::expected<void, utf16_error>;
+            using expected_type = std::expected<void, from_utf16_error>;
 
             auto       it       = std::ranges::begin(range);
             const auto sentinel = std::ranges::end(range);
@@ -704,16 +784,43 @@ namespace upp
                 if (impl::utf16::is_surrogate(first_code_unit))
                 {
                     if (first_code_unit >= 0xDC00U)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = 1}};
+                    {
+                        return expected_type{
+                            std::unexpect,
+                            from_utf16_error{
+                                .valid_up_to = valid_up_to,
+                                .error       = utf16_error{
+                                    .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate
+                                }
+                            }
+                        };
+                    }
 
                     if (it == sentinel)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = std::nullopt}};
+                    {
+                        return expected_type{
+                            std::unexpect, from_utf16_error{
+                                               .valid_up_to = valid_up_to,
+                                               .error       = utf16_error{.length = {std::nullopt}, .code = utf16_error_code::unpaired_high_surrogate}
+                                           }
+                        };
+                    }
 
                     const char16_t second_code_unit = std::bit_cast<char16_t>(*it);
                     ++index, ++it;
 
                     if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU)
-                        return expected_type{std::unexpect, utf16_error{.valid_up_to = valid_up_to, .error_length = 1}};
+                    {
+                        return expected_type{
+                            std::unexpect,
+                            from_utf16_error{
+                                .valid_up_to = valid_up_to,
+                                .error       = utf16_error{
+                                    .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_high_surrogate
+                                }
+                            }
+                        };
+                    }
 
                     std::uint32_t code_point =
                         ((static_cast<std::uint32_t>(first_code_unit & 0x3FFU) << 10) | static_cast<std::uint32_t>(second_code_unit & 0x3FFU)) +
@@ -860,8 +967,17 @@ namespace upp
         /// Built-in integral type for storing code units of a given encoding.
         using default_code_unit_type = char32_t;
 
-        /// Error type returned by UTF-32 validating, decoding and transcoding functions.
+        /// @brief Error type describing a decoding error in incremental decoding.
+        ///
+        /// @see from_error_type
+        ///
         using error_type = utf32_error;
+
+        /// @brief Error type describing a decoding failure when processing a full input sequence, including position.
+        ///
+        /// @see error_type
+        ///
+        using from_error_type = from_utf32_error;
 
         /// Instance of the UTF-32 encoding tag.
         static constexpr encoding_tag_type encoding_tag{};
@@ -885,15 +1001,15 @@ namespace upp
         /// It should have exactly one parameter of type `char32_t`.
         /// This makes it possible to use this function with single-pass ranges while also getting the code units out of that range.
         ///
-        /// @return `std::expected<void, utf32_error>` containing: `void` if the range is valid UTF-32, otherwise `utf32_error`.
+        /// @return `std::expected<void, from_utf32_error>` containing: `void` if the range is valid UTF-32, otherwise `from_utf32_error`.
         ///
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range, std::invocable<default_code_unit_type> CodeUnitCallback>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> validate_range(Range&& range, const CodeUnitCallback& code_unit_callback)
         {
-            using expected_type = std::expected<void, utf32_error>;
+            using expected_type = std::expected<void, from_utf32_error>;
 
             auto       it       = std::ranges::begin(range);
             const auto sentinel = std::ranges::end(range);
@@ -906,7 +1022,18 @@ namespace upp
 
                 if (!is_valid_usv(code_unit))
                 {
-                    return expected_type{std::unexpect, utf32_error{.valid_up_to = index}};
+                    if (code_unit > impl::max_usv)
+                    {
+                        return expected_type{
+                            std::unexpect, from_utf32_error{.valid_up_to = index, .error = utf32_error{.code = utf32_error_code::out_of_range}}
+                        };
+                    }
+                    else
+                    {
+                        return expected_type{
+                            std::unexpect, from_utf32_error{.valid_up_to = index, .error = utf32_error{.code = utf32_error_code::encoded_surrogate}}
+                        };
+                    }
                 }
 
                 std::invoke(code_unit_callback, std::bit_cast<char32_t>(code_unit));
@@ -919,13 +1046,13 @@ namespace upp
         ///
         /// @param range Range of UTF-32 code units to verify.
         ///
-        /// @return `std::expected<void, utf32_error>` containing: `void` if the range is valid UTF-32, otherwise `utf32_error`.
+        /// @return `std::expected<void, from_utf32_error>` containing: `void` if the range is valid UTF-32, otherwise `from_utf32_error`.
         ///
         /// @see decode_range, decode_range_lossy, decode_range_unchecked
         ///
         template<std::ranges::input_range Range>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> validate_range(Range&& range)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> validate_range(Range&& range)
         {
             return validate_range(std::forward<Range>(range), [](char32_t) static {});
         }
@@ -937,15 +1064,15 @@ namespace upp
         /// @param code_point_callback Callback function called with every decoded code point.
         /// It should have exactly one parameter of type `upp::uchar`.
         ///
-        /// @return `std::expected<void, utf32_error>` containing: `void` if no error occurs, otherwise `utf32_error`.
+        /// @return `std::expected<void, from_utf32_error>` containing: `void` if no error occurs, otherwise `from_utf32_error`.
         ///
         /// @see decode_range_lossy, decode_range_unchecked, validate_range
         ///
         template<std::ranges::input_range Range, std::invocable<char_type> CodePointCallback>
             requires is_code_unit_range<Range>
-        [[nodiscard]] static constexpr std::expected<void, error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
+        [[nodiscard]] static constexpr std::expected<void, from_error_type> decode_range(Range&& range, const CodePointCallback& code_point_callback)
         {
-            using expected_type = std::expected<void, utf32_error>;
+            using expected_type = std::expected<void, from_utf32_error>;
 
             auto       it       = std::ranges::begin(range);
             const auto sentinel = std::ranges::end(range);
@@ -960,7 +1087,18 @@ namespace upp
 
                 if (!code_point.has_value())
                 {
-                    return expected_type{std::unexpect, utf32_error{.valid_up_to = index}};
+                    if (code_unit > impl::max_usv)
+                    {
+                        return expected_type{
+                            std::unexpect, from_utf32_error{.valid_up_to = index, .error = utf32_error{.code = utf32_error_code::out_of_range}}
+                        };
+                    }
+                    else
+                    {
+                        return expected_type{
+                            std::unexpect, from_utf32_error{.valid_up_to = index, .error = utf32_error{.code = utf32_error_code::encoded_surrogate}}
+                        };
+                    }
                 }
 
                 std::invoke(code_point_callback, *code_point);

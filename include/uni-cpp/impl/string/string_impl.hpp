@@ -187,9 +187,9 @@ namespace upp
     template<string_compatible_container<encoding::ascii> Container>
     template<std::ranges::input_range Range>
         requires ranges::code_unit_range<Range, encoding::ascii>
-    [[nodiscard]] constexpr std::expected<basic_ascii_string<Container>, ascii_error> basic_ascii_string<Container>::from_ascii(Range&& range)
+    [[nodiscard]] constexpr std::expected<basic_ascii_string<Container>, from_ascii_error> basic_ascii_string<Container>::from_ascii(Range&& range)
     {
-        using expected_type = std::expected<basic_ascii_string<Container>, ascii_error>;
+        using expected_type = std::expected<basic_ascii_string<Container>, from_ascii_error>;
 
         if constexpr (std::same_as<Container, std::remove_cvref_t<Range>>)
         {
@@ -273,9 +273,9 @@ namespace upp
         requires unicode_encoding<E>
     template<std::ranges::input_range Range>
         requires ranges::code_unit_range<Range, encoding::utf8>
-    [[nodiscard]] constexpr std::expected<basic_ustring<E, C>, utf8_error> basic_ustring<E, C>::from_utf8(Range&& range)
+    [[nodiscard]] constexpr std::expected<basic_ustring<E, C>, from_utf8_error> basic_ustring<E, C>::from_utf8(Range&& range)
     {
-        return impl::basic_ustring_impl::from_utf<encoding::utf8, utf8_error, E, C>(std::forward<Range>(range));
+        return impl::basic_ustring_impl::from_utf<encoding::utf8, from_utf8_error, E, C>(std::forward<Range>(range));
     }
 
     template<encoding E, string_compatible_container<E> C>
@@ -300,9 +300,9 @@ namespace upp
         requires unicode_encoding<E>
     template<std::ranges::input_range Range>
         requires ranges::code_unit_range<Range, encoding::utf16>
-    [[nodiscard]] constexpr std::expected<basic_ustring<E, C>, utf16_error> basic_ustring<E, C>::from_utf16(Range&& range)
+    [[nodiscard]] constexpr std::expected<basic_ustring<E, C>, from_utf16_error> basic_ustring<E, C>::from_utf16(Range&& range)
     {
-        return impl::basic_ustring_impl::from_utf<encoding::utf16, utf16_error, E, C>(std::forward<Range>(range));
+        return impl::basic_ustring_impl::from_utf<encoding::utf16, from_utf16_error, E, C>(std::forward<Range>(range));
     }
 
     template<encoding E, string_compatible_container<E> C>
@@ -327,9 +327,9 @@ namespace upp
         requires unicode_encoding<E>
     template<std::ranges::input_range Range>
         requires ranges::code_unit_range<Range, encoding::utf32>
-    [[nodiscard]] constexpr std::expected<basic_ustring<E, C>, utf32_error> basic_ustring<E, C>::from_utf32(Range&& range)
+    [[nodiscard]] constexpr std::expected<basic_ustring<E, C>, from_utf32_error> basic_ustring<E, C>::from_utf32(Range&& range)
     {
-        return impl::basic_ustring_impl::from_utf<encoding::utf32, utf32_error, E, C>(std::forward<Range>(range));
+        return impl::basic_ustring_impl::from_utf<encoding::utf32, from_utf32_error, E, C>(std::forward<Range>(range));
     }
 
     template<encoding E, string_compatible_container<E> C>

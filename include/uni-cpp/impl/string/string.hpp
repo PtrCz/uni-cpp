@@ -146,7 +146,7 @@ namespace upp
 
         /// @brief Constructs a `basic_ascii_string` from ASCII encoded data with error checking.
         ///
-        /// @return `std::expected` containing the string on success, or an `ascii_error` on failure.
+        /// @return `std::expected` containing the string on success, or an `from_ascii_error` on failure.
         ///
         /// If you are absolutely certain that `range` is valid ASCII, you can use `from_ascii_unchecked` instead.
         ///
@@ -157,7 +157,7 @@ namespace upp
         ///
         template<std::ranges::input_range Range>
             requires ranges::code_unit_range<Range, encoding::ascii>
-        [[nodiscard]] static constexpr std::expected<basic_ascii_string, ascii_error> from_ascii(Range&& range);
+        [[nodiscard]] static constexpr std::expected<basic_ascii_string, from_ascii_error> from_ascii(Range&& range);
 
         /// @brief Constructs a `basic_ascii_string` from ASCII encoded data, replacing decoding errors with `ascii_char::substitute_character()`s.
         ///
@@ -398,7 +398,7 @@ namespace upp
 
         /// @brief Constructs a `basic_ustring` from UTF-8 encoded data with error checking.
         ///
-        /// @return `std::expected` containing the string on success, or a `utf8_error` on failure.
+        /// @return `std::expected` containing the string on success, or a `from_utf8_error` on failure.
         ///
         /// If you are absolutely certain that `range` is valid UTF-8, you can use `from_utf8_unchecked` instead.
         ///
@@ -409,7 +409,7 @@ namespace upp
         ///
         template<std::ranges::input_range Range>
             requires ranges::code_unit_range<Range, encoding::utf8>
-        [[nodiscard]] static constexpr std::expected<basic_ustring, utf8_error> from_utf8(Range&& range);
+        [[nodiscard]] static constexpr std::expected<basic_ustring, from_utf8_error> from_utf8(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-8 encoded data, replacing decoding errors with `uchar::replacement_character()`s.
         ///
@@ -440,7 +440,7 @@ namespace upp
 
         /// @brief Constructs a `basic_ustring` from UTF-16 encoded data with error checking.
         ///
-        /// @return `std::expected` containing the string on success, or a `utf16_error` on failure.
+        /// @return `std::expected` containing the string on success, or a `from_utf16_error` on failure.
         ///
         /// If you are absolutely certain that `range` is valid UTF-16, you can use `from_utf16_unchecked` instead.
         ///
@@ -451,7 +451,7 @@ namespace upp
         ///
         template<std::ranges::input_range Range>
             requires ranges::code_unit_range<Range, encoding::utf16>
-        [[nodiscard]] static constexpr std::expected<basic_ustring, utf16_error> from_utf16(Range&& range);
+        [[nodiscard]] static constexpr std::expected<basic_ustring, from_utf16_error> from_utf16(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-16 encoded data, replacing decoding errors with `uchar::replacement_character()`s.
         ///
@@ -482,7 +482,7 @@ namespace upp
 
         /// @brief Constructs a `basic_ustring` from UTF-32 encoded data with error checking.
         ///
-        /// @return `std::expected` containing the string on success, or a `utf32_error` on failure.
+        /// @return `std::expected` containing the string on success, or a `from_utf32_error` on failure.
         ///
         /// If you are absolutely certain that `range` is valid UTF-32, you can use `from_utf32_unchecked` instead.
         ///
@@ -493,7 +493,7 @@ namespace upp
         ///
         template<std::ranges::input_range Range>
             requires ranges::code_unit_range<Range, encoding::utf32>
-        [[nodiscard]] static constexpr std::expected<basic_ustring, utf32_error> from_utf32(Range&& range);
+        [[nodiscard]] static constexpr std::expected<basic_ustring, from_utf32_error> from_utf32(Range&& range);
 
         /// @brief Constructs a `basic_ustring` from UTF-32 encoded data, replacing decoding errors with `uchar::replacement_character()`s.
         ///

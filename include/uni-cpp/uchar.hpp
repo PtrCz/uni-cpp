@@ -279,6 +279,11 @@ namespace upp
         std::uint8_t m_value;
     };
 
+    namespace impl
+    {
+        inline constexpr std::uint32_t max_usv = 0x10FFFFU;
+    }
+
     /// @brief A Unicode character type representing a single [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value).
     ///
     /// @headerfile "" <uni-cpp/uchar.hpp>

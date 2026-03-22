@@ -53,9 +53,9 @@ namespace upp::ranges
     ///
     /// @headerfile "" <uni-cpp/ranges.hpp>
     ///
-    template<encoding Encoding, std::ranges::view View>
+    template<std::ranges::view View, encoding Encoding>
         requires code_unit_input_range<View, Encoding>
-    class valid_code_unit_view : public UNI_CPP_IMPL_VIEW_INTERFACE(valid_code_unit_view<Encoding, View>)
+    class valid_code_unit_view : public UNI_CPP_IMPL_VIEW_INTERFACE(valid_code_unit_view<View, Encoding>)
     {
     public:
         /// @brief Default constructor.
@@ -72,6 +72,18 @@ namespace upp::ranges
         /// If the underlying code unit sequence is invalid or incomplete (ends unexpectedly), the behaviour is undefined.
         ///
         constexpr explicit valid_code_unit_view(View base)
+            : m_base(std::move(base))
+        {
+        }
+
+        /// @brief Constructs the view from an underlying view.
+        ///
+        /// @param base The underlying view to wrap.
+        ///
+        /// @pre The underlying view MUST be a valid and complete code unit sequence.
+        /// If the underlying code unit sequence is invalid or incomplete (ends unexpectedly), the behaviour is undefined.
+        ///
+        constexpr valid_code_unit_view(View base, encoding_tag_t<Encoding>)
             : m_base(std::move(base))
         {
         }
@@ -95,7 +107,7 @@ namespace upp::ranges
         /// @brief Returns an iterator to the beginning of the range.
         ///
         constexpr auto begin() const
-            requires std::ranges::range<const View>
+            requires std::ranges::range<const View> && code_unit_input_range<const View, Encoding>
         {
             return std::ranges::begin(m_base);
         }
@@ -107,7 +119,7 @@ namespace upp::ranges
         /// @brief Returns an iterator/sentinel marking the end of the range.
         ///
         constexpr auto end() const
-            requires std::ranges::range<const View>
+            requires std::ranges::range<const View> && code_unit_input_range<const View, Encoding>
         {
             return std::ranges::end(m_base);
         }
@@ -123,7 +135,7 @@ namespace upp::ranges
         /// @brief Returns the size of the range.
         ///
         constexpr auto size() const
-            requires std::ranges::sized_range<const View>
+            requires std::ranges::sized_range<const View> && code_unit_input_range<const View, Encoding>
         {
             return std::ranges::size(m_base);
         }
@@ -139,7 +151,7 @@ namespace upp::ranges
         /// @brief Returns an approximate size of the range.
         ///
         constexpr auto reserve_hint() const
-            requires approximately_sized_range<const View>
+            requires approximately_sized_range<const View> && code_unit_input_range<const View, Encoding>
         {
             return ranges::reserve_hint(m_base);
         }
@@ -147,6 +159,13 @@ namespace upp::ranges
     private:
         View m_base = View();
     };
+
+    /// @cond
+
+    template<typename Range, encoding Encoding>
+    valid_code_unit_view(Range&&, encoding_tag_t<Encoding>) -> valid_code_unit_view<std::views::all_t<Range>, Encoding>;
+
+    /// @endcond
 
     /// @brief Template variable used to indicate whether a range type is guaranteed to be a well-formed code unit sequence in the given encoding.
     ///
@@ -196,7 +215,7 @@ namespace upp::ranges
     // invariants
 
     template<encoding Encoding, typename View>
-    inline constexpr bool enable_valid_code_unit_range<valid_code_unit_view<Encoding, View>, Encoding> = true;
+    inline constexpr bool enable_valid_code_unit_range<valid_code_unit_view<View, Encoding>, Encoding> = true;
 
     template<>
     inline constexpr bool enable_valid_code_unit_range<uchar::encode_utf8_t, encoding::utf8> = true;
@@ -242,7 +261,7 @@ namespace upp::ranges
                 if constexpr (valid_code_unit_range<std::views::all_t<Range>, Encoding>)
                     return std::views::all(std::forward<Range>(range));
                 else
-                    return valid_code_unit_view<Encoding, std::views::all_t<Range>>(std::views::all(std::forward<Range>(range)));
+                    return valid_code_unit_view<std::views::all_t<Range>, Encoding>(std::views::all(std::forward<Range>(range)));
             }
         };
     } // namespace impl
@@ -265,7 +284,7 @@ namespace upp::ranges
         ///
         /// @return
         /// - `std::views::all(std::forward<Range>(range))` if `valid_code_unit_range<std::views::all_t<Range>, Encoding>` is `true`,
-        /// - otherwise: `valid_code_unit_view<Encoding, std::views::all_t<Range>>(std::views::all(std::forward<Range>(range)))`.
+        /// - otherwise: `valid_code_unit_view<std::views::all_t<Range>, Encoding>(std::views::all(std::forward<Range>(range)))`.
         ///
         /// @par Example usage
         /// @code{.cpp}
@@ -297,7 +316,7 @@ namespace upp::ranges
         ///
         /// @return
         /// - `std::views::all(std::forward<Range>(range))` if `valid_code_unit_range<std::views::all_t<Range>, encoding::ascii>` is `true`,
-        /// - otherwise: `valid_code_unit_view<encoding::ascii, std::views::all_t<Range>>(std::views::all(std::forward<Range>(range)))`.
+        /// - otherwise: `valid_code_unit_view<std::views::all_t<Range>, encoding::ascii>(std::views::all(std::forward<Range>(range)))`.
         ///
         /// @pre The `range` argument MUST be a valid ASCII code unit range.
         /// If the code unit sequence is invalid (contains values above `0x7F`), the behaviour is undefined.
@@ -317,7 +336,7 @@ namespace upp::ranges
         ///
         /// @return
         /// - `std::views::all(std::forward<Range>(range))` if `valid_code_unit_range<std::views::all_t<Range>, encoding::utf8>` is `true`,
-        /// - otherwise: `valid_code_unit_view<encoding::utf8, std::views::all_t<Range>>(std::views::all(std::forward<Range>(range)))`.
+        /// - otherwise: `valid_code_unit_view<std::views::all_t<Range>, encoding::utf8>(std::views::all(std::forward<Range>(range)))`.
         ///
         /// @pre The `range` argument MUST be a valid UTF-8 code unit range.
         /// If the code unit sequence is invalid or incomplete (ends unexpectedly), the behaviour is undefined.
@@ -337,7 +356,7 @@ namespace upp::ranges
         ///
         /// @return
         /// - `std::views::all(std::forward<Range>(range))` if `valid_code_unit_range<std::views::all_t<Range>, encoding::utf16>` is `true`,
-        /// - otherwise: `valid_code_unit_view<encoding::utf16, std::views::all_t<Range>>(std::views::all(std::forward<Range>(range)))`.
+        /// - otherwise: `valid_code_unit_view<std::views::all_t<Range>, encoding::utf16>(std::views::all(std::forward<Range>(range)))`.
         ///
         /// @pre The `range` argument MUST be a valid UTF-16 code unit range.
         /// If the code unit sequence is invalid or incomplete (ends unexpectedly), the behaviour is undefined.
@@ -357,7 +376,7 @@ namespace upp::ranges
         ///
         /// @return
         /// - `std::views::all(std::forward<Range>(range))` if `valid_code_unit_range<std::views::all_t<Range>, encoding::utf32>` is `true`,
-        /// - otherwise: `valid_code_unit_view<encoding::utf32, std::views::all_t<Range>>(std::views::all(std::forward<Range>(range)))`.
+        /// - otherwise: `valid_code_unit_view<std::views::all_t<Range>, encoding::utf32>(std::views::all(std::forward<Range>(range)))`.
         ///
         /// @pre The `range` argument MUST be a valid UTF-32 code unit range.
         /// If the code unit sequence is invalid (contains non-USVs), the behaviour is undefined.
@@ -370,8 +389,8 @@ namespace upp::ranges
 
 /// @cond
 
-template<upp::encoding Encoding, typename View>
-inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::valid_code_unit_view<Encoding, View>> =
+template<typename View, upp::encoding Encoding>
+inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::valid_code_unit_view<View, Encoding>> =
     std::ranges::enable_borrowed_range<View>;
 
 /// @endcond

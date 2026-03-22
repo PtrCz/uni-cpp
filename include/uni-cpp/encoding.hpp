@@ -34,6 +34,65 @@ namespace upp
         utf32  ///< UTF-32 encoding
     };
 
+    /// @defgroup tag_types Tag types for representing non-type template parameters.
+    ///
+    /// @brief Tag types used for class template argument deduction (CTAD).
+    ///
+
+    /// @addtogroup tag_types
+    /// @{
+
+    /// @brief Tag type for representing a non-type template parameter.
+    ///
+    /// @headerfile "" <uni-cpp/encoding.hpp>
+    ///
+    template<auto Value>
+    struct nontype_t
+    {
+        explicit nontype_t() = default;
+    };
+
+    /// @brief Instance of @ref nontype_t.
+    ///
+    template<auto Value>
+    inline constexpr nontype_t<Value> nontype{};
+
+    /// @brief Tag type for representing an encoding non-type template parameter.
+    ///
+    template<encoding Encoding>
+    using encoding_tag_t = nontype_t<Encoding>;
+
+    /// @brief Instance of @ref encoding_tag_t.
+    ///
+    template<encoding Encoding>
+    inline constexpr encoding_tag_t<Encoding> encoding_tag{};
+
+    /// Tag type for the ASCII encoding.
+    using ascii_tag_t = encoding_tag_t<encoding::ascii>;
+
+    /// Instance of the ASCII encoding tag.
+    inline constexpr ascii_tag_t ascii_tag{};
+
+    /// Tag type for the UTF-8 encoding.
+    using utf8_tag_t = encoding_tag_t<encoding::utf8>;
+
+    /// Instance of the UTF-8 encoding tag.
+    inline constexpr utf8_tag_t utf8_tag{};
+
+    /// Tag type for the UTF-16 encoding.
+    using utf16_tag_t = encoding_tag_t<encoding::utf16>;
+
+    /// Instance of the UTF-16 encoding tag.
+    inline constexpr utf16_tag_t utf16_tag{};
+
+    /// Tag type for the UTF-32 encoding.
+    using utf32_tag_t = encoding_tag_t<encoding::utf32>;
+
+    /// Instance of the UTF-32 encoding tag.
+    inline constexpr utf32_tag_t utf32_tag{};
+
+    /// @}
+
     /// @brief Returns `true` if `enc` is a Unicode encoding (UTF-8/16/32), otherwise `false`.
     ///
     [[nodiscard]] constexpr bool is_unicode_encoding(encoding enc) noexcept
@@ -62,6 +121,9 @@ namespace upp
     template<>
     struct encoding_traits<encoding::ascii>
     {
+        /// Tag type for the ASCII encoding.
+        using encoding_tag_type = ascii_tag_t;
+
         /// The uni-cpp type for storing code points of a given encoding.
         using char_type = ascii_char;
 
@@ -70,6 +132,9 @@ namespace upp
 
         /// Error type returned by ASCII validating, decoding and transcoding functions.
         using error_type = ascii_error;
+
+        /// Instance of the ASCII encoding tag.
+        static constexpr encoding_tag_type encoding_tag{};
 
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = false;
@@ -232,6 +297,9 @@ namespace upp
     template<>
     struct encoding_traits<encoding::utf8>
     {
+        /// Tag type for the UTF-8 encoding.
+        using encoding_tag_type = utf8_tag_t;
+
         /// The uni-cpp type for storing code points of a given encoding.
         using char_type = uchar;
 
@@ -240,6 +308,9 @@ namespace upp
 
         /// Error type returned by UTF-8 validating, decoding and transcoding functions.
         using error_type = utf8_error;
+
+        /// Instance of the UTF-8 encoding tag.
+        static constexpr encoding_tag_type encoding_tag{};
 
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = true;
@@ -507,6 +578,9 @@ namespace upp
     template<>
     struct encoding_traits<encoding::utf16>
     {
+        /// Tag type for the UTF-16 encoding.
+        using encoding_tag_type = utf16_tag_t;
+
         /// The uni-cpp type for storing code points of a given encoding.
         using char_type = uchar;
 
@@ -515,6 +589,9 @@ namespace upp
 
         /// Error type returned by UTF-16 validating, decoding and transcoding functions.
         using error_type = utf16_error;
+
+        /// Instance of the UTF-16 encoding tag.
+        static constexpr encoding_tag_type encoding_tag{};
 
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = true;
@@ -774,6 +851,9 @@ namespace upp
     template<>
     struct encoding_traits<encoding::utf32>
     {
+        /// Tag type for the UTF-32 encoding.
+        using encoding_tag_type = utf32_tag_t;
+
         /// The uni-cpp type for storing code points of a given encoding.
         using char_type = uchar;
 
@@ -782,6 +862,9 @@ namespace upp
 
         /// Error type returned by UTF-32 validating, decoding and transcoding functions.
         using error_type = utf32_error;
+
+        /// Instance of the UTF-32 encoding tag.
+        static constexpr encoding_tag_type encoding_tag{};
 
         /// `true` for [variable-width encodings](https://en.wikipedia.org/wiki/Variable-length_encoding), otherwise `false`.
         static constexpr bool is_variable_width = false;

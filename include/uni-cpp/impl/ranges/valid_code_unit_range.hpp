@@ -183,6 +183,12 @@ namespace upp::ranges
     /// - `enable_valid_code_unit_range<uchar::encode_utf8_t, encoding::utf8>` is `true`,
     /// - `enable_valid_code_unit_range<uchar::encode_utf16_t, encoding::utf16>` is `true`,
     /// - `enable_valid_code_unit_range<valid_code_unit_view<Encoding, View>, Encoding>` is `true`.
+    /// - `enable_valid_code_unit_range<transcode_view<View, SourceEncoding, TargetEncoding, Kind, ToType>, TargetEncoding>` equals to `Kind != transcode_view_kind::expected`.
+    ///   That's because the `transcode_view` always produces valid UTF, but if the `Kind` is `expected`, then the `value_type` of the `transcode_view` range is
+    ///   `std::expected<ToType, error_type>`, which can't be a `valid_code_unit_range`, because it isn't even a `code_unit_range`.
+    /// - The following extra specialization for `transcode_view` is provided if `valid_code_unit_range<View, encoding::ascii>` is satisfied:
+    ///   `enable_valid_code_unit_range<transcode_view<View, SourceEncoding, encoding::utf8, Kind, ToType>, encoding::ascii> = Kind != transcode_view_kind::expected`.
+    ///   It means that transcoding a valid ASCII range to UTF-8 results in a range that's valid ASCII as well.
     ///
     /// @par Specializing `enable_valid_code_unit_range` vs. using `views::mark_as_valid_encoding`
     ///     Specializing `enable_valid_code_unit_range` declares that the **type itself** guarantees a well-formed code unit sequence for the specified `Encoding`.

@@ -8,7 +8,11 @@
 
 #include "../../encoding.hpp"
 
+#include <cstddef>
 #include <ranges>
+#include <iterator>
+#include <type_traits>
+#include <concepts>
 
 #ifndef UNI_CPP_IMPL_DOXYGEN
 
@@ -55,6 +59,15 @@ namespace upp::ranges
     ///
     template<typename Range, encoding Encoding>
     concept code_unit_input_range = std::ranges::input_range<Range> && code_unit_range<Range, Encoding>;
+
+    namespace impl
+    {
+        template<bool Const, typename T>
+        using maybe_const = std::conditional_t<Const, const T, T>;
+
+        template<typename Range>
+        concept range_supports_empty = std::ranges::range<Range> && requires(Range& rg) { std::ranges::empty(rg); };
+    } // namespace impl
 } // namespace upp::ranges
 
 #endif // UNI_CPP_IMPL_RANGES_BASE_HPP

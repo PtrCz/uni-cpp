@@ -11,7 +11,6 @@
 
 #include "utility.hpp"
 #include "ranges.hpp"
-#include "../utf.hpp"
 
 TEST_CASE("string type traits", "[string types]")
 {

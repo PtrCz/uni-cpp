@@ -7,7 +7,7 @@
 
 #include "utility.hpp"
 #include "ranges.hpp"
-#include "../utf.hpp"
+#include "../encoding/utf.hpp"
 
 TEST_CASE("upp::basic_ustring from_utf()", "[UTF encoding][string types][Unicode string types]")
 {
@@ -39,7 +39,7 @@ TEST_CASE("upp::basic_ustring from_utf()", "[UTF encoding][string types][Unicode
 
                     for (const auto& sequences : upp_test::utf::valid_sequences())
                     {
-                        const auto& input_sequence = sequences.template encoded_with<Encoding>();
+                        const auto& input_sequence = sequences.template encoded_as<Encoding>();
 
                         upp_test::string_input_range<code_unit_type> input_range{std::basic_string_view<code_unit_type>{input_sequence}};
 
@@ -49,7 +49,7 @@ TEST_CASE("upp::basic_ustring from_utf()", "[UTF encoding][string types][Unicode
                         REQUIRE(result.has_value());
                         REQUIRE(input_range_result.has_value());
 
-                        auto&& expected = sequences.template encoded_with<StringType::encoding_value>();
+                        auto&& expected = sequences.template encoded_as<StringType::encoding_value>();
 
                         CHECK(result->underlying() == expected);
                         CHECK(input_range_result->underlying() == expected);
@@ -67,11 +67,11 @@ TEST_CASE("upp::basic_ustring from_utf()", "[UTF encoding][string types][Unicode
                 upp_test::run_for_each_unicode_string_type([&]<typename StringType>() {
                     using code_unit_type = upp::encoding_traits<Encoding>::default_code_unit_type;
 
-                    for (const auto& test_case : upp_test::utf::invalid_test_cases_for_encoding<Encoding>())
+                    for (const auto& test_case : upp_test::utf::invalid_sequences_for_encoding<Encoding>())
                     {
-                        upp_test::string_input_range<code_unit_type> input_range{std::basic_string_view<code_unit_type>{test_case.input}};
+                        upp_test::string_input_range<code_unit_type> input_range{std::basic_string_view<code_unit_type>{test_case.sequence}};
 
-                        const auto result             = from_utf.template operator()<Encoding, StringType>(test_case.input);
+                        const auto result             = from_utf.template operator()<Encoding, StringType>(test_case.sequence);
                         const auto input_range_result = from_utf.template operator()<Encoding, StringType>(input_range);
 
                         REQUIRE(!result.has_value());
@@ -112,14 +112,14 @@ TEST_CASE("upp::basic_ustring from_utf_lossy()", "[UTF encoding][string types][U
             upp_test::run_for_each_unicode_string_type([&]<typename StringType>() {
                 using code_unit_type = upp::encoding_traits<SourceEncoding>::default_code_unit_type;
 
-                for (const auto& test_case : upp_test::utf::invalid_test_cases_for_encoding<SourceEncoding>())
+                for (const auto& test_case : upp_test::utf::invalid_sequences_for_encoding<SourceEncoding>())
                 {
-                    upp_test::string_input_range<code_unit_type> input_range{std::basic_string_view<code_unit_type>{test_case.input}};
+                    upp_test::string_input_range<code_unit_type> input_range{std::basic_string_view<code_unit_type>{test_case.sequence}};
 
-                    const auto result             = from_utf_lossy.template operator()<SourceEncoding, StringType>(test_case.input);
+                    const auto result             = from_utf_lossy.template operator()<SourceEncoding, StringType>(test_case.sequence);
                     const auto input_range_result = from_utf_lossy.template operator()<SourceEncoding, StringType>(input_range);
 
-                    auto&& expected = test_case.template encoded_lossily_with<StringType::encoding_value>();
+                    auto&& expected = test_case.template lossily_encoded_as<StringType::encoding_value>();
 
                     CHECK(result.underlying() == expected);
                     CHECK(input_range_result.underlying() == expected);
@@ -155,7 +155,7 @@ TEST_CASE("upp::basic_ustring from_utf_unchecked()", "[UTF encoding][string type
                 {
                     const StringType result = from_unchecked(sequences);
 
-                    const auto& expected = sequences.template encoded_with<StringType::encoding_value>();
+                    const auto& expected = sequences.template encoded_as<StringType::encoding_value>();
 
                     CHECK(result.underlying() == expected);
                 }

@@ -46,19 +46,23 @@ namespace upp
 
 namespace upp::ranges
 {
-    /// @brief Identifies types that are ranges of code units of a given encoding.
-    ///
-    /// @headerfile "" <uni-cpp/ranges.hpp>
-    ///
-    template<typename Range, encoding Encoding>
-    concept code_unit_range = encoding_traits<Encoding>::template is_code_unit_range<Range>;
-
     /// @brief Identifies types that are input ranges of code units of a given encoding.
     ///
+    /// @see @ref upp::ranges::code_unit_range "code_unit_range"
+    ///
     /// @headerfile "" <uni-cpp/ranges.hpp>
     ///
     template<typename Range, encoding Encoding>
-    concept code_unit_input_range = std::ranges::input_range<Range> && code_unit_range<Range, Encoding>;
+    concept code_unit_range_for = encoding_traits<Encoding>::template is_code_unit_range<Range>;
+
+    /// @brief Identifies types that are input ranges of code units of some encoding.
+    ///
+    /// @see @ref upp::ranges::code_unit_range_for "code_unit_range_for"
+    ///
+    /// @headerfile "" <uni-cpp/ranges.hpp>
+    ///
+    template<typename Range>
+    concept code_unit_range = std::ranges::input_range<Range> && code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>;
 
     namespace impl
     {

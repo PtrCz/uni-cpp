@@ -54,7 +54,7 @@ namespace upp::ranges
     /// @headerfile "" <uni-cpp/ranges.hpp>
     ///
     template<std::ranges::view View, encoding Encoding>
-        requires code_unit_input_range<View, Encoding>
+        requires code_unit_range_for<View, Encoding>
     class valid_code_unit_view : public UNI_CPP_IMPL_VIEW_INTERFACE(valid_code_unit_view<View, Encoding>)
     {
     public:
@@ -107,7 +107,7 @@ namespace upp::ranges
         /// @brief Returns an iterator to the beginning of the range.
         ///
         constexpr auto begin() const
-            requires std::ranges::range<const View> && code_unit_input_range<const View, Encoding>
+            requires std::ranges::range<const View> && code_unit_range_for<const View, Encoding>
         {
             return std::ranges::begin(m_base);
         }
@@ -119,7 +119,7 @@ namespace upp::ranges
         /// @brief Returns an iterator/sentinel marking the end of the range.
         ///
         constexpr auto end() const
-            requires std::ranges::range<const View> && code_unit_input_range<const View, Encoding>
+            requires std::ranges::range<const View> && code_unit_range_for<const View, Encoding>
         {
             return std::ranges::end(m_base);
         }
@@ -135,7 +135,7 @@ namespace upp::ranges
         /// @brief Returns the size of the range.
         ///
         constexpr auto size() const
-            requires std::ranges::sized_range<const View> && code_unit_input_range<const View, Encoding>
+            requires std::ranges::sized_range<const View> && code_unit_range_for<const View, Encoding>
         {
             return std::ranges::size(m_base);
         }
@@ -151,7 +151,7 @@ namespace upp::ranges
         /// @brief Returns an approximate size of the range.
         ///
         constexpr auto reserve_hint() const
-            requires approximately_sized_range<const View> && code_unit_input_range<const View, Encoding>
+            requires approximately_sized_range<const View> && code_unit_range_for<const View, Encoding>
         {
             return ranges::reserve_hint(m_base);
         }
@@ -237,7 +237,7 @@ namespace upp::ranges
 
     /// @brief Identifies ranges that are guaranteed to be well-formed code unit sequences in the given encoding.
     ///
-    /// A range satisfies this concept if it models `code_unit_input_range` for the
+    /// A range satisfies this concept if it models `code_unit_range_for` for the
     /// given `Encoding` and its type guarantees that every value represents
     /// a complete and well-formed code unit sequence.
     ///
@@ -254,7 +254,7 @@ namespace upp::ranges
     /// @headerfile "" <uni-cpp/ranges.hpp>
     ///
     template<typename Range, encoding Encoding>
-    concept valid_code_unit_range = code_unit_input_range<Range, Encoding> &&
+    concept valid_code_unit_range = code_unit_range_for<Range, Encoding> &&
                                     (enable_valid_code_unit_range<std::remove_cvref_t<Range>, Encoding> ||
                                      (Encoding == encoding::utf8 && enable_valid_code_unit_range<std::remove_cvref_t<Range>, encoding::ascii>));
 
@@ -265,7 +265,7 @@ namespace upp::ranges
         {
         public:
             template<std::ranges::viewable_range Range>
-                requires code_unit_input_range<Range, Encoding>
+                requires code_unit_range_for<Range, Encoding>
             [[nodiscard]] constexpr auto operator()(Range&& range) const
             {
                 if constexpr (valid_code_unit_range<std::views::all_t<Range>, Encoding>)
@@ -288,7 +288,7 @@ namespace upp::ranges
         /// @par Call signature (of the instantiated RangeAdaptorClosureObject)
         /// ```cpp
         /// template<std::ranges::viewable_range Range>
-        ///     requires code_unit_input_range<Range, Encoding>
+        ///     requires code_unit_range_for<Range, Encoding>
         /// constexpr valid_code_unit_range<Encoding> auto mark_as_valid_encoding(Range&& range);
         /// ```
         ///
@@ -320,7 +320,7 @@ namespace upp::ranges
         /// @par Call signature
         /// ```cpp
         /// template<std::ranges::viewable_range Range>
-        ///     requires code_unit_input_range<Range, encoding::ascii>
+        ///     requires code_unit_range_for<Range, encoding::ascii>
         /// constexpr valid_code_unit_range<encoding::ascii> auto mark_as_valid_ascii(Range&& range);
         /// ```
         ///
@@ -340,7 +340,7 @@ namespace upp::ranges
         /// @par Call signature
         /// ```cpp
         /// template<std::ranges::viewable_range Range>
-        ///     requires code_unit_input_range<Range, encoding::utf8>
+        ///     requires code_unit_range_for<Range, encoding::utf8>
         /// constexpr valid_code_unit_range<encoding::utf8> auto mark_as_valid_utf8(Range&& range);
         /// ```
         ///
@@ -360,7 +360,7 @@ namespace upp::ranges
         /// @par Call signature
         /// ```cpp
         /// template<std::ranges::viewable_range Range>
-        ///     requires code_unit_input_range<Range, encoding::utf16>
+        ///     requires code_unit_range_for<Range, encoding::utf16>
         /// constexpr valid_code_unit_range<encoding::utf16> auto mark_as_valid_utf16(Range&& range);
         /// ```
         ///
@@ -380,7 +380,7 @@ namespace upp::ranges
         /// @par Call signature
         /// ```cpp
         /// template<std::ranges::viewable_range Range>
-        ///     requires code_unit_input_range<Range, encoding::utf32>
+        ///     requires code_unit_range_for<Range, encoding::utf32>
         /// constexpr valid_code_unit_range<encoding::utf32> auto mark_as_valid_utf32(Range&& range);
         /// ```
         ///

@@ -175,7 +175,7 @@ namespace upp::ranges
     ///
     template<std::ranges::view View, encoding SourceEncoding, encoding TargetEncoding, transcode_view_kind Kind,
              code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
-        requires unicode_encoding<TargetEncoding> && code_unit_input_range<View, SourceEncoding> &&
+        requires unicode_encoding<TargetEncoding> && code_unit_range_for<View, SourceEncoding> &&
                  (Kind != transcode_view_kind::valid || valid_code_unit_range<View, SourceEncoding>) && std::same_as<ToType, std::remove_cv_t<ToType>>
     class transcode_view : public UNI_CPP_IMPL_VIEW_INTERFACE(transcode_view<View, SourceEncoding, TargetEncoding, Kind, ToType>)
     {
@@ -271,7 +271,7 @@ namespace upp::ranges
         /// @brief Returns an iterator to the beginning of the range.
         ///
         constexpr iterator<true> begin() const
-            requires std::ranges::range<const View> && code_unit_input_range<const View, SourceEncoding>
+            requires std::ranges::range<const View> && code_unit_range_for<const View, SourceEncoding>
         {
             return iterator<true>(*this, std::ranges::begin(m_base));
         }
@@ -291,7 +291,7 @@ namespace upp::ranges
         /// @brief Returns a sentinel marking the end of the range.
         ///
         constexpr sentinel<true> end() const
-            requires std::ranges::range<const View> && code_unit_input_range<const View, SourceEncoding>
+            requires std::ranges::range<const View> && code_unit_range_for<const View, SourceEncoding>
         {
             return sentinel<true>(std::ranges::end(m_base));
         }
@@ -299,7 +299,7 @@ namespace upp::ranges
         /// @brief Returns an iterator marking the end of the range.
         ///
         constexpr iterator<true> end() const
-            requires std::ranges::common_range<const View> && code_unit_input_range<const View, SourceEncoding>
+            requires std::ranges::common_range<const View> && code_unit_range_for<const View, SourceEncoding>
         {
             return iterator<true>(*this, std::ranges::end(m_base));
         }
@@ -315,7 +315,7 @@ namespace upp::ranges
         /// @brief Checks if the range is empty.
         ///
         constexpr bool empty() const
-            requires impl::range_supports_empty<const View> && code_unit_input_range<const View, SourceEncoding>
+            requires impl::range_supports_empty<const View> && code_unit_range_for<const View, SourceEncoding>
         {
             return std::ranges::empty(m_base);
         }
@@ -337,7 +337,7 @@ namespace upp::ranges
         /// e.g. UTF-32 → UTF-32.
         ///
         constexpr auto size() const
-            requires std::ranges::sized_range<const View> && code_unit_input_range<const View, SourceEncoding> && s_preserves_element_count
+            requires std::ranges::sized_range<const View> && code_unit_range_for<const View, SourceEncoding> && s_preserves_element_count
         {
             return std::ranges::size(m_base);
         }
@@ -353,7 +353,7 @@ namespace upp::ranges
         /// @brief Returns an approximate size of the range.
         ///
         constexpr auto reserve_hint() const
-            requires approximately_sized_range<const View> && code_unit_input_range<const View, SourceEncoding>
+            requires approximately_sized_range<const View> && code_unit_range_for<const View, SourceEncoding>
         {
             return ranges::reserve_hint(m_base);
         }
@@ -1133,7 +1133,7 @@ namespace upp::ranges
 
             template<std::ranges::view View2, encoding SourceEncoding2, encoding TargetEncoding2, transcode_view_kind Kind2,
                      code_unit_type_for<TargetEncoding2> ToType2>
-                requires unicode_encoding<TargetEncoding2> && code_unit_input_range<View2, SourceEncoding2> &&
+                requires unicode_encoding<TargetEncoding2> && code_unit_range_for<View2, SourceEncoding2> &&
                          (Kind2 != transcode_view_kind::valid || valid_code_unit_range<View2, SourceEncoding2>) &&
                          std::same_as<ToType2, std::remove_cv_t<ToType2>>
             friend class transcode_view;
@@ -1189,7 +1189,7 @@ namespace upp::ranges
 
             template<std::ranges::view View2, encoding SourceEncoding2, encoding TargetEncoding2, transcode_view_kind Kind2,
                      code_unit_type_for<TargetEncoding2> ToType2>
-                requires unicode_encoding<TargetEncoding2> && code_unit_input_range<View2, SourceEncoding2> &&
+                requires unicode_encoding<TargetEncoding2> && code_unit_range_for<View2, SourceEncoding2> &&
                          (Kind2 != transcode_view_kind::valid || valid_code_unit_range<View2, SourceEncoding2>) &&
                          std::same_as<ToType2, std::remove_cv_t<ToType2>>
             friend class transcode_view;
@@ -1267,7 +1267,7 @@ namespace upp::ranges
         {
         public:
             template<std::ranges::viewable_range Range>
-                requires code_unit_input_range<Range, SourceEncoding> &&
+                requires code_unit_range_for<Range, SourceEncoding> &&
                          (Kind != transcode_view_kind::valid || valid_code_unit_range<Range, SourceEncoding>)
             [[nodiscard]] constexpr auto operator()(Range&& range) const
             {

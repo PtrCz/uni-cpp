@@ -107,6 +107,13 @@ namespace upp
     template<encoding Enc>
     concept unicode_encoding = is_unicode_encoding(Enc);
 
+    /// @brief Identifies integral types other than _cv_ `bool`.
+    ///
+    /// @headerfile "" <uni-cpp/encoding.hpp>
+    ///
+    template<typename T>
+    concept integral_nonbool = std::integral<T> && !std::same_as<const volatile T, const volatile bool>;
+
     /// @brief Provides traits for a given text encoding.
     ///
     /// @headerfile "" <uni-cpp/encoding.hpp>
@@ -150,11 +157,12 @@ namespace upp
 
         /// `true` iff type `T` could be used as a code unit type for the ASCII encoding.
         template<typename T>
-        static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
+        static constexpr bool is_code_unit_type = integral_nonbool<T> && sizeof(T) == sizeof(default_code_unit_type);
 
-        /// `true` iff type `R` is a range of ASCII code units.
+        /// `true` iff type `R` is an input range of ASCII code units.
         template<typename R>
-        static constexpr bool is_code_unit_range = std::ranges::range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+        static constexpr bool is_code_unit_range =
+            std::ranges::input_range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
 
         /// @brief Validates a range of ASCII.
         ///
@@ -335,11 +343,12 @@ namespace upp
 
         /// `true` iff type `T` could be used as a code unit type for the UTF-8 encoding.
         template<typename T>
-        static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
+        static constexpr bool is_code_unit_type = integral_nonbool<T> && sizeof(T) == sizeof(default_code_unit_type);
 
-        /// `true` iff type `R` is a range of UTF-8 code units.
+        /// `true` iff type `R` is an input range of UTF-8 code units.
         template<typename R>
-        static constexpr bool is_code_unit_range = std::ranges::range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+        static constexpr bool is_code_unit_range =
+            std::ranges::input_range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
 
         /// @brief Validates a range of UTF-8.
         ///
@@ -651,11 +660,12 @@ namespace upp
 
         /// `true` iff type `T` could be used as a code unit type for the UTF-16 encoding.
         template<typename T>
-        static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
+        static constexpr bool is_code_unit_type = integral_nonbool<T> && sizeof(T) == sizeof(default_code_unit_type);
 
-        /// `true` iff type `R` is a range of UTF-16 code units.
+        /// `true` iff type `R` is an input range of UTF-16 code units.
         template<typename R>
-        static constexpr bool is_code_unit_range = std::ranges::range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+        static constexpr bool is_code_unit_range =
+            std::ranges::input_range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
 
         /// @brief Validates a range of UTF-16.
         ///
@@ -987,11 +997,12 @@ namespace upp
 
         /// `true` iff type `T` could be used as a code unit type for the UTF-32 encoding.
         template<typename T>
-        static constexpr bool is_code_unit_type = std::integral<T> && sizeof(T) == sizeof(default_code_unit_type);
+        static constexpr bool is_code_unit_type = integral_nonbool<T> && sizeof(T) == sizeof(default_code_unit_type);
 
-        /// `true` iff type `R` is a range of UTF-32 code units.
+        /// `true` iff type `R` is an input range of UTF-32 code units.
         template<typename R>
-        static constexpr bool is_code_unit_range = std::ranges::range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+        static constexpr bool is_code_unit_range =
+            std::ranges::input_range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
 
         /// @brief Validates a range of UTF-32.
         ///
@@ -1160,10 +1171,29 @@ namespace upp
 
     /// @brief Identifies types that could be used as a code unit type for a given encoding.
     ///
+    /// Checks whether type `T` is a code unit type and is the appropriate size for the specified encoding.
+    /// For example, `char`, `char8_t` and `std::uint8_t` all satisfy `code_unit_type_for<upp::encoding::ascii>`,
+    /// but `char16_t` and `std::uint32_t` do not, because they are not the proper size for the ASCII encoding.
+    ///
+    /// To check if type `T` is a code unit type for any encoding, use @ref upp::code_unit_type "code_unit_type" instead.
+    ///
     /// @headerfile "" <uni-cpp/encoding.hpp>
     ///
     template<typename T, encoding Encoding>
     concept code_unit_type_for = encoding_traits<Encoding>::template is_code_unit_type<T>;
+
+    /// @brief Identifies types that could be used as a code unit type for some encoding.
+    ///
+    /// Identifies types that could be used as a code unit type for ASCII, UTF-8, UTF-16 or UTF-32.
+    /// For example, `char`, `char16_t`, `std::uint32_t` etc. all satisfy this concept, but `std::uint64_t`
+    /// does not, because it's not a code unit type for any encoding.
+    ///
+    /// To check if type `T` is a code unit type for a specific encoding, use @ref upp::code_unit_type_for "code_unit_type_for" instead.
+    ///
+    /// @headerfile "" <uni-cpp/encoding.hpp>
+    ///
+    template<typename T>
+    concept code_unit_type = integral_nonbool<T> && (sizeof(T) == 1uz || sizeof(T) == 2uz || sizeof(T) == 4uz);
 
     namespace impl
     {

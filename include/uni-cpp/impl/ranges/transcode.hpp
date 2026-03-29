@@ -18,11 +18,44 @@
 
 #include <memory>
 #include <bit>
+#include <type_traits>
 #include <expected>
+
+/// @defgroup transcode_view Transcoding code unit ranges
+///
+/// @brief Provides range adaptors for transcoding between different UTF encodings.
+///
+/// Example:
+///
+/// @code{.cpp}
+///
+/// /// @brief Read a UTF-8 text file as TargetEncoding.
+/// ///
+/// template<upp::encoding TargetEncoding>
+///     requires upp::unicode_encoding<TargetEncoding>
+/// auto read_utf8_file_as(std::ifstream& in)
+/// {
+///     in >> std::noskipws;
+///
+///     auto src_view = std::ranges::istream_view<char>(in);
+///
+///     return src_view | upp::views::transcode_lossy_utf8_to<TargetEncoding>;
+/// }
+///
+/// @endcode
+///
+/// @see transcoding_range_adaptors
+/// @see transcode_view_kind
+/// @see transcode_view
+///
+/// @headerfile "" <uni-cpp/ranges.hpp>
+///
 
 namespace upp::ranges
 {
-    /// @brief Defines the error-handling policy for @ref upp::ranges::transcode_view "transcode_view" and @ref upp::views::transcode "views::transcode".
+    /// @brief Defines the error-handling policy for @ref upp::ranges::transcode_view "transcode_view" and @ref transcoding_range_adaptors "transcoding range adaptors".
+    ///
+    /// @ingroup transcode_view
     ///
     enum class transcode_view_kind : std::uint8_t
     {
@@ -36,11 +69,16 @@ namespace upp::ranges
         ///
         /// When this is used, the `value_type` of the `transcode_view` range is `std::expected<ToType, error_type>`.
         ///
+        /// To determine the number of malformed code units to replace with a single `std::unexpected` value,
+        /// it uses the [Substitution of Maximal Subparts](https://www.unicode.org/versions/Unicode17.0.0/core-spec/chapter-3/#G66453) specification.
+        ///
         expected,
 
         /// @brief Performs lossy transcoding.
         ///
-        /// Replaces invalid sequences with the replacement character.
+        /// Replaces invalid sequences with the Unicode replacement character.
+        /// To determine the number of malformed code units to replace with a single replacement character,
+        /// it uses the [Substitution of Maximal Subparts](https://www.unicode.org/versions/Unicode17.0.0/core-spec/chapter-3/#G66453) specification.
         ///
         lossy,
     };
@@ -106,6 +144,13 @@ namespace upp::ranges
             It& current;
             It  original;
         };
+
+        struct iterator_type_tag
+        {
+        };
+
+        template<typename>
+        struct get_transcode_view_subrange_info;
     } // namespace impl::transcode_view_impl
 
     /// @brief A lazy view that transcodes text to different UTF encodings.
@@ -122,7 +167,9 @@ namespace upp::ranges
     /// @tparam ToType Target code unit type. As an example, if `TargetEncoding` is UTF-16, then this type could be
     ///         `char16_t`, `std::uint16_t`, `[...]`. By default, this type is specified as `typename encoding_traits<TargetEncoding>::default_code_unit_type`.
     ///
-    /// @note Users should use the @ref upp::views::transcode "views::transcode" range adaptor family as opposed to using this type directly.
+    /// @note Users should use the @ref transcoding_range_adaptors "transcoding range adaptors" as opposed to using this type directly.
+    ///
+    /// @ingroup transcode_view
     ///
     /// @headerfile "" <uni-cpp/ranges.hpp>
     ///
@@ -313,7 +360,7 @@ namespace upp::ranges
 
     private:
         template<bool Const>
-        class iterator : public impl::transcode_view_impl::iterator_category_impl<View>
+        class iterator : public impl::transcode_view_impl::iterator_category_impl<View>, private impl::transcode_view_impl::iterator_type_tag
         {
         private:
             using parent_t = impl::maybe_const<Const, transcode_view>;
@@ -1077,6 +1124,13 @@ namespace upp::ranges
 
             std::expected<void, error_type> m_success{}; ///< Holds error information about the last read operation.
 
+            template<typename>
+            friend struct impl::transcode_view_impl::get_transcode_view_subrange_info;
+
+            // for the implementation of `get_transcode_view_subrange_info`
+            static constexpr auto kind            = Kind;
+            static constexpr auto source_encoding = SourceEncoding;
+
             template<std::ranges::view View2, encoding SourceEncoding2, encoding TargetEncoding2, transcode_view_kind Kind2,
                      code_unit_type_for<TargetEncoding2> ToType2>
                 requires unicode_encoding<TargetEncoding2> && code_unit_input_range<View2, SourceEncoding2> &&
@@ -1164,9 +1218,52 @@ namespace upp::ranges
 
     namespace impl
     {
+        namespace transcode_view_impl
+        {
+            template<typename>
+            inline constexpr bool is_empty_view = false;
+
+            template<typename T>
+            inline constexpr bool is_empty_view<std::ranges::empty_view<T>> = true;
+
+            template<typename>
+            inline constexpr bool is_transcode_view = false;
+
+            template<typename View, encoding SourceEncoding, encoding TargetEncoding, typename ToType, transcode_view_kind Kind>
+            inline constexpr bool is_transcode_view<transcode_view<View, SourceEncoding, TargetEncoding, Kind, ToType>> = true;
+
+            template<typename>
+            struct get_transcode_view_info;
+
+            template<typename View, encoding SourceEncoding, encoding TargetEncoding, transcode_view_kind Kind, typename ToType>
+            struct get_transcode_view_info<transcode_view<View, SourceEncoding, TargetEncoding, Kind, ToType>>
+            {
+                static constexpr transcode_view_kind kind            = Kind;
+                static constexpr encoding            source_encoding = SourceEncoding;
+            };
+
+            template<typename It>
+            inline constexpr bool is_transcode_view_iterator = std::is_base_of_v<iterator_type_tag, It>;
+
+            template<typename>
+            inline constexpr bool is_transcode_view_subrange = false;
+
+            template<typename It>
+            inline constexpr bool is_transcode_view_subrange<std::ranges::subrange<It, It, std::ranges::subrange_kind::unsized>> =
+                is_transcode_view_iterator<It>;
+
+            template<typename It>
+                requires is_transcode_view_iterator<It>
+            struct get_transcode_view_subrange_info<std::ranges::subrange<It, It, std::ranges::subrange_kind::unsized>>
+            {
+                static constexpr transcode_view_kind kind            = It::kind;
+                static constexpr encoding            source_encoding = It::source_encoding;
+            };
+        } // namespace transcode_view_impl
+
         template<encoding SourceEncoding, encoding TargetEncoding, transcode_view_kind Kind, code_unit_type_for<TargetEncoding> ToType>
             requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
-        struct transcode_utf_fn : public std::ranges::range_adaptor_closure<transcode_utf_fn<SourceEncoding, TargetEncoding, Kind, ToType>>
+        struct transcode_fn : public std::ranges::range_adaptor_closure<transcode_fn<SourceEncoding, TargetEncoding, Kind, ToType>>
         {
         public:
             template<std::ranges::viewable_range Range>
@@ -1174,14 +1271,177 @@ namespace upp::ranges
                          (Kind != transcode_view_kind::valid || valid_code_unit_range<Range, SourceEncoding>)
             [[nodiscard]] constexpr auto operator()(Range&& range) const
             {
-                return transcode_view<std::views::all_t<Range>, SourceEncoding, TargetEncoding, Kind, ToType>(
-                    std::views::all(std::forward<Range>(range)));
+                using range_t    = std::remove_cvref_t<Range>;
+                using error_type = encoding_traits<SourceEncoding>::error_type;
+                using expected_t = std::expected<ToType, error_type>;
+
+                if constexpr (valid_code_unit_range<Range, TargetEncoding> && Kind != transcode_view_kind::expected &&
+                              std::same_as<ToType, std::ranges::range_value_t<Range>>)
+                {
+                    return std::views::all(std::forward<Range>(range));
+                }
+                else if constexpr (transcode_view_impl::is_empty_view<range_t>)
+                {
+                    if constexpr (Kind == transcode_view_kind::expected)
+                    {
+                        return std::ranges::empty_view<expected_t>{};
+                    }
+                    else
+                        return std::ranges::empty_view<ToType>{};
+                }
+                else if constexpr (transcode_view_impl::is_transcode_view<range_t> && Kind != transcode_view_kind::expected)
+                {
+                    using range_info = transcode_view_impl::get_transcode_view_info<range_t>;
+
+                    return transcode_view(std::forward<Range>(range).base(), encoding_tag<range_info::source_encoding>, encoding_tag<TargetEncoding>,
+                                          nontype<range_info::kind>, ToType{});
+                }
+                else if constexpr (transcode_view_impl::is_transcode_view_subrange<range_t> && Kind != transcode_view_kind::expected)
+                {
+                    using range_info = transcode_view_impl::get_transcode_view_subrange_info<range_t>;
+
+                    return transcode_view(std::ranges::subrange(range.begin().base(), range.end().base()), encoding_tag<range_info::source_encoding>,
+                                          encoding_tag<TargetEncoding>, nontype<range_info::kind>, ToType{});
+                }
+                else
+                {
+                    return transcode_view<std::views::all_t<Range>, SourceEncoding, TargetEncoding, Kind, ToType>(
+                        std::views::all(std::forward<Range>(range)));
+                }
             }
         };
     } // namespace impl
 
     namespace views
     {
+        /// @addtogroup transcode_view
+        /// @{
+
+        /// @defgroup transcoding_range_adaptors Transcoding range adaptors
+        ///
+        /// @brief Range adaptors for transcoding between UTF encodings.
+        ///
+        /// Provides a set of lazy range adaptors that transcode between encodings using different error-handling policies.
+        ///
+        /// There are three kinds of transcoding range adaptors: `valid`, `expected`, and `lossy`. Their meaning
+        /// is described in @ref transcode_view_kind.
+        ///
+        /// There are multiple versions of those adaptors -- some take the source encoding as a template parameter, and other
+        /// have the source encoding baked into the adaptors name. The same goes for the target encoding and the error-handling policy.
+        ///
+        /// There are @ref generic_transcoding_range_adaptors "generic adaptors": `transcode`, `transcode_valid`, `transcode_expected`, `transcode_lossy`;
+        /// and pre-instantiated adaptors, such as: `transcode_valid_utf8_to_utf16`, `transcode_lossy_utf16_to_utf32`, `[...]`.
+        /// There is also a mix of those two: `transcode_utf8_to`, `transcode_valid_utf16_to`, `[...]`.
+        ///
+        /// The name format of these adaptors is <code>transcode[_<i>kind</i>][_<i>source-encoding</i>_to[_<i>target-encoding</i>]]</code>
+        /// except that the adaptors where the _target-encoding_ is provided but the _kind_ isn't, are not provided.
+        /// _kind_ is one of: `valid`, `expected`, `lossy`. _source-encoding_ is one of: `ascii`, `utf8`, `utf16`, `utf32`.
+        /// _target-encoding_ is one of: `utf8`, `utf16`, `utf32`.
+        ///
+        /// Here are a few examples:
+        ///
+        /// @code{.cpp}
+        ///
+        /// /// @brief Read a UTF-8 text file as TargetEncoding.
+        /// ///
+        /// template<upp::encoding TargetEncoding>
+        ///     requires upp::unicode_encoding<TargetEncoding>
+        /// auto read_utf8_file_as(std::ifstream& in)
+        /// {
+        ///     in >> std::noskipws;
+        ///
+        ///     auto src_view = std::ranges::istream_view<char>(in);
+        ///
+        ///     return src_view | upp::views::transcode_lossy_utf8_to<TargetEncoding>;
+        /// }
+        ///
+        /// @endcode
+        ///
+        /// @code{.cpp}
+        ///
+        /// /// @brief Count code points in the given code unit sequence.
+        /// ///
+        /// template<upp::encoding Encoding, typename Range>
+        ///     requires upp::ranges::valid_code_unit_range<Range, Encoding>
+        /// std::size_t count_code_points(Range&& code_units)
+        /// {
+        ///     auto code_points = code_units | upp::views::transcode_valid<Encoding, upp::encoding::utf32>;
+        ///
+        ///     return std::ranges::distance(code_points);
+        /// }
+        ///
+        /// @endcode
+        ///
+        /// @code{.cpp}
+        ///
+        /// /// @pre @p str is valid UTF-8.
+        /// ///
+        /// void foo(std::string_view str)
+        /// {
+        ///     // ...
+        ///
+        ///     #ifdef OS_WINDOWS
+        ///
+        ///     win32::some_windows_function(
+        ///         str
+        ///             | upp::views::mark_as_valid_utf8
+        ///             | upp::views::transcode_valid_utf8_to_utf16
+        ///             | std::ranges::to<std::u16string>()
+        ///     );
+        ///
+        ///     #endif
+        ///
+        ///     // ...
+        /// }
+        ///
+        /// @endcode
+        ///
+        /// @{
+
+        /// @defgroup generic_transcoding_range_adaptors Generic transcoding adaptors
+        ///
+        /// @brief Generic range adaptors that transcode between different UTF encodings.
+        ///
+        /// There are four of those generic adaptors:
+        ///
+        /// - `transcode` is the most generic of them all. Not only does it take `SourceEncoding` and `TargetEncoding`
+        ///   as a template parameter, it takes an error-handling strategy (`transcode_view_kind`) as well. The target code unit
+        ///   type can be specified too (`char` for ASCII, `std::uint32_t` for UTF-32, etc.). The rest of these adaptors
+        ///   are a more specific version of this one.
+        ///
+        /// - `transcode_valid` guarantees that no transcoding errors happen during the transcoding. For this reason, the
+        ///   original range of code units must satisfy @ref valid_code_unit_range "valid_code_unit_range<SourceEncoding>".
+        ///
+        /// - `transcode_expected` has a value type of `std::expected<ToType, error_type>` where `ToType` is the target code unit
+        ///   type, and `error_type` is `upp::encoding_traits<SourceEncoding>::error_type`. That is, each element of the range is
+        ///   either a code unit or an error value containing details about the error. It can be used to implement a custom
+        ///   error-handling policy.
+        ///
+        /// - `transcode_lossy` is similar to `transcode_valid`, but it doesn't require the original code unit sequence to be well-formed.
+        ///   Instead, it replaces ill-formed code unit subsequences with the Unicode replacement character.
+        ///
+        /// Here is an example of using one of these adaptors in a generic context:
+        ///
+        /// @code{.cpp}
+        ///
+        /// /// @brief Count code points in the given code unit sequence.
+        /// ///
+        /// template<upp::encoding Encoding, typename Range>
+        ///     requires upp::ranges::valid_code_unit_range<Range, Encoding>
+        /// std::size_t count_code_points(Range&& code_units)
+        /// {
+        ///     auto code_points = code_units | upp::views::transcode_valid<Encoding, upp::encoding::utf32>;
+        ///
+        ///     return std::ranges::distance(code_points);
+        /// }
+        ///
+        /// @endcode
+        ///
+        /// @note These adaptors were made to be used in generic/template contexts. For non-generic contexts,
+        /// users might prefer to use the pre-instantiated range adaptors, such as @ref transcode_valid_utf16_to_utf8.
+        ///
+        /// @{
+
         /// @brief Range adaptor that transcodes code unit ranges to different UTF encodings.
         ///
         /// Produces a lazy view that converts a sequence of code units from a source encoding into a target encoding
@@ -1193,17 +1453,315 @@ namespace upp::ranges
         /// @tparam Kind Specifies the error handling strategy. Depending on the `Kind` template parameter, the resulting range has a different `value_type`.
         ///         For `Kind == transcode_view_kind::expected`, the `value_type` is `std::expected<ToType, typename encoding_traits<SourceEncoding>::error_type>`.
         ///         Otherwise, the `value_type` is `ToType`. If `Kind` is `transcode_view_kind::valid`, then the adapted range must satisfy
-        ///         @ref upp::ranges::valid_code_unit_range "valid_code_unit_range<Range, SourceEncoding>". By default, `Kind` is `transcode_view_kind::valid`.
+        ///         @ref upp::ranges::valid_code_unit_range "valid_code_unit_range<Range, SourceEncoding>".
         ///
         /// @tparam ToType Target code unit type. As an example, if `TargetEncoding` is UTF-16, then this type could be
         ///         `char16_t`, `std::uint16_t`, `[...]`. By default, this type is specified as `typename encoding_traits<TargetEncoding>::default_code_unit_type`.
         ///
         /// @see transcode_view_kind
+        /// @see views::transcode_valid, views::transcode_expected, views::transcode_lossy
         ///
-        template<encoding SourceEncoding, encoding TargetEncoding, transcode_view_kind Kind = transcode_view_kind::valid,
+        template<encoding SourceEncoding, encoding TargetEncoding, transcode_view_kind Kind,
                  code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
             requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
-        inline constexpr impl::transcode_utf_fn<SourceEncoding, TargetEncoding, Kind, ToType> transcode{};
+        inline constexpr impl::transcode_fn<SourceEncoding, TargetEncoding, Kind, ToType> transcode{};
+
+        /// @brief Range adaptor that transcodes well-formed code unit ranges to different UTF encodings.
+        ///
+        /// Produces a lazy view that transcodes a well-formed code unit sequence from a source encoding into a target encoding.
+        ///
+        /// When adapting a code unit range using this adaptor, the range must satisfy @ref upp::ranges::valid_code_unit_range "valid_code_unit_range<Range, SourceEncoding>".
+        /// The reason for this is to guarantee at the type-system level that the transcoding cannot fail.
+        ///
+        /// @tparam SourceEncoding The encoding to transcode from.
+        /// @tparam TargetEncoding Must be a UTF encoding. This adaptor cannot transcode to ASCII.
+        ///
+        /// @tparam ToType Target code unit type. As an example, if `TargetEncoding` is UTF-16, then this type could be
+        ///         `char16_t`, `std::uint16_t`, `[...]`. By default, this type is specified as `typename encoding_traits<TargetEncoding>::default_code_unit_type`.
+        ///
+        /// @see views::transcode, views::transcode_expected, views::transcode_lossy
+        ///
+        template<encoding SourceEncoding, encoding TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<SourceEncoding, TargetEncoding, transcode_view_kind::valid, ToType> transcode_valid{};
+
+        /// @brief Range adaptor that transcodes code unit ranges to different UTF encodings using `std::expected` to propagate transcoding errors.
+        ///
+        /// Produces a view of `std::expected` values containing either code units in the `TargetEncoding` or errors caused by ill-formed
+        /// code unit sequences in the transcoded sequence.
+        ///
+        /// This adaptor is used over `transcode_lossy` whenever a detailed error description is needed. This can be, for example,
+        /// whenever the user wants to use a custom error-handling policy.
+        ///
+        /// @tparam SourceEncoding The encoding to transcode from.
+        /// @tparam TargetEncoding Must be a UTF encoding. This adaptor cannot transcode to ASCII.
+        ///
+        /// @tparam ToType Target code unit type. As an example, if `TargetEncoding` is UTF-16, then this type could be
+        ///         `char16_t`, `std::uint16_t`, `[...]`. By default, this type is specified as `typename encoding_traits<TargetEncoding>::default_code_unit_type`.
+        ///
+        /// @see views::transcode, views::transcode_valid, views::transcode_lossy
+        ///
+        template<encoding SourceEncoding, encoding TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<SourceEncoding, TargetEncoding, transcode_view_kind::expected, ToType> transcode_expected{};
+
+        /// @brief Range adaptor that transcodes code unit ranges to different UTF encoding replacing ill-formed subsequences with U+FFFD.
+        ///
+        /// Produces a lazy view that transcodes potentially-ill-formed code unit sequences from one encoding to another.
+        ///
+        /// It replaces ill-formed code unit sequences with the Unicode replacement character (U+FFFD).
+        /// It uses the [Substitution of Maximal Subparts](https://www.unicode.org/versions/Unicode17.0.0/core-spec/chapter-3/#G66453) specification
+        /// to determine the number of malformed code units to replace with a single replacement character.
+        ///
+        /// @tparam SourceEncoding The encoding to transcode from.
+        /// @tparam TargetEncoding Must be a UTF encoding. This adaptor cannot transcode to ASCII.
+        ///
+        /// @tparam ToType Target code unit type. As an example, if `TargetEncoding` is UTF-16, then this type could be
+        ///         `char16_t`, `std::uint16_t`, `[...]`. By default, this type is specified as `typename encoding_traits<TargetEncoding>::default_code_unit_type`.
+        ///
+        /// @see views::transcode, views::transcode_valid, views::transcode_expected
+        ///
+        template<encoding SourceEncoding, encoding TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<SourceEncoding, TargetEncoding, transcode_view_kind::lossy, ToType> transcode_lossy{};
+
+        /// @}
+
+        /// @defgroup ascii_transcoding_range_adaptors ASCII transcoding adaptors
+        ///
+        /// @brief Range adaptors that transcode ASCII to UTF encodings using the specified error-handling policy.
+        ///
+        /// See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        ///
+        /// @{
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding TargetEncoding, transcode_view_kind Kind,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::ascii, TargetEncoding, Kind, ToType> transcode_ascii_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::ascii, TargetEncoding, transcode_view_kind::valid, ToType> transcode_valid_ascii_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::ascii, TargetEncoding, transcode_view_kind::expected, ToType> transcode_expected_ascii_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::ascii, TargetEncoding, transcode_view_kind::lossy, ToType> transcode_lossy_ascii_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::ascii, encoding::utf8, transcode_view_kind::valid, char8_t> transcode_valid_ascii_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::ascii, encoding::utf16, transcode_view_kind::valid, char16_t> transcode_valid_ascii_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::ascii, encoding::utf32, transcode_view_kind::valid, char32_t> transcode_valid_ascii_to_utf32{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::ascii, encoding::utf8, transcode_view_kind::expected, char8_t>
+            transcode_expected_ascii_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::ascii, encoding::utf16, transcode_view_kind::expected, char16_t>
+            transcode_expected_ascii_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::ascii, encoding::utf32, transcode_view_kind::expected, char32_t>
+            transcode_expected_ascii_to_utf32{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::ascii, encoding::utf8, transcode_view_kind::lossy, char8_t> transcode_lossy_ascii_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::ascii, encoding::utf16, transcode_view_kind::lossy, char16_t> transcode_lossy_ascii_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::ascii, encoding::utf32, transcode_view_kind::lossy, char32_t> transcode_lossy_ascii_to_utf32{};
+
+        /// @}
+
+        /// @defgroup utf8_transcoding_range_adaptors UTF-8 transcoding adaptors
+        ///
+        /// @brief Range adaptors that transcode UTF-8 to different UTF encodings using the specified error-handling policy.
+        ///
+        /// See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        ///
+        /// @{
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding TargetEncoding, transcode_view_kind Kind,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf8, TargetEncoding, Kind, ToType> transcode_utf8_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf8, TargetEncoding, transcode_view_kind::valid, ToType> transcode_valid_utf8_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf8, TargetEncoding, transcode_view_kind::expected, ToType> transcode_expected_utf8_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf8, TargetEncoding, transcode_view_kind::lossy, ToType> transcode_lossy_utf8_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf8, encoding::utf8, transcode_view_kind::valid, char8_t> transcode_valid_utf8_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf8, encoding::utf16, transcode_view_kind::valid, char16_t> transcode_valid_utf8_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf8, encoding::utf32, transcode_view_kind::valid, char32_t> transcode_valid_utf8_to_utf32{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf8, encoding::utf8, transcode_view_kind::expected, char8_t> transcode_expected_utf8_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf8, encoding::utf16, transcode_view_kind::expected, char16_t>
+            transcode_expected_utf8_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf8, encoding::utf32, transcode_view_kind::expected, char32_t>
+            transcode_expected_utf8_to_utf32{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf8, encoding::utf8, transcode_view_kind::lossy, char8_t> transcode_lossy_utf8_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf8, encoding::utf16, transcode_view_kind::lossy, char16_t> transcode_lossy_utf8_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf8, encoding::utf32, transcode_view_kind::lossy, char32_t> transcode_lossy_utf8_to_utf32{};
+
+        /// @}
+
+        /// @defgroup utf16_transcoding_range_adaptors UTF-16 transcoding adaptors
+        ///
+        /// @brief Range adaptors that transcode UTF-16 to different UTF encodings using the specified error-handling policy.
+        ///
+        /// See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        ///
+        /// @{
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding TargetEncoding, transcode_view_kind Kind,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf16, TargetEncoding, Kind, ToType> transcode_utf16_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf16, TargetEncoding, transcode_view_kind::valid, ToType> transcode_valid_utf16_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf16, TargetEncoding, transcode_view_kind::expected, ToType> transcode_expected_utf16_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf16, TargetEncoding, transcode_view_kind::lossy, ToType> transcode_lossy_utf16_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf16, encoding::utf8, transcode_view_kind::valid, char8_t> transcode_valid_utf16_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf16, encoding::utf16, transcode_view_kind::valid, char16_t> transcode_valid_utf16_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf16, encoding::utf32, transcode_view_kind::valid, char32_t> transcode_valid_utf16_to_utf32{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf16, encoding::utf8, transcode_view_kind::expected, char8_t>
+            transcode_expected_utf16_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf16, encoding::utf16, transcode_view_kind::expected, char16_t>
+            transcode_expected_utf16_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf16, encoding::utf32, transcode_view_kind::expected, char32_t>
+            transcode_expected_utf16_to_utf32{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf16, encoding::utf8, transcode_view_kind::lossy, char8_t> transcode_lossy_utf16_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf16, encoding::utf16, transcode_view_kind::lossy, char16_t> transcode_lossy_utf16_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf16, encoding::utf32, transcode_view_kind::lossy, char32_t> transcode_lossy_utf16_to_utf32{};
+
+        /// @}
+
+        /// @defgroup utf32_transcoding_range_adaptors UTF-32 transcoding adaptors
+        ///
+        /// @brief Range adaptors that transcode UTF-32 to different UTF encodings using the specified error-handling policy.
+        ///
+        /// See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        ///
+        /// @{
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding TargetEncoding, transcode_view_kind Kind,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf32, TargetEncoding, Kind, ToType> transcode_utf32_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf32, TargetEncoding, transcode_view_kind::valid, ToType> transcode_valid_utf32_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf32, TargetEncoding, transcode_view_kind::expected, ToType> transcode_expected_utf32_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> ToType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
+        inline constexpr impl::transcode_fn<encoding::utf32, TargetEncoding, transcode_view_kind::lossy, ToType> transcode_lossy_utf32_to{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf8, transcode_view_kind::valid, char8_t> transcode_valid_utf32_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf16, transcode_view_kind::valid, char16_t> transcode_valid_utf32_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf32, transcode_view_kind::valid, char32_t> transcode_valid_utf32_to_utf32{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf8, transcode_view_kind::expected, char8_t>
+            transcode_expected_utf32_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf16, transcode_view_kind::expected, char16_t>
+            transcode_expected_utf32_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf32, transcode_view_kind::expected, char32_t>
+            transcode_expected_utf32_to_utf32{};
+
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf8, transcode_view_kind::lossy, char8_t> transcode_lossy_utf32_to_utf8{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf16, transcode_view_kind::lossy, char16_t> transcode_lossy_utf32_to_utf16{};
+        /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
+        inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf32, transcode_view_kind::lossy, char32_t> transcode_lossy_utf32_to_utf32{};
+
+        /// @}
+        /// @}
+        /// @}
     } // namespace views
 } // namespace upp::ranges
 

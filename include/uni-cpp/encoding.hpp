@@ -57,6 +57,21 @@ namespace upp
     template<auto Value>
     inline constexpr nontype_t<Value> nontype{};
 
+    /// @brief Tag type for representing a type template parameter.
+    ///
+    /// @headerfile "" <uni-cpp/encoding.hpp>
+    ///
+    template<typename T>
+    struct type_tag_t
+    {
+        explicit type_tag_t() = default;
+    };
+
+    /// @brief Instance of @ref type_tag_t.
+    ///
+    template<typename T>
+    inline constexpr type_tag_t<T> type_tag{};
+
     /// @brief Tag type for representing an encoding non-type template parameter.
     ///
     template<encoding Encoding>

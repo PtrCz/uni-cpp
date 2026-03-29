@@ -247,7 +247,7 @@ namespace upp::ranges
         ///
         /// Tagged constructor for CTAD.
         ///
-        constexpr transcode_view(View base, encoding_tag_t<SourceEncoding>, encoding_tag_t<TargetEncoding>, nontype_t<Kind>, ToType)
+        constexpr transcode_view(View base, encoding_tag_t<SourceEncoding>, encoding_tag_t<TargetEncoding>, nontype_t<Kind>, type_tag_t<ToType>)
             : m_base(std::move(base))
         {
         }
@@ -1202,7 +1202,7 @@ namespace upp::ranges
     /// @cond
 
     template<typename Range, encoding SourceEncoding, encoding TargetEncoding, transcode_view_kind Kind, typename ToType>
-    transcode_view(Range&&, encoding_tag_t<SourceEncoding>, encoding_tag_t<TargetEncoding>, nontype_t<Kind>, ToType)
+    transcode_view(Range&&, encoding_tag_t<SourceEncoding>, encoding_tag_t<TargetEncoding>, nontype_t<Kind>, type_tag_t<ToType>)
         -> transcode_view<std::views::all_t<Range>, SourceEncoding, TargetEncoding, Kind, ToType>;
 
     template<typename View, encoding SourceEncoding, encoding TargetEncoding, transcode_view_kind Kind, typename ToType>
@@ -1294,14 +1294,14 @@ namespace upp::ranges
                     using range_info = transcode_view_impl::get_transcode_view_info<range_t>;
 
                     return transcode_view(std::forward<Range>(range).base(), encoding_tag<range_info::source_encoding>, encoding_tag<TargetEncoding>,
-                                          nontype<range_info::kind>, ToType{});
+                                          nontype<range_info::kind>, type_tag<ToType>);
                 }
                 else if constexpr (transcode_view_impl::is_transcode_view_subrange<range_t> && Kind != transcode_view_kind::expected)
                 {
                     using range_info = transcode_view_impl::get_transcode_view_subrange_info<range_t>;
 
                     return transcode_view(std::ranges::subrange(range.begin().base(), range.end().base()), encoding_tag<range_info::source_encoding>,
-                                          encoding_tag<TargetEncoding>, nontype<range_info::kind>, ToType{});
+                                          encoding_tag<TargetEncoding>, nontype<range_info::kind>, type_tag<ToType>);
                 }
                 else
                 {

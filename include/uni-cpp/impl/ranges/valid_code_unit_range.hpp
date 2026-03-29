@@ -184,6 +184,7 @@ namespace upp::ranges
     /// - `enable_valid_code_unit_range<uchar::encode_utf16_t, encoding::utf16>` is `true`,
     /// - `enable_valid_code_unit_range<valid_code_unit_view<Encoding, View>, Encoding>` is `true`.
     /// - `enable_valid_code_unit_range<std::ranges::empty_view<CodeUnitType>, Encoding>` is `true` if `CodeUnitType` satisfies `code_unit_type_for<Encoding>`.
+    /// - `enable_valid_code_unit_range<cast_code_units_to_view<View, ToType>, Encoding>` equals `enable_valid_code_unit_range<std::remove_cvref_t<View>, Encoding>`.
     /// - `enable_valid_code_unit_range<transcode_view<View, SourceEncoding, TargetEncoding, Kind, ToType>, TargetEncoding>` equals to `Kind != transcode_view_kind::expected`.
     ///   That's because the `transcode_view` always produces valid UTF, but if the `Kind` is `expected`, then the `value_type` of the `transcode_view` range is
     ///   `std::expected<ToType, error_type>`, which can't be a `valid_code_unit_range`, because it isn't even a `code_unit_range`.
@@ -400,8 +401,7 @@ namespace upp::ranges
 /// @cond
 
 template<typename View, upp::encoding Encoding>
-inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::valid_code_unit_view<View, Encoding>> =
-    std::ranges::enable_borrowed_range<View>;
+inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::valid_code_unit_view<View, Encoding>> = std::ranges::borrowed_range<View>;
 
 /// @endcond
 

@@ -10,6 +10,7 @@
 #include "approximately_sized_range.hpp"
 #include "view_interface.hpp"
 #include "valid_code_unit_range.hpp"
+#include "cast_code_units_to.hpp"
 
 #include "../../uchar.hpp"
 #include "../../encoding.hpp"
@@ -1275,10 +1276,9 @@ namespace upp::ranges
                 using error_type = encoding_traits<SourceEncoding>::error_type;
                 using expected_t = std::expected<ToType, error_type>;
 
-                if constexpr (valid_code_unit_range<Range, TargetEncoding> && Kind != transcode_view_kind::expected &&
-                              std::same_as<ToType, std::ranges::range_value_t<Range>>)
+                if constexpr (valid_code_unit_range<Range, TargetEncoding> && Kind != transcode_view_kind::expected)
                 {
-                    return std::views::all(std::forward<Range>(range));
+                    return std::forward<Range>(range) | views::cast_code_units_to<ToType>;
                 }
                 else if constexpr (transcode_view_impl::is_empty_view<range_t>)
                 {

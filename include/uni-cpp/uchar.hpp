@@ -19,8 +19,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <expected>
 
 #include "impl/unicode_data/case_conversion.hpp"
+#include "impl/encoding/ascii.hpp"
+#include "impl/encoding/utf32.hpp"
 
 #include <concepts>
 #include <iterator>
@@ -194,22 +197,22 @@ namespace upp
         ///
         constexpr ascii_char& operator=(const ascii_char&) noexcept = default;
 
-        /// @brief Constructs `ascii_char` from the given `value` if it's a valid ASCII character, otherwise returns `std::nullopt`.
+        /// @brief Constructs `ascii_char` from the given `value` if it's a valid ASCII character, otherwise returns `ascii_error`.
         ///
         /// Attempts to convert `value` to an `ascii_char`. This conversion succeeds only if
-        /// `value` is within the ASCII range `[0, 127]`. If `value` is outside this range, `std::nullopt` is returned.
+        /// `value` is within the ASCII range `[0, 127]`. If `value` is outside this range, `ascii_error` is returned.
         ///
         /// Use `from_lossy` to substitute invalid values with a fallback character, or `from_unchecked`
         /// if you are certain `value` is valid and want to avoid a check.
         ///
         /// @see from_lossy, from_unchecked
         ///
-        [[nodiscard]] static constexpr std::optional<ascii_char> from(std::uint8_t value) noexcept
+        [[nodiscard]] static constexpr std::expected<ascii_char, ascii_error> from(std::uint8_t value) noexcept
         {
-            if (is_valid_ascii(value))
-                return std::optional(ascii_char{value});
+            if (!is_valid_ascii(value))
+                return std::expected<ascii_char, ascii_error>{std::unexpect, ascii_error{}};
 
-            return std::optional<ascii_char>();
+            return std::expected<ascii_char, ascii_error>{std::in_place, ascii_char{value}};
         }
 
         /// @brief Constructs `ascii_char` from the given `value` if it's a valid ASCII character, otherwise returns the ASCII substitute character.
@@ -234,10 +237,10 @@ namespace upp
         /// This function constructs an `ascii_char` assuming the provided `value`
         /// is within the valid ASCII range.
         ///
-        /// @pre `value` MUST BE in the ASCII range - `[0, 127]`.
+        /// @pre `value` MUST be in the ASCII range - `[0, 127]`.
         ///
         /// @warning If the precondition of this function isn't met, the behavior is undefined.
-        /// Use `from` or `from_lossy` for safe alternatives that perform validation.
+        /// Use `from` or `from_lossy` as a safe alternative that performs validation.
         ///
         /// @see from, from_lossy
         ///
@@ -332,22 +335,31 @@ namespace upp
         ///
         constexpr uchar& operator=(const uchar&) noexcept = default;
 
-        /// @brief Constructs `uchar` from the given `value` if it's a valid Unicode scalar value, otherwise returns `std::nullopt`.
+        /// @brief Constructs `uchar` from the given `value` if it's a valid Unicode scalar value, otherwise returns `utf32_error`.
         ///
         /// Attempts to convert `value` to a `uchar`. This conversion succeeds only if
-        /// `value` is a valid Unicode scalar value. If it's not, `std::nullopt` is returned.
+        /// `value` is a valid Unicode scalar value. If it's not, `utf32_error` is returned.
         ///
         /// Use `from_lossy` to substitute invalid values with a replacement character, or `from_unchecked`
         /// if you are certain `value` is valid and want to avoid a check.
         ///
         /// @see from_lossy, from_unchecked
         ///
-        [[nodiscard]] static constexpr std::optional<uchar> from(std::uint32_t value) noexcept
+        [[nodiscard]] static constexpr std::expected<uchar, utf32_error> from(std::uint32_t value) noexcept
         {
-            if (is_valid_usv(value))
-                return std::optional(uchar{value});
+            if (!is_valid_usv(value))
+            {
+                if (value > impl::max_usv)
+                {
+                    return std::expected<uchar, utf32_error>{std::unexpect, utf32_error{.code = utf32_error_code::out_of_range}};
+                }
+                else
+                {
+                    return std::expected<uchar, utf32_error>{std::unexpect, utf32_error{.code = utf32_error_code::encoded_surrogate}};
+                }
+            }
 
-            return std::optional<uchar>();
+            return std::expected<uchar, utf32_error>{std::in_place, uchar{value}};
         }
 
         /// @brief Constructs `uchar` from the given `value` if it's a valid Unicode scalar value, otherwise returns the Unicode replacement character.
@@ -372,10 +384,10 @@ namespace upp
         /// This function constructs a `uchar` assuming the provided `value`
         /// is a valid Unicode scalar value.
         ///
-        /// @pre `value` MUST BE a valid [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value).
+        /// @pre `value` MUST be a valid [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value).
         ///
         /// @warning If the precondition of this function isn't met, the behavior is undefined.
-        /// Use `from` or `from_lossy` for safe alternatives that perform validation.
+        /// Use `from` or `from_lossy` as a safe alternative that performs validation.
         ///
         /// @see from, from_lossy
         ///

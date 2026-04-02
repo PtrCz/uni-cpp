@@ -39,24 +39,24 @@ EVAL_TEST_CASE("upp::ascii_char default constructor");
 
 TEST_CASE("upp::ascii_char from(), from_lossy() & from_unchecked()", "[upp::ascii_char]")
 {
-    std::array<std::pair<std::uint8_t, bool>, 6> tests = {
-        // {value, is_valid} pairs
-        // clang-format off
-        std::make_pair(std::uint8_t{0x00}, true ),
-        std::make_pair(std::uint8_t{0x41}, true ),
-        std::make_pair(std::uint8_t{0x7F}, true ),
-        std::make_pair(std::uint8_t{0x80}, false),
-        std::make_pair(std::uint8_t{0xA2}, false),
-        std::make_pair(std::uint8_t{0xFF}, false),
-        // clang-format on
+    struct test_case
+    {
+        std::uint8_t value;
+        bool         is_valid;
     };
 
-    for (const auto& test : tests)
-    {
-        const auto& value    = test.first;
-        const auto& is_valid = test.second;
+    const auto test_cases = std::to_array<test_case>({
+        {.value = 0x00, .is_valid = true},
+        {.value = 0x41, .is_valid = true},
+        {.value = 0x7F, .is_valid = true},
+        {.value = 0x80, .is_valid = false},
+        {.value = 0xA2, .is_valid = false},
+        {.value = 0xFF, .is_valid = false},
+    });
 
-        std::optional<upp::ascii_char> from_result = upp::ascii_char::from(value);
+    for (const auto& [value, is_valid] : test_cases)
+    {
+        std::expected<upp::ascii_char, upp::ascii_error> from_result = upp::ascii_char::from(value);
 
         CHECK(from_result.has_value() == is_valid);
 
@@ -69,7 +69,7 @@ TEST_CASE("upp::ascii_char from(), from_lossy() & from_unchecked()", "[upp::asci
             CHECK(upp::ascii_char::from_lossy(value) == upp::ascii_char::substitute_character());
 
         if (from_result.has_value())
-            CHECK(from_result.value().value() == value);
+            CHECK(from_result->value() == value);
     }
 }
 EVAL_TEST_CASE("upp::ascii_char from(), from_lossy() & from_unchecked()");
@@ -135,30 +135,33 @@ EVAL_TEST_CASE("upp::uchar default constructor");
 
 TEST_CASE("upp::uchar from(), from_lossy() & from_unchecked()", "[upp::uchar]")
 {
-    std::array<std::pair<std::uint32_t, bool>, 12> tests = {
-        // {value, is_valid} pairs
-        // clang-format off
-        std::make_pair(0x00000000U, true ),
-        std::make_pair(0x00007022U, true ),
-        std::make_pair(0x0000D7FFU, true ),
-        std::make_pair(0x0000D800U, false),
-        std::make_pair(0x0000DEBAU, false),
-        std::make_pair(0x0000DFFFU, false),
-        std::make_pair(0x0000E000U, true ),
-        std::make_pair(0x0005AEFDU, true ),
-        std::make_pair(0x0010FFFFU, true ),
-        std::make_pair(0x00110000U, false),
-        std::make_pair(0x00201330U, false),
-        std::make_pair(0xFFFFFFFFU, false),
-        // clang-format on
+    struct test_case
+    {
+        std::uint32_t                   value;
+        bool                            is_valid;
+        std::optional<upp::utf32_error> expected_error;
     };
 
-    for (const auto& test : tests)
-    {
-        const auto& value    = test.first;
-        const auto& is_valid = test.second;
+    const auto test_cases = std::to_array<test_case>({
+        // clang-format off
+        {.value = 0x00000000U, .is_valid = true , .expected_error = std::nullopt},
+        {.value = 0x00007022U, .is_valid = true , .expected_error = std::nullopt},
+        {.value = 0x0000D7FFU, .is_valid = true , .expected_error = std::nullopt},
+        {.value = 0x0000D800U, .is_valid = false, .expected_error = upp::utf32_error{.code = upp::utf32_error_code::encoded_surrogate}},
+        {.value = 0x0000DEBAU, .is_valid = false, .expected_error = upp::utf32_error{.code = upp::utf32_error_code::encoded_surrogate}},
+        {.value = 0x0000DFFFU, .is_valid = false, .expected_error = upp::utf32_error{.code = upp::utf32_error_code::encoded_surrogate}},
+        {.value = 0x0000E000U, .is_valid = true , .expected_error = std::nullopt},
+        {.value = 0x0005AEFDU, .is_valid = true , .expected_error = std::nullopt},
+        {.value = 0x0010FFFFU, .is_valid = true , .expected_error = std::nullopt},
+        {.value = 0x00110000U, .is_valid = false, .expected_error = upp::utf32_error{.code = upp::utf32_error_code::out_of_range}},
+        {.value = 0x00201330U, .is_valid = false, .expected_error = upp::utf32_error{.code = upp::utf32_error_code::out_of_range}},
+        {.value = 0xFFFFFFFFU, .is_valid = false, .expected_error = upp::utf32_error{.code = upp::utf32_error_code::out_of_range}},
+        // clang-format on
+    });
 
-        std::optional<upp::uchar> from_result = upp::uchar::from(value);
+    for (const auto& [value, is_valid, expected_error] : test_cases)
+    {
+        std::expected<upp::uchar, upp::utf32_error> from_result = upp::uchar::from(value);
 
         CHECK(from_result.has_value() == is_valid);
 
@@ -171,7 +174,13 @@ TEST_CASE("upp::uchar from(), from_lossy() & from_unchecked()", "[upp::uchar]")
             CHECK(upp::uchar::from_lossy(value) == upp::uchar::replacement_character());
 
         if (from_result.has_value())
-            CHECK(from_result.value().value() == value);
+        {
+            CHECK(from_result->value() == value);
+        }
+        else if (!is_valid)
+        {
+            CHECK(from_result.error() == *expected_error); // NOLINT(bugprone-unchecked-optional-access)
+        }
     }
 }
 EVAL_TEST_CASE("upp::uchar from(), from_lossy() & from_unchecked()");

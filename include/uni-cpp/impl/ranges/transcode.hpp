@@ -792,19 +792,7 @@ namespace upp::ranges
                 }
                 else
                 {
-                    if (is_valid_usv(code_unit))
-                    {
-                        return {.decoded = expected_type{std::in_place, uchar::from_unchecked(code_unit)}, .to_increment = 1};
-                    }
-                    else
-                    {
-                        if (code_unit > upp::impl::max_usv)
-                            return {.decoded = expected_type{std::unexpect, utf32_error{.code = utf32_error_code::out_of_range}}, .to_increment = 1};
-                        else
-                            return {
-                                .decoded = expected_type{std::unexpect, utf32_error{.code = utf32_error_code::encoded_surrogate}}, .to_increment = 1
-                            };
-                    }
+                    return {.decoded = uchar::from(code_unit), .to_increment = 1};
                 }
             }
 

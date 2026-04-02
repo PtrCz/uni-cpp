@@ -258,7 +258,7 @@ namespace upp
             {
                 const std::uint8_t code_unit = std::bit_cast<std::uint8_t>(*it);
 
-                const std::optional<ascii_char> code_point = ascii_char::from(code_unit);
+                const std::expected<ascii_char, ascii_error> code_point = ascii_char::from(code_unit);
 
                 if (!code_point.has_value())
                 {
@@ -1109,22 +1109,11 @@ namespace upp
             {
                 const std::uint32_t code_unit = std::bit_cast<std::uint32_t>(*it);
 
-                const std::optional<uchar> code_point = uchar::from(code_unit);
+                const std::expected<uchar, utf32_error> code_point = uchar::from(code_unit);
 
                 if (!code_point.has_value())
                 {
-                    if (code_unit > impl::max_usv)
-                    {
-                        return expected_type{
-                            std::unexpect, from_utf32_error{.valid_up_to = index, .error = utf32_error{.code = utf32_error_code::out_of_range}}
-                        };
-                    }
-                    else
-                    {
-                        return expected_type{
-                            std::unexpect, from_utf32_error{.valid_up_to = index, .error = utf32_error{.code = utf32_error_code::encoded_surrogate}}
-                        };
-                    }
+                    return expected_type{std::unexpect, from_utf32_error{.valid_up_to = index, .error = code_point.error()}};
                 }
 
                 std::invoke(code_point_callback, *code_point);

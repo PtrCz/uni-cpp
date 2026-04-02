@@ -16,6 +16,7 @@
 #include "../../encoding.hpp"
 
 #include "../inplace_vector.hpp"
+#include "as_expected_range.hpp"
 
 #include <memory>
 #include <bit>
@@ -1264,9 +1265,14 @@ namespace upp::ranges
                 using error_type = encoding_traits<SourceEncoding>::error_type;
                 using expected_t = std::expected<ToType, error_type>;
 
-                if constexpr (valid_code_unit_range<Range, TargetEncoding> && Kind != transcode_view_kind::expected)
+                if constexpr (valid_code_unit_range<Range, TargetEncoding>)
                 {
-                    return std::forward<Range>(range) | views::cast_code_units_to<ToType>;
+                    if constexpr (Kind == transcode_view_kind::expected)
+                    {
+                        return std::forward<Range>(range) | views::cast_code_units_to<ToType> | impl::as_expected_range<error_type>;
+                    }
+                    else
+                        return std::forward<Range>(range) | views::cast_code_units_to<ToType>;
                 }
                 else if constexpr (transcode_view_impl::is_empty_view<range_t>)
                 {
@@ -1277,19 +1283,38 @@ namespace upp::ranges
                     else
                         return std::ranges::empty_view<ToType>{};
                 }
-                else if constexpr (transcode_view_impl::is_transcode_view<range_t> && Kind != transcode_view_kind::expected)
+                else if constexpr (transcode_view_impl::is_transcode_view<range_t>)
                 {
                     using range_info = transcode_view_impl::get_transcode_view_info<range_t>;
 
-                    return transcode_view(std::forward<Range>(range).base(), encoding_tag<range_info::source_encoding>, encoding_tag<TargetEncoding>,
-                                          nontype<range_info::kind>, type_tag<ToType>);
+                    if constexpr (Kind == transcode_view_kind::expected)
+                    {
+                        return impl::as_expected_range<error_type>(
+                            transcode_view(std::forward<Range>(range).base(), encoding_tag<range_info::source_encoding>, encoding_tag<TargetEncoding>,
+                                           nontype<range_info::kind>, type_tag<ToType>));
+                    }
+                    else
+                    {
+                        return transcode_view(std::forward<Range>(range).base(), encoding_tag<range_info::source_encoding>,
+                                              encoding_tag<TargetEncoding>, nontype<range_info::kind>, type_tag<ToType>);
+                    }
                 }
-                else if constexpr (transcode_view_impl::is_transcode_view_subrange<range_t> && Kind != transcode_view_kind::expected)
+                else if constexpr (transcode_view_impl::is_transcode_view_subrange<range_t>)
                 {
                     using range_info = transcode_view_impl::get_transcode_view_subrange_info<range_t>;
 
-                    return transcode_view(std::ranges::subrange(range.begin().base(), range.end().base()), encoding_tag<range_info::source_encoding>,
-                                          encoding_tag<TargetEncoding>, nontype<range_info::kind>, type_tag<ToType>);
+                    if constexpr (Kind == transcode_view_kind::expected)
+                    {
+                        return impl::as_expected_range<error_type>(
+                            transcode_view(std::ranges::subrange(range.begin().base(), range.end().base()), encoding_tag<range_info::source_encoding>,
+                                           encoding_tag<TargetEncoding>, nontype<range_info::kind>, type_tag<ToType>));
+                    }
+                    else
+                    {
+                        return transcode_view(std::ranges::subrange(range.begin().base(), range.end().base()),
+                                              encoding_tag<range_info::source_encoding>, encoding_tag<TargetEncoding>, nontype<range_info::kind>,
+                                              type_tag<ToType>);
+                    }
                 }
                 else
                 {

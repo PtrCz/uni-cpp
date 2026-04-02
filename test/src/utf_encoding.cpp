@@ -1,8 +1,10 @@
 #include "bugspray.hpp"
 
 #include "test_data.hpp"
+#include "ranges/base.hpp"
 
 #include <uni-cpp/uchar.hpp>
+#include <uni-cpp/ranges.hpp>
 #include <cstdint>
 #include <ranges>
 
@@ -21,7 +23,7 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
 
         for (const auto& [ch, encoded] : test_cases)
         {
-            CHECK(std::ranges::equal(ch.encode_utf8(), encoded));
+            CHECK(upp_test::ranges::equal(ch.encode_utf8(), encoded | upp::views::cast_code_units_to<char8_t>));
         }
     }
 
@@ -35,7 +37,7 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
             REQUIRE(ch.has_value());
 
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-            CHECK(std::ranges::equal(ch->encode_utf8(), data));
+            CHECK(upp_test::ranges::equal(ch->encode_utf8(), data | upp::views::cast_code_units_to<char8_t>));
         }
     }
 }
@@ -56,7 +58,7 @@ TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
 
         for (const auto& [ch, encoded] : test_cases)
         {
-            CHECK(std::ranges::equal(ch.encode_utf16(), encoded));
+            CHECK(upp_test::ranges::equal(ch.encode_utf16(), encoded | upp::views::cast_code_units_to<char16_t>));
         }
     }
 
@@ -70,7 +72,7 @@ TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
             REQUIRE(ch.has_value());
 
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-            CHECK(std::ranges::equal(ch->encode_utf16(), data));
+            CHECK(upp_test::ranges::equal(ch->encode_utf16(), data | upp::views::cast_code_units_to<char16_t>));
         }
     }
 }

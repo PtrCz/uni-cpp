@@ -4,6 +4,7 @@
 
 #include "../utility.hpp"
 #include "../encoding/encoding.hpp"
+#include "base.hpp"
 #include "to_input.hpp"
 
 // Note: Clang has some difficulties to run the following test at compile-time.
@@ -38,21 +39,21 @@ TEST_CASE("transcode_view", "[ranges][UTF encoding]", runtime)
 
                     const auto test_for_range = [&](auto&& rg) {
                         if constexpr (upp::ranges::valid_code_unit_range<decltype(rg), SourceEncoding>)
-                            CHECK(std::ranges::equal(rg | transcode_valid, expected));
+                            CHECK(upp_test::ranges::equal(rg | transcode_valid, expected));
 
                         // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage)
-                        CHECK(std::ranges::equal(rg | transcode_expected, expected_expected));
-                        CHECK(std::ranges::equal(rg | transcode_lossy, expected_lossy));
+                        CHECK(upp_test::ranges::equal(rg | transcode_expected, expected_expected));
+                        CHECK(upp_test::ranges::equal(rg | transcode_lossy, expected_lossy));
 
                         if constexpr (std::ranges::bidirectional_range<decltype(rg)>)
                         {
                             // Test reading backwards (operator--)
 
                             if constexpr (upp::ranges::valid_code_unit_range<decltype(rg), SourceEncoding>)
-                                CHECK(std::ranges::equal(rg | transcode_valid | std::views::reverse, expected | std::views::reverse));
+                                CHECK(upp_test::ranges::equal(rg | transcode_valid | std::views::reverse, expected | std::views::reverse));
 
-                            CHECK(std::ranges::equal(rg | transcode_expected | std::views::reverse, expected_expected | std::views::reverse));
-                            CHECK(std::ranges::equal(rg | transcode_lossy | std::views::reverse, expected_lossy | std::views::reverse));
+                            CHECK(upp_test::ranges::equal(rg | transcode_expected | std::views::reverse, expected_expected | std::views::reverse));
+                            CHECK(upp_test::ranges::equal(rg | transcode_lossy | std::views::reverse, expected_lossy | std::views::reverse));
                         }
                     };
 
@@ -82,13 +83,13 @@ TEST_CASE("transcode_view", "[ranges][UTF encoding]", runtime)
                     const auto& expected_expected = seq.template transcoded_with_errors_to<TargetEncoding>();
                     const auto& expected_lossy    = seq.template lossily_encoded_as<TargetEncoding>();
 
-                    CHECK(std::ranges::equal(seq.sequence | transcode_expected, expected_expected));
-                    CHECK(std::ranges::equal(seq.sequence | upp_test::views::to_input | transcode_expected, expected_expected));
-                    CHECK(std::ranges::equal(seq.sequence | transcode_expected | std::views::reverse, expected_expected | std::views::reverse));
+                    CHECK(upp_test::ranges::equal(seq.sequence | transcode_expected, expected_expected));
+                    CHECK(upp_test::ranges::equal(seq.sequence | upp_test::views::to_input | transcode_expected, expected_expected));
+                    CHECK(upp_test::ranges::equal(seq.sequence | transcode_expected | std::views::reverse, expected_expected | std::views::reverse));
 
-                    CHECK(std::ranges::equal(seq.sequence | transcode_lossy, expected_lossy));
-                    CHECK(std::ranges::equal(seq.sequence | upp_test::views::to_input | transcode_lossy, expected_lossy));
-                    CHECK(std::ranges::equal(seq.sequence | transcode_lossy | std::views::reverse, expected_lossy | std::views::reverse));
+                    CHECK(upp_test::ranges::equal(seq.sequence | transcode_lossy, expected_lossy));
+                    CHECK(upp_test::ranges::equal(seq.sequence | upp_test::views::to_input | transcode_lossy, expected_lossy));
+                    CHECK(upp_test::ranges::equal(seq.sequence | transcode_lossy | std::views::reverse, expected_lossy | std::views::reverse));
                 }
             });
         });

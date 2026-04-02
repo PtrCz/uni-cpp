@@ -1,9 +1,9 @@
 #include "bugspray.hpp"
 
-#include "test_data.hpp"
-
 #include <uni-cpp/uchar.hpp>
-#include <ranges>
+
+#include "test_data.hpp"
+#include "ranges/base.hpp"
 
 TEST_CASE("Lowercase conversion & lowercase mappings", "[case conversion][upp::uchar]", runtime)
 {
@@ -17,7 +17,7 @@ TEST_CASE("Lowercase conversion & lowercase mappings", "[case conversion][upp::u
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
         const auto expected = ch->to_lowercase() | std::views::transform([](upp::uchar c) { return c.value(); });
 
-        CHECK(std::ranges::equal(expected, data));
+        CHECK(upp_test::ranges::equal(expected, data));
     }
 }
 
@@ -33,7 +33,7 @@ TEST_CASE("Uppercase conversion & uppercase mappings", "[case conversion][upp::u
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
         const auto expected = ch->to_uppercase() | std::views::transform([](upp::uchar c) { return c.value(); });
 
-        CHECK(std::ranges::equal(expected, data));
+        CHECK(upp_test::ranges::equal(expected, data));
     }
 }
 
@@ -49,6 +49,6 @@ TEST_CASE("Titlecase conversion & titlecase mappings", "[case conversion][upp::u
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
         const auto expected = ch->to_titlecase() | std::views::transform([](upp::uchar c) { return c.value(); });
 
-        CHECK(std::ranges::equal(expected, data));
+        CHECK(upp_test::ranges::equal(expected, data));
     }
 }

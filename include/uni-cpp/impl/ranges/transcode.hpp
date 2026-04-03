@@ -53,6 +53,34 @@
 /// @headerfile "" <uni-cpp/ranges.hpp>
 ///
 
+/// @defgroup decode_view Decoding code unit ranges
+///
+/// @brief Provides range adaptors for decoding code unit sequences.
+///
+/// Example:
+///
+/// @code{.cpp}
+///
+/// using namespace std::string_view_literals;
+///
+/// auto utf8_sequence = u8"नमस्ते"sv | upp::views::mark_as_valid_utf8;
+///
+/// // Iterate code points
+///
+/// for (upp::uchar code_point : utf8_sequence | upp::views::decode_valid_utf8)
+/// {
+///     std::print("U+{:04X} ", code_point.value());
+/// }
+///
+/// @endcode
+///
+/// @see decoding_range_adaptors
+/// @see decode_view_kind
+/// @see decode_view
+///
+/// @headerfile "" <uni-cpp/ranges.hpp>
+///
+
 namespace upp::ranges
 {
     /// @brief Defines the error-handling policy for @ref upp::ranges::transcode_view "transcode_view" and @ref transcoding_range_adaptors "transcoding range adaptors".
@@ -1206,6 +1234,275 @@ namespace upp::ranges
 
     /// @endcond
 
+    /// @brief Defines the error-handling policy for @ref upp::ranges::decode_view "decode_view" and @ref decoding_range_adaptors "decoding range adaptors".
+    ///
+    /// @ingroup decode_view
+    ///
+    using decode_view_kind = transcode_view_kind;
+
+    namespace impl::decode_view_impl
+    {
+        template<typename View, encoding SourceEncoding, decode_view_kind Kind>
+        struct variable_width_decoding_traits
+        {
+        private:
+            static_assert(SourceEncoding == encoding::utf8 || SourceEncoding == encoding::utf16);
+
+            using error_type = encoding_traits<SourceEncoding>::error_type;
+            using expected_t = std::expected<uchar, error_type>;
+
+            using transcode_view_t = ranges::transcode_view<View, SourceEncoding, encoding::utf32, Kind, std::uint32_t>;
+
+            using iter_t       = std::ranges::iterator_t<transcode_view_t&>;
+            using const_iter_t = std::ranges::iterator_t<const transcode_view_t&>;
+
+            using sent_t       = std::ranges::sentinel_t<transcode_view_t&>;
+            using const_sent_t = std::ranges::sentinel_t<const transcode_view_t&>;
+
+        public:
+            [[nodiscard]] static constexpr expected_t transform_element(std::expected<std::uint32_t, error_type> expected)
+                requires(Kind == decode_view_kind::expected)
+            {
+                return expected.transform([](std::uint32_t code_point) static { return uchar::from_unchecked(code_point); });
+            }
+
+            [[nodiscard]] static constexpr uchar transform_element(std::uint32_t code_point)
+                requires(Kind != decode_view_kind::expected)
+            {
+                return uchar::from_unchecked(code_point);
+            }
+
+            [[nodiscard]] static constexpr auto base_projection(const transcode_view_t& view) { return view.base(); }
+            [[nodiscard]] static constexpr auto base_projection(transcode_view_t&& view) { return std::move(view).base(); }
+
+            [[nodiscard]] static constexpr const auto& iterator_base_projection(const iter_t& it) { return it.base(); }
+            [[nodiscard]] static constexpr auto        iterator_base_projection(iter_t&& it) { return std::move(it).base(); }
+
+            [[nodiscard]] static constexpr const auto& iterator_base_projection(const const_iter_t& it) { return it.base(); }
+            [[nodiscard]] static constexpr auto        iterator_base_projection(const_iter_t&& it) { return std::move(it).base(); }
+
+            [[nodiscard]] static constexpr auto sentinel_base_projection(const sent_t& sent) { return sent.base(); }
+            [[nodiscard]] static constexpr auto sentinel_base_projection(const const_sent_t& sent) { return sent.base(); }
+        };
+
+        template<typename View, encoding SourceEncoding, decode_view_kind Kind, typename ToType>
+        struct fixed_width_decoding_traits
+        {
+        private:
+            static_assert(SourceEncoding == encoding::ascii || SourceEncoding == encoding::utf32);
+
+            using code_unit_t = std::remove_cvref_t<std::ranges::range_reference_t<View>>;
+
+            using error_type = encoding_traits<SourceEncoding>::error_type;
+            using expected_t = std::expected<ToType, error_type>;
+
+        private:
+            [[nodiscard]] static constexpr expected_t transform_expected_impl(code_unit_t code_unit)
+            {
+                if constexpr (SourceEncoding == encoding::ascii)
+                {
+                    const std::uint8_t ascii_code_unit = std::bit_cast<std::uint8_t>(code_unit);
+
+                    if constexpr (std::same_as<ToType, ascii_char>)
+                    {
+                        return ascii_char::from(ascii_code_unit);
+                    }
+                    else
+                    {
+                        return ascii_char::from(ascii_code_unit).transform([](ascii_char ch) static { return uchar{ch}; });
+                    }
+                }
+                else if constexpr (SourceEncoding == encoding::utf32)
+                {
+                    return uchar::from(std::bit_cast<std::uint32_t>(code_unit));
+                }
+                else
+                    static_assert(false);
+            }
+
+            [[nodiscard]] static constexpr ToType transform_lossy_impl(code_unit_t code_unit)
+            {
+                if constexpr (SourceEncoding == encoding::ascii)
+                {
+                    const std::uint8_t ascii_code_unit = std::bit_cast<std::uint8_t>(code_unit);
+
+                    if constexpr (std::same_as<ToType, ascii_char>)
+                    {
+                        return ascii_char::from_lossy(ascii_code_unit);
+                    }
+                    else
+                    {
+                        if (is_valid_ascii(ascii_code_unit))
+                        {
+                            return uchar::from_unchecked(static_cast<std::uint32_t>(ascii_code_unit));
+                        }
+                        else
+                            return uchar::replacement_character();
+                    }
+                }
+                else if constexpr (SourceEncoding == encoding::utf32)
+                {
+                    return uchar::from_lossy(std::bit_cast<std::uint32_t>(code_unit));
+                }
+                else
+                    static_assert(false);
+            }
+
+            [[nodiscard]] static constexpr ToType transform_valid_impl(code_unit_t code_unit)
+            {
+                if constexpr (std::same_as<ToType, ascii_char>)
+                {
+                    return ascii_char::from_unchecked(std::bit_cast<std::uint8_t>(code_unit));
+                }
+                else if constexpr (std::same_as<ToType, uchar>)
+                {
+                    if constexpr (SourceEncoding == encoding::ascii)
+                    {
+                        return uchar::from_unchecked(static_cast<std::uint32_t>(std::bit_cast<std::uint8_t>(code_unit)));
+                    }
+                    else
+                        return uchar::from_unchecked(std::bit_cast<std::uint32_t>(code_unit));
+                }
+                else
+                    static_assert(false);
+            }
+
+        public:
+            [[nodiscard]] static constexpr expected_t transform_element(code_unit_t code_unit)
+                requires(Kind == decode_view_kind::expected)
+            {
+                if constexpr (valid_code_unit_range<View, SourceEncoding>)
+                {
+                    return expected_t{std::in_place, transform_valid_impl(code_unit)};
+                }
+                else
+                    return transform_expected_impl(code_unit);
+            }
+
+            [[nodiscard]] static constexpr ToType transform_element(code_unit_t code_unit)
+                requires(Kind == decode_view_kind::lossy)
+            {
+                if constexpr (valid_code_unit_range<View, SourceEncoding>)
+                {
+                    return transform_valid_impl(code_unit);
+                }
+                else
+                    return transform_lossy_impl(code_unit);
+            }
+
+            [[nodiscard]] static constexpr ToType transform_element(code_unit_t code_unit)
+                requires(Kind == decode_view_kind::valid)
+            {
+                return transform_valid_impl(code_unit);
+            }
+        };
+    } // namespace impl::decode_view_impl
+
+    /// @brief A lazy view that decodes code units to code points.
+    ///
+    /// @tparam View Underlying view type. If the `Kind` template parameter is specified as `valid`, then the `View` type must satisfy
+    ///         `valid_code_unit_range<View, SourceEncoding>`.
+    ///
+    /// @tparam SourceEncoding The encoding of the code units from the underlying view.
+    ///
+    /// @tparam Kind Specifies the error handling strategy. Depending on the `Kind` template parameter, the range has a different `value_type`.
+    ///         For `Kind == decode_view_kind::expected`, the `value_type` is `std::expected<ToType, typename encoding_traits<SourceEncoding>::error_type>`.
+    ///         Otherwise, the `value_type` is `ToType`.
+    ///
+    /// @tparam ToType Target code point type. If the source encoding is ASCII, this type can be either `uchar` or `ascii_char`.
+    ///         Otherwise, this type must be `uchar`.
+    ///
+    /// @note Users should use the @ref decoding_range_adaptors "decoding range adaptors" instead of using this type directly.
+    ///
+    /// @ingroup decode_view
+    ///
+    /// @headerfile "" <uni-cpp/ranges.hpp>
+    ///
+    template<std::ranges::view View, encoding SourceEncoding, decode_view_kind Kind, char_type ToType>
+        requires code_unit_range_for<View, SourceEncoding> && (Kind != decode_view_kind::valid || valid_code_unit_range<View, SourceEncoding>) &&
+                 (std::same_as<ToType, uchar> || SourceEncoding == encoding::ascii)
+    class decode_view : public impl::simple_view_adaptor<impl::decode_view_impl::variable_width_decoding_traits<View, SourceEncoding, Kind>,
+                                                         transcode_view<View, SourceEncoding, encoding::utf32, Kind, std::uint32_t>>
+    {
+    private:
+        using transcode_view_t = transcode_view<View, SourceEncoding, encoding::utf32, Kind, std::uint32_t>;
+
+        using base_t =
+            impl::simple_view_adaptor<impl::decode_view_impl::variable_width_decoding_traits<View, SourceEncoding, Kind>, transcode_view_t>;
+
+        static_assert(SourceEncoding == encoding::utf8 ||
+                      SourceEncoding == encoding::utf16); // see partial specializations for ASCII and UTF-32 below
+
+    public:
+        /// @brief Default constructor.
+        ///
+        decode_view()
+            requires std::default_initializable<View>
+        = default;
+
+        /// @brief Constructs the `decode_view` from the underlying view.
+        ///
+        constexpr explicit decode_view(View base)
+            : base_t(transcode_view_t(std::move(base)))
+        {
+        }
+
+        /// @brief Constructs the `decode_view` from the underlying view.
+        ///
+        /// Tagged constructor for CTAD.
+        ///
+        constexpr decode_view(View base, encoding_tag_t<SourceEncoding>, nontype_t<Kind>, type_tag_t<ToType>)
+            : base_t(transcode_view_t(std::move(base)))
+        {
+        }
+    };
+
+    /// @cond
+
+    template<std::ranges::view View, decode_view_kind Kind, char_type ToType>
+        requires code_unit_range_for<View, encoding::ascii> && (Kind != decode_view_kind::valid || valid_code_unit_range<View, encoding::ascii>)
+    class decode_view<View, encoding::ascii, Kind, ToType>
+        : public impl::simple_view_adaptor<impl::decode_view_impl::fixed_width_decoding_traits<View, encoding::ascii, Kind, ToType>, View>
+    {
+    private:
+        using base_t = impl::simple_view_adaptor<impl::decode_view_impl::fixed_width_decoding_traits<View, encoding::ascii, Kind, ToType>, View>;
+
+    public:
+        using base_t::base_t;
+
+        constexpr decode_view(View base, encoding_tag_t<encoding::ascii>, nontype_t<Kind>, type_tag_t<ToType>)
+            : base_t(std::move(base))
+        {
+        }
+    };
+
+    template<std::ranges::view View, decode_view_kind Kind>
+        requires code_unit_range_for<View, encoding::utf32> && (Kind != decode_view_kind::valid || valid_code_unit_range<View, encoding::utf32>)
+    class decode_view<View, encoding::utf32, Kind, uchar>
+        : public impl::simple_view_adaptor<impl::decode_view_impl::fixed_width_decoding_traits<View, encoding::utf32, Kind, uchar>, View>
+    {
+    private:
+        using base_t = impl::simple_view_adaptor<impl::decode_view_impl::fixed_width_decoding_traits<View, encoding::utf32, Kind, uchar>, View>;
+
+    public:
+        using base_t::base_t;
+
+        constexpr decode_view(View base, encoding_tag_t<encoding::utf32>, nontype_t<Kind>, type_tag_t<uchar>)
+            : base_t(std::move(base))
+        {
+        }
+    };
+
+    /// @endcond
+
+    /// @cond
+
+    template<typename Range, encoding SourceEncoding, decode_view_kind Kind, typename ToType>
+    decode_view(Range&&, encoding_tag_t<SourceEncoding>, nontype_t<Kind>, type_tag_t<ToType>)
+        -> decode_view<std::views::all_t<Range>, SourceEncoding, Kind, ToType>;
+
+    /// @endcond
+
     namespace impl
     {
         namespace transcode_view_impl
@@ -1320,6 +1617,71 @@ namespace upp::ranges
                 {
                     return transcode_view<std::views::all_t<Range>, SourceEncoding, TargetEncoding, Kind, ToType>(
                         std::views::all(std::forward<Range>(range)));
+                }
+            }
+        };
+
+        template<encoding SourceEncoding, decode_view_kind Kind, char_type ToType>
+            requires(std::same_as<ToType, uchar> || SourceEncoding == encoding::ascii)
+        struct decode_fn : public std::ranges::range_adaptor_closure<decode_fn<SourceEncoding, Kind, ToType>>
+        {
+        public:
+            template<std::ranges::viewable_range Range>
+                requires code_unit_range_for<Range, SourceEncoding> &&
+                         (Kind != decode_view_kind::valid || valid_code_unit_range<Range, SourceEncoding>)
+            [[nodiscard]] constexpr auto operator()(Range&& range) const
+            {
+                using range_t    = std::remove_cvref_t<Range>;
+                using error_type = encoding_traits<SourceEncoding>::error_type;
+                using expected_t = std::expected<ToType, error_type>;
+
+                if constexpr (transcode_view_impl::is_empty_view<range_t>)
+                {
+                    if constexpr (Kind == decode_view_kind::expected)
+                    {
+                        return std::ranges::empty_view<expected_t>{};
+                    }
+                    else
+                        return std::ranges::empty_view<ToType>{};
+                }
+                else if constexpr (transcode_view_impl::is_transcode_view<range_t>)
+                {
+                    using range_info = transcode_view_impl::get_transcode_view_info<range_t>;
+
+                    static constexpr bool is_valid_ascii_range = valid_code_unit_range<Range, encoding::ascii>;
+
+                    static constexpr encoding decode_view_source_encoding = is_valid_ascii_range ? upp::encoding::ascii : range_info::source_encoding;
+
+                    if constexpr (SourceEncoding == encoding::ascii && !is_valid_ascii_range)
+                    {
+                        // Cannot optimize this case any further.
+                        // Consider `0x80` as an input:
+                        //
+                        // 0x80 --> transcode_lossy_ascii_to_utf8 --> 0xEF 0xBF 0xBD --> decode_lossy_ascii --> 0x1A 0x1A 0x1A
+                        //
+                        // and
+                        //
+                        // 0x80 --> decode_lossy_ascii --> 0x1A
+                        //
+                        // both produce different results.
+
+                        return decode_view<std::views::all_t<Range>, SourceEncoding, Kind, ToType>(std::views::all(std::forward<Range>(range)));
+                    }
+                    else if constexpr (Kind == decode_view_kind::expected)
+                    {
+                        return impl::as_expected_range<error_type>(decode_view(std::forward<Range>(range).base(),
+                                                                               encoding_tag<decode_view_source_encoding>, nontype<range_info::kind>,
+                                                                               type_tag<ToType>));
+                    }
+                    else
+                    {
+                        return decode_view(std::forward<Range>(range).base(), encoding_tag<decode_view_source_encoding>, nontype<range_info::kind>,
+                                           type_tag<ToType>);
+                    }
+                }
+                else
+                {
+                    return decode_view<std::views::all_t<Range>, SourceEncoding, Kind, ToType>(std::views::all(std::forward<Range>(range)));
                 }
             }
         };
@@ -1771,6 +2133,236 @@ namespace upp::ranges
         inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf16, transcode_view_kind::lossy, char16_t> transcode_lossy_utf32_to_utf16{};
         /// @details See @ref transcoding_range_adaptors "Transcoding Range Adaptors documentation".
         inline constexpr impl::transcode_fn<encoding::utf32, encoding::utf32, transcode_view_kind::lossy, char32_t> transcode_lossy_utf32_to_utf32{};
+
+        /// @}
+        /// @}
+        /// @}
+
+        /// @addtogroup decode_view
+        /// @{
+
+        /// @defgroup decoding_range_adaptors Decoding range adaptors
+        ///
+        /// @brief Range adaptors for decoding code units into code points.
+        ///
+        /// Provides a set of lazy range adaptors that decode code units to code points using different error-handling policies.
+        ///
+        /// There are three kinds of decoding range adaptors: `valid`, `expected`, and `lossy`. Their meaning
+        /// is described in @ref decode_view_kind.
+        ///
+        /// There are multiple versions of those adaptors -- some take the source encoding as a template parameter, and other
+        /// have the source encoding baked into the adaptors name. The same goes for the error-handling policy.
+        ///
+        /// There are @ref generic_decoding_range_adaptors "generic adaptors": `decode`, `decode_valid`, `decode_expected`, `decode_lossy`;
+        /// and pre-instantiated adaptors, such as: `decode_valid_utf8`, `decode_lossy_utf16`, `decode_valid_ascii_to_uchars`, `[...]`.
+        ///
+        /// For decoding ASCII, the code point type can be specified as either `ascii_char` or `uchar`. The pre-instantiated adaptors
+        /// for ASCII reflect this --- there are <code>decode_<i>kind</i>_ascii</code> adaptors which decode to `ascii_char`s, and there are
+        /// <code>decode_<i>kind</i>_ascii_to_uchars</code> adaptors which decode to `uchar`s.
+        ///
+        /// The lossy decoding uses a different fallback character depending on the target code point type specified.
+        /// It uses `uchar::replacement_character()` for `uchar` and `ascii_char::substitute_character()` for `ascii_char`.
+        ///
+        /// Here is an example:
+        ///
+        /// @code{.cpp}
+        ///
+        /// using namespace std::string_view_literals;
+        ///
+        /// auto utf8_sequence = u8"नमस्ते"sv | upp::views::mark_as_valid_utf8;
+        ///
+        /// // Iterate code points
+        ///
+        /// for (upp::uchar code_point : utf8_sequence | upp::views::decode_valid_utf8)
+        /// {
+        ///     std::print("U+{:04X} ", code_point.value());
+        /// }
+        ///
+        /// @endcode
+        ///
+        /// @{
+
+        /// @defgroup generic_decoding_range_adaptors Generic decoding adaptors
+        ///
+        /// @brief Generic range adaptors that decode ranges of code units.
+        ///
+        /// There are four of those generic adaptors:
+        ///
+        /// - `decode` is the most generic of them all. It takes the `SourceEncoding` and the error-handling strategy (`decode_view_kind`)
+        ///   as template parameters. The target code point type can be specified too. The rest of these adaptors
+        ///   are a more specific version of this one.
+        ///
+        /// - `decode_valid` guarantees that no decoding errors happen during the decoding. For this reason, the
+        ///   original range of code units must satisfy @ref valid_code_unit_range "valid_code_unit_range<SourceEncoding>".
+        ///
+        /// - `decode_expected` has a value type of `std::expected<ToType, error_type>` where `ToType` is the target code point
+        ///   type, and `error_type` is `upp::encoding_traits<SourceEncoding>::error_type`. That is, each element of the range is
+        ///   either a code point or an error value containing details about the error. It can be used to implement a custom
+        ///   error-handling policy.
+        ///
+        /// - `decode_lossy` is similar to `decode_valid`, but it doesn't require the original code unit sequence to be well-formed.
+        ///   Instead, it replaces ill-formed code unit subsequences with a fallback character.
+        ///
+        /// @{
+
+        /// @brief Range adaptor that decodes code units to code points (`uchar`s or `ascii_char`s).
+        ///
+        /// Produces a lazy view that converts a sequence of code units from a source encoding into a sequence
+        /// of code points using the provided error-handling policy.
+        ///
+        /// When decoding a UTF encoding, the code point type (`ToType`) is `uchar`. When decoding ASCII,
+        /// the code point type (`ToType`) can be specified as either `uchar` or `ascii_char`.
+        ///
+        /// @tparam SourceEncoding The encoding to decode from.
+        ///
+        /// @tparam Kind Specifies the error handling strategy. Depending on the `Kind` template parameter, the resulting range has a different `value_type`.
+        ///         For `Kind == decode_view_kind::expected`, the `value_type` is `std::expected<ToType, typename encoding_traits<SourceEncoding>::error_type>`.
+        ///         Otherwise, the `value_type` is `ToType`. If `Kind` is `decode_view_kind::valid`, then the adapted range must satisfy
+        ///         @ref upp::ranges::valid_code_unit_range "valid_code_unit_range<Range, SourceEncoding>".
+        ///
+        /// @tparam ToType Code point type to decode to. If the source encoding is ASCII, this type can be either `uchar` or `ascii_char`.
+        ///         Otherwise, this type must be `uchar`. By default, this type is specified as `uchar`.
+        ///
+        /// @see decode_view_kind
+        /// @see views::decode_valid, views::decode_expected, views::decode_lossy
+        ///
+        template<encoding SourceEncoding, decode_view_kind Kind, char_type ToType = uchar>
+            requires(std::same_as<ToType, uchar> || SourceEncoding == encoding::ascii)
+        inline constexpr impl::decode_fn<SourceEncoding, Kind, ToType> decode{};
+
+        /// @brief Range adaptor that decodes well-formed code unit ranges to code points.
+        ///
+        /// Produces a lazy view that decodes a well-formed code unit sequence into a sequence of code points.
+        ///
+        /// When adapting a code unit range using this adaptor, the range must satisfy @ref upp::ranges::valid_code_unit_range "valid_code_unit_range<Range, SourceEncoding>".
+        /// The reason for this is to guarantee at the type-system level that the decoding cannot fail.
+        ///
+        /// @tparam SourceEncoding The encoding to decode from.
+        ///
+        /// @tparam ToType Code point type to decode to. If the source encoding is ASCII, this type can be either `uchar` or `ascii_char`.
+        ///         Otherwise, this type must be `uchar`. By default, this type is specified as `uchar`.
+        ///
+        /// @see views::decode, views::decode_expected, views::decode_lossy
+        ///
+        template<encoding SourceEncoding, char_type ToType = uchar>
+            requires(std::same_as<ToType, uchar> || SourceEncoding == encoding::ascii)
+        inline constexpr impl::decode_fn<SourceEncoding, decode_view_kind::valid, ToType> decode_valid{};
+
+        /// @brief Range adaptor that decodes code unit ranges to code points using `std::expected` to propagate decoding errors.
+        ///
+        /// Produces a view of `std::expected` values containing either code points decoded from the original code unit sequence,
+        /// or errors caused by ill-formed code unit sequences in the original sequence.
+        ///
+        /// This adaptor is used over `decode_lossy` whenever a detailed error description is needed. This can be, for example,
+        /// whenever the user wants to use a custom error-handling policy.
+        ///
+        /// @tparam SourceEncoding The encoding to decode from.
+        ///
+        /// @tparam ToType Code point type to decode to. If the source encoding is ASCII, this type can be either `uchar` or `ascii_char`.
+        ///         Otherwise, this type must be `uchar`. By default, this type is specified as `uchar`.
+        ///
+        /// @see views::decode, views::decode_valid, views::decode_lossy
+        ///
+        template<encoding SourceEncoding, char_type ToType = uchar>
+            requires(std::same_as<ToType, uchar> || SourceEncoding == encoding::ascii)
+        inline constexpr impl::decode_fn<SourceEncoding, decode_view_kind::expected, ToType> decode_expected{};
+
+        /// @brief Range adaptor that decodes code unit ranges to code points, replacing ill-formed subsequences with a fallback character.
+        ///
+        /// Produces a lazy view that decodes potentially-ill-formed code unit sequences to a sequence of code points.
+        ///
+        /// It replaces ill-formed code unit sequences with a fallback character.
+        ///
+        /// The fallback character depends on the specified `ToType`: U+FFFD for `uchar` and `0x1A` for `ascii_char`.
+        ///
+        /// It uses the [Substitution of Maximal Subparts](https://www.unicode.org/versions/Unicode17.0.0/core-spec/chapter-3/#G66453) specification
+        /// to determine the number of malformed code units to replace with a single fallback character.
+        ///
+        /// @tparam SourceEncoding The encoding to decode from.
+        ///
+        /// @tparam ToType Code point type to decode to. If the source encoding is ASCII, this type can be either `uchar` or `ascii_char`.
+        ///         Otherwise, this type must be `uchar`. By default, this type is specified as `uchar`.
+        ///
+        /// @see views::decode, views::decode_valid, views::decode_expected
+        ///
+        template<encoding SourceEncoding, char_type ToType = uchar>
+            requires(std::same_as<ToType, uchar> || SourceEncoding == encoding::ascii)
+        inline constexpr impl::decode_fn<SourceEncoding, decode_view_kind::lossy, ToType> decode_lossy{};
+
+        /// @}
+
+        /// @defgroup ascii_decoding_range_adaptors ASCII decoding adaptors
+        ///
+        /// @brief Range adaptors that decode ASCII code units to a range of code points using the specified error-handling policy.
+        ///
+        /// See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        ///
+        /// @{
+
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::ascii, decode_view_kind::valid, ascii_char> decode_valid_ascii{};
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::ascii, decode_view_kind::expected, ascii_char> decode_expected_ascii{};
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::ascii, decode_view_kind::lossy, ascii_char> decode_lossy_ascii{};
+
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::ascii, decode_view_kind::valid, uchar> decode_valid_ascii_to_uchars{};
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::ascii, decode_view_kind::expected, uchar> decode_expected_ascii_to_uchars{};
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::ascii, decode_view_kind::lossy, uchar> decode_lossy_ascii_to_uchars{};
+
+        /// @}
+
+        /// @defgroup utf8_decoding_range_adaptors UTF-8 decoding adaptors
+        ///
+        /// @brief Range adaptors that decode UTF-8 code units to a range of `uchar`s using the specified error-handling policy.
+        ///
+        /// See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        ///
+        /// @{
+
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::utf8, decode_view_kind::valid, uchar> decode_valid_utf8{};
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::utf8, decode_view_kind::expected, uchar> decode_expected_utf8{};
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::utf8, decode_view_kind::lossy, uchar> decode_lossy_utf8{};
+
+        /// @}
+
+        /// @defgroup utf16_decoding_range_adaptors UTF-16 decoding adaptors
+        ///
+        /// @brief Range adaptors that decode UTF-16 code units to a range of `uchar`s using the specified error-handling policy.
+        ///
+        /// See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        ///
+        /// @{
+
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::utf16, decode_view_kind::valid, uchar> decode_valid_utf16{};
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::utf16, decode_view_kind::expected, uchar> decode_expected_utf16{};
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::utf16, decode_view_kind::lossy, uchar> decode_lossy_utf16{};
+
+        /// @}
+
+        /// @defgroup utf32_decoding_range_adaptors UTF-32 decoding adaptors
+        ///
+        /// @brief Range adaptors that decode UTF-32 code units to a range of `uchar`s using the specified error-handling policy.
+        ///
+        /// See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        ///
+        /// @{
+
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::utf32, decode_view_kind::valid, uchar> decode_valid_utf32{};
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::utf32, decode_view_kind::expected, uchar> decode_expected_utf32{};
+        /// @details See @ref decoding_range_adaptors "Decoding Range Adaptors documentation".
+        inline constexpr impl::decode_fn<encoding::utf32, decode_view_kind::lossy, uchar> decode_lossy_utf32{};
 
         /// @}
         /// @}

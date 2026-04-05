@@ -3,7 +3,7 @@
 
 /// @file
 ///
-/// @brief Defines a range adaptor for transcoding ranges between text encodings.
+/// @brief Defines range adaptors for encoding, decoding and transcoding ranges between text encodings.
 ///
 
 #include "base.hpp"
@@ -77,6 +77,44 @@
 /// @see decoding_range_adaptors
 /// @see decode_view_kind
 /// @see decode_view
+///
+/// @headerfile "" <uni-cpp/ranges.hpp>
+///
+
+/// @defgroup encode_view Encoding code point ranges
+///
+/// @brief Provides range adaptors for encoding code point ranges in a given encoding.
+///
+/// The following adaptors are provided:
+/// - @ref upp::ranges::views::encode_as "views::encode_as",
+/// - @ref upp::ranges::views::encode_as_ascii "views::encode_as_ascii",
+/// - @ref upp::ranges::views::encode_as_utf8 "views::encode_as_utf8",
+/// - @ref upp::ranges::views::encode_as_utf16 "views::encode_as_utf16",
+/// - @ref upp::ranges::views::encode_as_utf32 "views::encode_as_utf32".
+///
+/// These adaptors adapt ranges of @ref upp::ascii_char "ascii_chars" and @ref upp::uchar "uchars".
+/// They encode these code point ranges in the given encoding. The target code unit type can be specified as well.
+///
+/// See @ref encoding_range_adaptors "encoding range adaptors" documentation for more.
+///
+/// @par Example
+///
+/// @code{.cpp}
+///
+/// using namespace upp::char_literals;
+///
+/// std::array code_points{0x0412_uc, 0x0456_uc, 0x0442_uc, 0x0430_uc, 0x044E_uc};
+///
+/// auto as_utf8 = code_points | upp::views::encode_as_utf8;
+///
+/// std::println("{::02X}", as_utf8 | upp::views::cast_code_units_to<std::uint8_t>);
+///
+/// // output: [D0, 92, D1, 96, D1, 82, D0, B0, D1, 8E]
+///
+/// @endcode
+///
+/// @see encoding_range_adaptors
+/// @see encode_view
 ///
 /// @headerfile "" <uni-cpp/ranges.hpp>
 ///
@@ -1503,20 +1541,197 @@ namespace upp::ranges
 
     /// @endcond
 
+    /// @cond
+
+    template<std::ranges::view View, encoding TargetEncoding, code_unit_type_for<TargetEncoding> CodeUnitType>
+        requires char_type<std::remove_cvref_t<std::ranges::range_reference_t<View>>> &&
+                 (std::same_as<std::remove_cvref_t<std::ranges::range_reference_t<View>>, ascii_char> || TargetEncoding != encoding::ascii) &&
+                 std::same_as<CodeUnitType, std::remove_cv_t<CodeUnitType>>
+    class encode_view;
+
+    template<typename View, encoding TargetEncoding, typename CodeUnitType>
+    inline constexpr bool enable_valid_code_unit_range<encode_view<View, TargetEncoding, CodeUnitType>, TargetEncoding> = true;
+
+    /// @endcond
+
+    namespace impl::encode_view_impl
+    {
+        template<typename View, encoding TargetEncoding, typename CodeUnitType>
+        using variable_width_encoding_transcode_view =
+            transcode_view<encode_view<View, encoding::utf32, char32_t>, encoding::utf32, TargetEncoding, transcode_view_kind::valid, CodeUnitType>;
+
+        template<typename View, encoding TargetEncoding, typename CodeUnitType>
+        struct variable_width_encoding_traits
+        {
+        private:
+            using transcode_view_t = variable_width_encoding_transcode_view<View, TargetEncoding, CodeUnitType>;
+
+            using iter_t       = std::ranges::iterator_t<transcode_view_t&>;
+            using const_iter_t = std::ranges::iterator_t<const transcode_view_t&>;
+
+            using sent_t       = std::ranges::sentinel_t<transcode_view_t&>;
+            using const_sent_t = std::ranges::sentinel_t<const transcode_view_t&>;
+
+        public:
+            [[nodiscard]] static constexpr auto base_projection(const transcode_view_t& view) { return view.base().base(); }
+            [[nodiscard]] static constexpr auto base_projection(transcode_view_t&& view) { return std::move(view).base().base(); }
+
+            [[nodiscard]] static constexpr const auto& iterator_base_projection(const iter_t& it) { return it.base().base(); }
+            [[nodiscard]] static constexpr auto        iterator_base_projection(iter_t&& it) { return std::move(it).base().base(); }
+
+            [[nodiscard]] static constexpr const auto& iterator_base_projection(const const_iter_t& it) { return it.base().base(); }
+            [[nodiscard]] static constexpr auto        iterator_base_projection(const_iter_t&& it) { return std::move(it).base().base(); }
+
+            [[nodiscard]] static constexpr auto sentinel_base_projection(const sent_t& sent) { return sent.base().base(); }
+            [[nodiscard]] static constexpr auto sentinel_base_projection(const const_sent_t& sent) { return sent.base().base(); }
+        };
+
+        template<typename View, encoding TargetEncoding, typename CodeUnitType>
+        using variable_width_encoding_view_base =
+            impl::simple_view_adaptor<impl::encode_view_impl::variable_width_encoding_traits<View, TargetEncoding, CodeUnitType>,
+                                      variable_width_encoding_transcode_view<View, TargetEncoding, CodeUnitType>>;
+
+        template<typename View, encoding TargetEncoding, typename CodeUnitType>
+        struct fixed_width_encoding_traits
+        {
+        private:
+            using char_type_t = std::remove_cvref_t<std::ranges::range_reference_t<View>>;
+
+        public:
+            [[nodiscard]] static constexpr CodeUnitType transform_element(char_type_t code_point)
+            {
+                if constexpr (std::same_as<char_type_t, ascii_char>)
+                {
+                    if constexpr (TargetEncoding == encoding::ascii)
+                    {
+                        return std::bit_cast<CodeUnitType>(code_point.value());
+                    }
+                    else if constexpr (TargetEncoding == encoding::utf32)
+                    {
+                        return std::bit_cast<CodeUnitType>(static_cast<std::uint32_t>(code_point.value()));
+                    }
+                    else
+                        static_assert(false);
+                }
+                else
+                    return std::bit_cast<CodeUnitType>(code_point.value());
+            }
+        };
+    } // namespace impl::encode_view_impl
+
+    /// @brief A lazy view that encodes code points to code units in the given @p TargetEncoding.
+    ///
+    /// @tparam View The underlying view. It must be a view of `ascii_char`s or `uchar`s. If `TargetEncoding` is ASCII then it must
+    ///              be a view of `ascii_char`s.
+    ///
+    /// @tparam TargetEncoding The target encoding. Code points from the underlying view will be encoded in this encoding.
+    ///
+    /// @tparam CodeUnitType Target code unit type. This will be the `value_type` of this view. This type must not be _cv qualified_.
+    ///
+    /// @note Users should use the @ref encoding_range_adaptors "encoding range adaptors" instead of using this type directly.
+    ///
+    /// @ingroup encode_view
+    ///
+    /// @headerfile "" <uni-cpp/ranges.hpp>
+    ///
+    template<std::ranges::view View, encoding TargetEncoding, code_unit_type_for<TargetEncoding> CodeUnitType>
+        requires char_type<std::remove_cvref_t<std::ranges::range_reference_t<View>>> &&
+                 (std::same_as<std::remove_cvref_t<std::ranges::range_reference_t<View>>, ascii_char> || TargetEncoding != encoding::ascii) &&
+                 std::same_as<CodeUnitType, std::remove_cv_t<CodeUnitType>>
+    class encode_view : public impl::encode_view_impl::variable_width_encoding_view_base<View, TargetEncoding, CodeUnitType>
+    {
+    private:
+        using base_t = impl::encode_view_impl::variable_width_encoding_view_base<View, TargetEncoding, CodeUnitType>;
+
+        using encode_view_t = encode_view<View, encoding::utf32, char32_t>;
+
+        using transcode_view_t = transcode_view<encode_view_t, encoding::utf32, TargetEncoding, transcode_view_kind::valid, CodeUnitType>;
+
+    public:
+        /// @brief Default constructor.
+        ///
+        encode_view()
+            requires std::default_initializable<View>
+        = default;
+
+        /// @brief Constructs the `encode_view` from the underlying view.
+        ///
+        constexpr explicit encode_view(View base)
+            : base_t(transcode_view_t(encode_view_t(std::move(base))))
+        {
+        }
+
+        /// @brief Constructs the `encode_view` from the underlying view.
+        ///
+        /// Tagged constructor for CTAD.
+        ///
+        constexpr encode_view(View base, encoding_tag_t<TargetEncoding>, type_tag_t<CodeUnitType>)
+            : base_t(transcode_view_t(encode_view_t(std::move(base))))
+        {
+        }
+    };
+
+    /// @cond
+
+    template<std::ranges::view View, code_unit_type_for<encoding::ascii> CodeUnitType>
+        requires std::same_as<std::remove_cvref_t<std::ranges::range_reference_t<View>>, ascii_char> &&
+                 std::same_as<CodeUnitType, std::remove_cv_t<CodeUnitType>>
+    class encode_view<View, encoding::ascii, CodeUnitType>
+        : public impl::simple_view_adaptor<impl::encode_view_impl::fixed_width_encoding_traits<View, encoding::ascii, CodeUnitType>, View>
+    {
+    private:
+        using base_t = impl::simple_view_adaptor<impl::encode_view_impl::fixed_width_encoding_traits<View, encoding::ascii, CodeUnitType>, View>;
+
+    public:
+        using base_t::base_t;
+
+        constexpr encode_view(View base, encoding_tag_t<encoding::ascii>, type_tag_t<CodeUnitType>)
+            : base_t(std::move(base))
+        {
+        }
+    };
+
+    template<std::ranges::view View, code_unit_type_for<encoding::utf32> CodeUnitType>
+        requires char_type<std::remove_cvref_t<std::ranges::range_reference_t<View>>> && std::same_as<CodeUnitType, std::remove_cv_t<CodeUnitType>>
+    class encode_view<View, encoding::utf32, CodeUnitType>
+        : public impl::simple_view_adaptor<impl::encode_view_impl::fixed_width_encoding_traits<View, encoding::utf32, CodeUnitType>, View>
+    {
+    private:
+        using base_t = impl::simple_view_adaptor<impl::encode_view_impl::fixed_width_encoding_traits<View, encoding::utf32, CodeUnitType>, View>;
+
+    public:
+        using base_t::base_t;
+
+        constexpr encode_view(View base, encoding_tag_t<encoding::utf32>, type_tag_t<CodeUnitType>)
+            : base_t(std::move(base))
+        {
+        }
+    };
+
+    /// @endcond
+
+    /// @cond
+
+    template<typename Range, encoding TargetEncoding, typename CodeUnitType>
+    encode_view(Range&&, encoding_tag_t<TargetEncoding>, type_tag_t<CodeUnitType>)
+        -> encode_view<std::views::all_t<Range>, TargetEncoding, CodeUnitType>;
+
+    /// @endcond
+
     namespace impl
     {
+        template<typename>
+        inline constexpr bool is_empty_view = false;
+
+        template<typename T>
+        inline constexpr bool is_empty_view<std::ranges::empty_view<T>> = true;
+
         namespace transcode_view_impl
         {
             template<typename>
-            inline constexpr bool is_empty_view = false;
-
-            template<typename T>
-            inline constexpr bool is_empty_view<std::ranges::empty_view<T>> = true;
-
-            template<typename>
             inline constexpr bool is_transcode_view = false;
 
-            template<typename View, encoding SourceEncoding, encoding TargetEncoding, typename ToType, transcode_view_kind Kind>
+            template<typename View, encoding SourceEncoding, encoding TargetEncoding, transcode_view_kind Kind, typename ToType>
             inline constexpr bool is_transcode_view<transcode_view<View, SourceEncoding, TargetEncoding, Kind, ToType>> = true;
 
             template<typename>
@@ -1548,6 +1763,47 @@ namespace upp::ranges
             };
         } // namespace transcode_view_impl
 
+        namespace decode_view_impl
+        {
+            template<typename>
+            inline constexpr bool is_decode_view = false;
+
+            template<typename View, encoding SourceEncoding, decode_view_kind Kind, typename ToType>
+            inline constexpr bool is_decode_view<decode_view<View, SourceEncoding, Kind, ToType>> = true;
+
+            template<typename>
+            struct get_decode_view_info;
+
+            template<typename View, encoding SourceEncoding, decode_view_kind Kind, typename ToType>
+            struct get_decode_view_info<decode_view<View, SourceEncoding, Kind, ToType>>
+            {
+                static constexpr decode_view_kind kind            = Kind;
+                static constexpr encoding         source_encoding = SourceEncoding;
+
+                using to_type = ToType;
+            };
+        } // namespace decode_view_impl
+
+        namespace encode_view_impl
+        {
+            template<typename>
+            inline constexpr bool is_encode_view = false;
+
+            template<typename View, encoding TargetEncoding, typename CodeUnitType>
+            inline constexpr bool is_encode_view<encode_view<View, TargetEncoding, CodeUnitType>> = true;
+
+            template<typename>
+            struct get_encode_view_info;
+
+            template<typename View, encoding TargetEncoding, typename CodeUnitType>
+            struct get_encode_view_info<encode_view<View, TargetEncoding, CodeUnitType>>
+            {
+                static constexpr encoding target_encoding = TargetEncoding;
+
+                using char_type_t = std::remove_cvref_t<std::ranges::range_reference_t<View>>;
+            };
+        } // namespace encode_view_impl
+
         template<encoding SourceEncoding, encoding TargetEncoding, transcode_view_kind Kind, code_unit_type_for<TargetEncoding> ToType>
             requires unicode_encoding<TargetEncoding> && std::same_as<ToType, std::remove_cv_t<ToType>>
         struct transcode_fn : public std::ranges::range_adaptor_closure<transcode_fn<SourceEncoding, TargetEncoding, Kind, ToType>>
@@ -1571,7 +1827,7 @@ namespace upp::ranges
                     else
                         return std::forward<Range>(range) | views::cast_code_units_to<ToType>;
                 }
-                else if constexpr (transcode_view_impl::is_empty_view<range_t>)
+                else if constexpr (is_empty_view<range_t>)
                 {
                     if constexpr (Kind == transcode_view_kind::expected)
                     {
@@ -1579,6 +1835,28 @@ namespace upp::ranges
                     }
                     else
                         return std::ranges::empty_view<ToType>{};
+                }
+                else if constexpr (encode_view_impl::is_encode_view<range_t>)
+                {
+                    if constexpr (valid_code_unit_range<range_t, SourceEncoding>)
+                    {
+                        // `valid_code_unit_range<range_t, SourceEncoding>` isn't true when `encode_as_utf8` --> `transcode_lossy_ascii_to`.
+
+                        if constexpr (Kind == transcode_view_kind::expected)
+                        {
+                            return impl::as_expected_range<error_type>(
+                                encode_view(std::forward<Range>(range).base(), encoding_tag<TargetEncoding>, type_tag<ToType>));
+                        }
+                        else
+                        {
+                            return encode_view(std::forward<Range>(range).base(), encoding_tag<TargetEncoding>, type_tag<ToType>);
+                        }
+                    }
+                    else
+                    {
+                        return transcode_view<std::views::all_t<Range>, SourceEncoding, TargetEncoding, Kind, ToType>(
+                            std::views::all(std::forward<Range>(range)));
+                    }
                 }
                 else if constexpr (transcode_view_impl::is_transcode_view<range_t>)
                 {
@@ -1635,7 +1913,7 @@ namespace upp::ranges
                 using error_type = encoding_traits<SourceEncoding>::error_type;
                 using expected_t = std::expected<ToType, error_type>;
 
-                if constexpr (transcode_view_impl::is_empty_view<range_t>)
+                if constexpr (is_empty_view<range_t>)
                 {
                     if constexpr (Kind == decode_view_kind::expected)
                     {
@@ -1643,6 +1921,30 @@ namespace upp::ranges
                     }
                     else
                         return std::ranges::empty_view<ToType>{};
+                }
+                else if constexpr (encode_view_impl::is_encode_view<range_t>)
+                {
+                    using range_info = encode_view_impl::get_encode_view_info<range_t>;
+
+                    using char_type_t = range_info::char_type_t;
+
+                    if constexpr (valid_code_unit_range<range_t, SourceEncoding> && std::same_as<char_type_t, ToType>)
+                    {
+                        // `valid_code_unit_range<range_t, SourceEncoding>` isn't true when `encode_as_utf8` --> `decode_lossy_ascii`.
+
+                        if constexpr (Kind == decode_view_kind::expected)
+                        {
+                            return impl::as_expected_range<error_type>(std::forward<Range>(range).base());
+                        }
+                        else
+                        {
+                            return std::forward<Range>(range).base();
+                        }
+                    }
+                    else
+                    {
+                        return decode_view<std::views::all_t<Range>, SourceEncoding, Kind, ToType>(std::views::all(std::forward<Range>(range)));
+                    }
                 }
                 else if constexpr (transcode_view_impl::is_transcode_view<range_t>)
                 {
@@ -1682,6 +1984,73 @@ namespace upp::ranges
                 else
                 {
                     return decode_view<std::views::all_t<Range>, SourceEncoding, Kind, ToType>(std::views::all(std::forward<Range>(range)));
+                }
+            }
+        };
+
+        template<encoding TargetEncoding, code_unit_type_for<TargetEncoding> CodeUnitType>
+            requires std::same_as<CodeUnitType, std::remove_cv_t<CodeUnitType>>
+        struct encode_fn : public std::ranges::range_adaptor_closure<encode_fn<TargetEncoding, CodeUnitType>>
+        {
+        public:
+            template<std::ranges::viewable_range Range>
+                requires char_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>> &&
+                         (std::same_as<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, ascii_char> || TargetEncoding != encoding::ascii)
+            [[nodiscard]] constexpr auto operator()(Range&& range) const
+            {
+                using range_t = std::remove_cvref_t<Range>;
+
+                if constexpr (is_empty_view<range_t>)
+                {
+                    return std::ranges::empty_view<CodeUnitType>{};
+                }
+                else if constexpr (decode_view_impl::is_decode_view<range_t>)
+                {
+                    using range_info = decode_view_impl::get_decode_view_info<range_t>;
+
+                    if constexpr (range_info::kind == decode_view_kind::lossy)
+                    {
+                        if constexpr (std::same_as<typename range_info::to_type, ascii_char>)
+                        {
+                            // Cannot optimize this case any further.
+                            // Consider `0x80` as an input:
+                            //
+                            // 0x80 --> decode_lossy_ascii --> 0x1A (ascii_char) --> encode_as_utf16 --> 0x001A
+                            //
+                            // and
+                            //
+                            // 0x80 --> transcode_lossy_ascii_to_utf16 --> 0xFFFD
+                            //
+                            // both produce different results.
+
+                            return encode_view<std::views::all_t<Range>, TargetEncoding, CodeUnitType>(std::views::all(std::forward<Range>(range)));
+                        }
+                        else
+                        {
+                            return transcode_view(std::forward<Range>(range).base(), encoding_tag<range_info::source_encoding>,
+                                                  encoding_tag<TargetEncoding>, nontype<transcode_view_kind::lossy>, type_tag<CodeUnitType>);
+                        }
+                    }
+                    else if constexpr (range_info::kind == decode_view_kind::valid)
+                    {
+                        if constexpr (range_info::source_encoding == TargetEncoding)
+                        {
+                            // Note: if TargetEncoding is ASCII then `range_info::source_encoding == TargetEncoding` is always true.
+
+                            return views::cast_code_units_to<CodeUnitType>(std::forward<Range>(range).base());
+                        }
+                        else
+                        {
+                            return transcode_view(std::forward<Range>(range).base(), encoding_tag<range_info::source_encoding>,
+                                                  encoding_tag<TargetEncoding>, nontype<transcode_view_kind::valid>, type_tag<CodeUnitType>);
+                        }
+                    }
+                    else
+                        static_assert(false);
+                }
+                else
+                {
+                    return encode_view<std::views::all_t<Range>, TargetEncoding, CodeUnitType>(std::views::all(std::forward<Range>(range)));
                 }
             }
         };
@@ -2365,6 +2734,109 @@ namespace upp::ranges
         inline constexpr impl::decode_fn<encoding::utf32, decode_view_kind::lossy, uchar> decode_lossy_utf32{};
 
         /// @}
+        /// @}
+        /// @}
+
+        /// @addtogroup encode_view
+        /// @{
+
+        /// @defgroup encoding_range_adaptors Encoding range adaptors
+        ///
+        /// @brief Range adaptors for encoding code points to code units using the given encoding.
+        ///
+        /// Provides a set of lazy range adaptors that encode code points to code units using the specified encoding.
+        ///
+        /// These adaptors work on ranges of code points, that is, ranges of either `uchar`s or `ascii_char`s.
+        /// They encode code points from these ranges to code units in a given encoding (ASCII, UTF-8, UTF-16 or UTF-32).
+        ///
+        /// Both `ascii_char` and `uchar` ranges can be encoded to UTF-8, UTF-16 and UTF-32. However, only `ascii_char` ranges
+        /// can be encoded to ASCII. It's to guarantee that the encoding cannot fail --- not *all* `uchar`s can be encoded as ASCII,
+        /// but *all* `ascii_char`s can.
+        ///
+        /// @ref upp::ranges::views::encode_as "views::encode_as" is the generic adaptor. The target encoding is specified as a template parameter.
+        /// The target code unit type can be specified as well, or it can be omitted to use the default code unit type for that encoding instead.
+        ///
+        /// For non-generic contexts, and for the QOL, the following adaptors are provided:
+        /// - @ref upp::ranges::views::encode_as_ascii "views::encode_as_ascii",
+        /// - @ref upp::ranges::views::encode_as_utf8 "views::encode_as_utf8",
+        /// - @ref upp::ranges::views::encode_as_utf16 "views::encode_as_utf16",
+        /// - @ref upp::ranges::views::encode_as_utf32 "views::encode_as_utf32".
+        ///
+        /// These are the default adaptors for these encodings. They don't take any template parameters.
+        /// They encode to the default code unit type for their encoding.
+        ///
+        /// Here is an example:
+        ///
+        /// @code{.cpp}
+        ///
+        /// using namespace upp::char_literals;
+        ///
+        /// std::array code_points{0x0412_uc, 0x0456_uc, 0x0442_uc, 0x0430_uc, 0x044E_uc};
+        ///
+        /// auto as_utf8 = code_points | upp::views::encode_as_utf8;
+        ///
+        /// std::println("{::02X}", as_utf8 | upp::views::cast_code_units_to<std::uint8_t>);
+        ///
+        /// // output: [D0, 92, D1, 96, D1, 82, D0, B0, D1, 8E]
+        ///
+        /// @endcode
+        ///
+        /// @{
+
+        /// @brief Range adaptor for encoding code points to code units using the given encoding.
+        ///
+        /// The adapted range must be a range of `uchar`s or `ascii_char`s. If the @p TargetEncoding is specified as ASCII,
+        /// then the adapted range must be specifically a range of `ascii_char`s.
+        ///
+        /// @tparam TargetEncoding The target encoding. Code points from the adapted range will be encoded in this encoding.
+        ///
+        /// @tparam TargetCodeUnitType Target code unit type. This will be the `value_type` of the produced view.
+        ///                            By default, this type is specified as `upp::encoding_traits<TargetEncoding>::default_code_unit_type`.
+        ///                            This type must not be _cv qualified_.
+        ///
+        /// @see encoding_range_adaptors
+        ///
+        template<encoding                           TargetEncoding,
+                 code_unit_type_for<TargetEncoding> TargetCodeUnitType = typename encoding_traits<TargetEncoding>::default_code_unit_type>
+            requires std::same_as<TargetCodeUnitType, std::remove_cv_t<TargetCodeUnitType>>
+        inline constexpr impl::encode_fn<TargetEncoding, TargetCodeUnitType> encode_as{};
+
+        /// @brief Range adaptor that encodes ranges of `ascii_char`s as ASCII code units.
+        ///
+        /// Adapts a range of `ascii_char`s. Produces a range of `char`s.
+        ///
+        /// @see encoding_range_adaptors
+        /// @see @ref upp::ranges::views::encode_as "views::encode_as"
+        ///
+        inline constexpr impl::encode_fn<encoding::ascii, char> encode_as_ascii{};
+
+        /// @brief Range adaptor that encodes ranges of code points as UTF-8.
+        ///
+        /// Adapts a range of `uchar`s or `ascii_char`s and encodes it as UTF-8, producing a view of `char8_t`s.
+        ///
+        /// @see encoding_range_adaptors
+        /// @see @ref upp::ranges::views::encode_as "views::encode_as"
+        ///
+        inline constexpr impl::encode_fn<encoding::utf8, char8_t> encode_as_utf8{};
+
+        /// @brief Range adaptor that encodes ranges of code points as UTF-16.
+        ///
+        /// Adapts a range of `uchar`s or `ascii_char`s and encodes it as UTF-16, producing a view of `char16_t`s.
+        ///
+        /// @see encoding_range_adaptors
+        /// @see @ref upp::ranges::views::encode_as "views::encode_as"
+        ///
+        inline constexpr impl::encode_fn<encoding::utf16, char16_t> encode_as_utf16{};
+
+        /// @brief Range adaptor that encodes ranges of code points as UTF-32.
+        ///
+        /// Adapts a range of `uchar`s or `ascii_char`s and encodes it as UTF-32, producing a view of `char32_t`s.
+        ///
+        /// @see encoding_range_adaptors
+        /// @see @ref upp::ranges::views::encode_as "views::encode_as"
+        ///
+        inline constexpr impl::encode_fn<encoding::utf32, char32_t> encode_as_utf32{};
+
         /// @}
         /// @}
     } // namespace views

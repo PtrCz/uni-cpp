@@ -1,0 +1,16 @@
+from ..add_unicode_version_argument import add_unicode_version_argument
+from ...core.datasets import datasets_and_all
+
+def register(sub):
+    parser = sub.add_parser(
+        'analyze',
+        help='Analyze dataset structure and statistics'
+    )
+
+    add_unicode_version_argument(parser)
+
+    parser.add_argument(
+        'dataset',
+        choices=datasets_and_all(),
+        help='Choose which dataset to analyze',
+    )

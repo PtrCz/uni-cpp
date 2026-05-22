@@ -47,9 +47,9 @@ class CommandDispatcher:
     def list(self, context: context.ListContext):
         match context.target:
             case 'datasets':
-                for dataset in datasets.datasets():
-                    print(dataset.name)
+                for dataset in datasets.datasets().keys():
+                    print(dataset)
 
             case 'tests':
-                for test in datasets.test_datasets():
-                    print(test.name)
+                for test in datasets.test_datasets().keys():
+                    print(test)

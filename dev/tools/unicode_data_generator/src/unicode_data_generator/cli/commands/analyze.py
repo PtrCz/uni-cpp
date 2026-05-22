@@ -11,7 +11,7 @@ def register(sub):
 
     parser.add_argument(
         'dataset',
-        choices=['all', *[d.name for d in datasets()]],
+        choices=['all', *datasets().keys()],
         help='Choose which dataset to analyze',
     )
 

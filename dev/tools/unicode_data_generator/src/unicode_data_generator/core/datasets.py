@@ -1,15 +1,16 @@
 from dataclasses import dataclass
 
-
 @dataclass(frozen=True)
 class Dataset:
-    name: str
+    type Name = str
+
+    name: Name
     necessary_ucd_files: frozenset[str]
 
 
-def datasets() -> set[Dataset]:
+def datasets() -> dict[Dataset.Name, Dataset]:
     return {
-        Dataset(
+        'case_mapping': Dataset(
             name='case_mapping',
             necessary_ucd_files=frozenset({
                 'ucd/UnicodeData.txt',
@@ -18,13 +19,13 @@ def datasets() -> set[Dataset]:
         ),
     }
 
-def test_datasets() -> set[Dataset]:
+def test_datasets() -> dict[Dataset.Name, Dataset]:
     return {
-        Dataset(
+        'utf_encoding': Dataset(
             name='utf_encoding',
             necessary_ucd_files=frozenset(),
         ),
-        Dataset(
+        'case_mapping': Dataset(
             name='case_mapping',
             necessary_ucd_files=frozenset({
                 'ucd/UnicodeData.txt',

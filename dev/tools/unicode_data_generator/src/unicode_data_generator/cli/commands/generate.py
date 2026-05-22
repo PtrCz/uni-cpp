@@ -36,7 +36,7 @@ def register_tables_subparser(sub):
 
     parser.add_argument(
         'dataset',
-        choices=['all', *[d.name for d in datasets()]],
+        choices=['all', *datasets().keys()],
         help='Choose which data tables to generate',
     )
 
@@ -53,7 +53,7 @@ def register_tests_subparser(sub):
 
     parser.add_argument(
         'dataset',
-        choices=['all', *[d.name for d in test_datasets()]],
+        choices=['all', *test_datasets().keys()],
         help='Choose which tests to generate',
     )
 

@@ -12,8 +12,8 @@ def datasets() -> set[Dataset]:
         Dataset(
             name='case_mapping',
             necessary_ucd_files=frozenset({
-                'UnicodeData.txt',
-                'SpecialCasing.txt',
+                'ucd/UnicodeData.txt',
+                'ucd/SpecialCasing.txt',
             }),
         ),
     }
@@ -27,8 +27,8 @@ def test_datasets() -> set[Dataset]:
         Dataset(
             name='case_mapping',
             necessary_ucd_files=frozenset({
-                'UnicodeData.txt',
-                'SpecialCasing.txt',
+                'ucd/UnicodeData.txt',
+                'ucd/SpecialCasing.txt',
             }),
         ),
     }

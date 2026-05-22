@@ -7,7 +7,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     global_context = context.GlobalContext(
-        cache_dir=args.cache_dir,
+        cache_dir=args.cache_dir if not getattr(args, 'no_cache', False) else None,
         output_dir=args.output_dir
     )
 

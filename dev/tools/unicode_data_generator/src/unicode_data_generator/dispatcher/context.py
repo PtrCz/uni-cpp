@@ -4,7 +4,7 @@ from typing import Literal
 
 @dataclass
 class GlobalContext:
-    cache_dir: Path
+    cache_dir: Path | None
     output_dir: Path
 
 @dataclass

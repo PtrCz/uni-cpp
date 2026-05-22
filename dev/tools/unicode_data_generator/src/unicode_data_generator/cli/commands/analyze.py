@@ -14,3 +14,9 @@ def register(sub):
         choices=['all', *[d.name for d in datasets()]],
         help='Choose which dataset to analyze',
     )
+
+    parser.add_argument(
+        '--no-cache',
+        action='store_true',
+        help='Ignore cache and regenerate everything'
+    )

@@ -48,8 +48,8 @@ class CommandDispatcher:
         match context.target:
             case 'datasets':
                 for dataset in datasets.datasets():
-                    print(dataset)
+                    print(dataset.name)
 
             case 'tests':
                 for test in datasets.test_datasets():
-                    print(test)
+                    print(test.name)

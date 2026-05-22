@@ -1,22 +1,34 @@
-def datasets() -> list[str]:
-    return [
-        'case_mapping',
-    ]
+from dataclasses import dataclass
 
-def datasets_and_all() -> list[str]:
-    ds = datasets()
-    ds.insert(0, 'all')
 
-    return ds
+@dataclass(frozen=True)
+class Dataset:
+    name: str
+    necessary_ucd_files: frozenset[str]
 
-def test_datasets() -> list[str]:
-    return [
-        'utf_encoding',
-        'case_mapping'
-    ]
 
-def test_datasets_and_all() -> list[str]:
-    ds = test_datasets()
-    ds.insert(0, 'all')
+def datasets() -> set[Dataset]:
+    return {
+        Dataset(
+            name='case_mapping',
+            necessary_ucd_files=frozenset({
+                'UnicodeData.txt',
+                'SpecialCasing.txt',
+            }),
+        ),
+    }
 
-    return ds
+def test_datasets() -> set[Dataset]:
+    return {
+        Dataset(
+            name='utf_encoding',
+            necessary_ucd_files=frozenset(),
+        ),
+        Dataset(
+            name='case_mapping',
+            necessary_ucd_files=frozenset({
+                'UnicodeData.txt',
+                'SpecialCasing.txt',
+            }),
+        ),
+    }

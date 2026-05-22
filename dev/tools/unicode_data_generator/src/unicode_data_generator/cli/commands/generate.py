@@ -1,5 +1,5 @@
 from ..add_unicode_version_argument import add_unicode_version_argument
-from ...core.datasets import datasets_and_all, test_datasets_and_all
+from ...core.datasets import datasets, test_datasets
 
 def register(p):
     parser = p.add_parser(
@@ -35,7 +35,7 @@ def register_tables_subparser(sub):
 
     parser.add_argument(
         'dataset',
-        choices=datasets_and_all(),
+        choices=['all', *[d.name for d in datasets()]],
         help='Choose which data tables to generate',
     )
 
@@ -51,7 +51,7 @@ def register_tests_subparser(sub):
 
     parser.add_argument(
         'dataset',
-        choices=test_datasets_and_all(),
+        choices=['all', *[d.name for d in test_datasets()]],
         help='Choose which tests to generate',
     )
 

@@ -15,6 +15,7 @@ def datasets() -> dict[Dataset.Name, Dataset]:
             necessary_ucd_files=frozenset({
                 'ucd/UnicodeData.txt',
                 'ucd/SpecialCasing.txt',
+                'ucd/CaseFolding.txt',
             }),
         ),
     }
@@ -30,6 +31,7 @@ def test_datasets() -> dict[Dataset.Name, Dataset]:
             necessary_ucd_files=frozenset({
                 'ucd/UnicodeData.txt',
                 'ucd/SpecialCasing.txt',
+                'ucd/CaseFolding.txt',
             }),
         ),
     }

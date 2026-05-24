@@ -1,16 +1,58 @@
 from . import context
 
 from ..core import datasets
+from ..ucd.manager import UCDManager
+from ..ucd.parser import Parser
 
 class CommandDispatcher:
     def __init__(self, global_context: context.GlobalContext):
         self.global_context = global_context
 
     def generate(self, context: context.GenerateContext):
-        print(f'Generate: {context}')
+        datasets_: set[datasets.Dataset] = set()
+        test_datasets: set[datasets.Dataset] = set()
 
+        match context.target:
+            case 'all':
+                datasets_ = set(datasets.datasets().values())
+                test_datasets = set(datasets.test_datasets().values())
+
+            case 'tables':
+                if context.dataset == 'all':
+                    datasets_ = set(datasets.datasets().values())
+                else:
+                    datasets_ = {datasets.datasets()[context.dataset]} # type: ignore
+
+            case 'tests':
+                if context.dataset == 'all':
+                    test_datasets = set(datasets.test_datasets().values())
+                else:
+                    test_datasets = {datasets.test_datasets()[context.dataset]} # type: ignore
+
+        necessary_ucd_files: set[str] = set()
+
+        necessary_ucd_files.update(
+            *(dataset.necessary_ucd_files for dataset in datasets_),
+            *(dataset.necessary_ucd_files for dataset in test_datasets),
+        )
+
+        parser = Parser(context.unicode_version, self.global_context.cache_dir)
+
+        if parser.has_cached_data_from_files(necessary_ucd_files):
+            parser.load_data_from_files_from_cache(necessary_ucd_files)
+
+        else:
+            ucd_manager = UCDManager(context.unicode_version, self.global_context.cache_dir)
+
+            for filepath in necessary_ucd_files:
+                ucd_manager.load_file(filepath)
+
+            parser.parse_files(ucd_manager.get_loaded_files())
+
+            
     def analyze(self, context: context.AnalyzeContext):
         print(f'Analyze: {context}')
+
 
     def clean(self, context: context.CleanContext):
         def delete_dir(name: str, path):

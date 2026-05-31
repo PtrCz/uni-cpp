@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Literal, NoReturn
 from ..core.internal_error import internal_error
 from ..core.test_fail import test_fail
-from .interface import Dataset, PrimaryData, ExtraTable, ExtraValue
+from .interface import Dataset, PrimaryData, ExtraTable, ExtraTables, ExtraValue, ExtraValues
 from ..ucd.code_point_data import CodePoint, CodePointData
 from ..core.ranges import code_point_range
 
@@ -84,11 +84,11 @@ class CaseMappingDataset(Dataset):
         return self._primary_data
     
     
-    def extra_tables(self) -> list[ExtraTable]:
+    def extra_tables(self) -> ExtraTables:
         return self._extra_tables
     
 
-    def extra_values(self) -> list[ExtraValue]:
+    def extra_values(self) -> ExtraValues:
         return self._extra_values
 
 
@@ -146,7 +146,7 @@ class CaseMappingDataset(Dataset):
         return PrimaryData(data)
     
 
-    def _generate_extra_tables(self) -> list[ExtraTable]:
+    def _generate_extra_tables(self) -> ExtraTables:
         special_mappings: list[int] = []
 
         for mapping in self.unique_special_mappings:
@@ -154,19 +154,19 @@ class CaseMappingDataset(Dataset):
 
         self.special_mappings_table = special_mappings
 
-        return [
-            ExtraTable('simple_mapping_offsets', self.offsets_union),
-            ExtraTable('special_mappings', special_mappings),
-        ]
+        return ExtraTables({
+            'simple_mapping_offsets': ExtraTable('simple_mapping_offsets', self.offsets_union),
+            'special_mappings':       ExtraTable('special_mappings', special_mappings),
+        })
     
 
-    def _generate_extra_values(self) -> list[ExtraValue]:
-        return [
-            ExtraValue(
+    def _generate_extra_values(self) -> ExtraValues:
+        return ExtraValues({
+            f'greatest_code_point_with_{case.name}_mapping': ExtraValue(
                 name=f'greatest_code_point_with_{case.name}_mapping',
                 value=self.mapping_data[case.name].greatest_code_point_with_mapping
             ) for case in self.cases
-        ]
+        })
 
 
     def lookup(self, code_point: CodePoint, case: CaseMapping, case_index: int) -> list[CodePoint]:

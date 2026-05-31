@@ -25,6 +25,9 @@ class ExtraTable:
     name: str
     values: list[int]
 
+    def total_size(self) -> int:
+        return len(self.values) * self.optimal_value_size()
+
     def are_values_signed(self):
         return any(value < 0 for value in self.values)
 
@@ -32,6 +35,20 @@ class ExtraTable:
         is_signed: bool = self.are_values_signed()
 
         return max(optimal_byte_size_for_value(value, is_signed) for value in self.values)
+
+
+@dataclass
+class ExtraTables:
+    tables: dict[str, ExtraTable]
+
+    def __getitem__(self, key: str):
+        return self.tables[key]
+
+    def __setitem__(self, key: str, value: ExtraTable):
+        self.tables[key] = value
+
+    def total_size(self) -> int:
+        return sum(table.total_size() for table in self.tables.values())
 
 
 @dataclass
@@ -44,6 +61,17 @@ class ExtraValue:
 
     def optimal_size(self):
         return optimal_byte_size_for_value(self.value, self.is_signed())
+
+
+@dataclass
+class ExtraValues:
+    values: dict[str, ExtraValue]
+
+    def __getitem__(self, key: str):
+        return self.values[key]
+
+    def __setitem__(self, key: str, value: ExtraValue):
+        self.values[key] = value
 
 
 class Dataset(ABC):
@@ -70,11 +98,11 @@ class Dataset(ABC):
     def primary_data(self) -> PrimaryData:
         pass
 
-    def extra_tables(self) -> list[ExtraTable]:
-        return []
+    def extra_tables(self) -> ExtraTables:
+        return ExtraTables(dict())
     
-    def extra_values(self) -> list[ExtraValue]:
-        return []
+    def extra_values(self) -> ExtraValues:
+        return ExtraValues(dict())
     
     def test_data(self) -> None | NoReturn:
         print(f'[*] Testing generated {self.pretty_name()} data IR')

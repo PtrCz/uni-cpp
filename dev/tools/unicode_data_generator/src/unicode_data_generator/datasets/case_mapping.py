@@ -1,9 +1,10 @@
 import inspect
 from dataclasses import dataclass, field
 from typing import Literal, NoReturn
+
 from ..core.internal_error import internal_error
 from ..core.test_fail import test_fail
-from .interface import Dataset, PrimaryData, ExtraTable, ExtraTables, ExtraValue, ExtraValues
+from .interface import Dataset, PrimaryData, ExtraTable, ExtraTables, ExtraValue, ExtraValues, EncoderId
 from ..ucd.code_point_data import CodePoint, CodePointData
 from ..core.ranges import code_point_range
 
@@ -78,6 +79,11 @@ class CaseMappingDataset(Dataset):
             'ucd/SpecialCasing.txt',
             'ucd/CaseFolding.txt',
         }
+    
+
+    @classmethod
+    def optimal_encoder(cls) -> EncoderId:
+        return 'multistage_lookup_tables'
     
 
     def primary_data(self) -> PrimaryData:

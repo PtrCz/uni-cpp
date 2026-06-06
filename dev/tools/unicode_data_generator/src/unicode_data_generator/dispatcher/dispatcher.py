@@ -61,10 +61,9 @@ class CommandDispatcher:
 
             d.test_data()
             
-            encoder = available_encoders()['multistage_lookup_tables']
+            encoder = available_encoders()[dataset.optimal_encoder()]
             e = encoder(d, context.use_precomputed_tuning or False, context.unicode_version)
 
-            tables = e.encoded_tables()
             e.test_data()
 
             emitter = Emitter(self.global_context.output_dir, context.unicode_version)

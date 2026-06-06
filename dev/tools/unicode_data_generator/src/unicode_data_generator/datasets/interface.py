@@ -46,6 +46,9 @@ class ExtraValues:
         self.values[key] = value
 
 
+type EncoderId = str
+
+
 class Dataset(ABC):
     @abstractmethod
     def __init__(self, data: CodePointData):
@@ -64,6 +67,11 @@ class Dataset(ABC):
     @classmethod
     @abstractmethod
     def necessary_ucd_files(cls) -> set[str]:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def optimal_encoder(cls) -> EncoderId:
         pass
 
     @abstractmethod

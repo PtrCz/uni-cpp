@@ -1,6 +1,7 @@
+from typing import Literal
 from ..core.internal_error import internal_error
 
-def optimal_byte_size_for_value(value: int, is_signed: bool):
+def optimal_byte_size_for_value(value: int, is_signed: bool) -> Literal[1, 2, 4, 8]:
     if is_signed:
         if -0x80 <= value <= 0x7F:
             return 1

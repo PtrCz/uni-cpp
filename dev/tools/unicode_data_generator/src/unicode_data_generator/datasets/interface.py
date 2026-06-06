@@ -1,20 +1,18 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import NoReturn
+from typing import NoReturn, Literal
 
-from ..ucd.code_point_properties import CodePoint
 from ..ucd.code_point_data import CodePointData
-
 from ..core.optimal_size import optimal_byte_size_for_value
 
 @dataclass
 class PrimaryData:
     data: list[int]
     
-    def are_values_signed(self):
+    def are_values_signed(self) -> bool:
         return any(value < 0 for value in self.data)
 
-    def optimal_value_size(self):
+    def optimal_value_size(self) -> Literal[1, 2, 4, 8]:
         is_signed: bool = self.are_values_signed()
 
         return max(optimal_byte_size_for_value(value, is_signed) for value in self.data)
@@ -28,10 +26,10 @@ class ExtraTable:
     def total_size(self) -> int:
         return len(self.values) * self.optimal_value_size()
 
-    def are_values_signed(self):
+    def are_values_signed(self) -> bool:
         return any(value < 0 for value in self.values)
 
-    def optimal_value_size(self):
+    def optimal_value_size(self) -> Literal[1, 2, 4, 8]:
         is_signed: bool = self.are_values_signed()
 
         return max(optimal_byte_size_for_value(value, is_signed) for value in self.values)
@@ -56,10 +54,10 @@ class ExtraValue:
     name: str
     value: int
 
-    def is_signed(self):
+    def is_signed(self) -> bool:
         return self.value < 0
 
-    def optimal_size(self):
+    def optimal_size(self) -> Literal[1, 2, 4, 8]:
         return optimal_byte_size_for_value(self.value, self.is_signed())
 
 

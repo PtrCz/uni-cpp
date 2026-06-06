@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import NoReturn
+from typing import NoReturn, Literal
 
 from ..datasets.interface import Dataset
 from ..core.optimal_size import optimal_byte_size_for_value
@@ -17,7 +17,7 @@ class EncodedTable:
     def are_values_signed(self) -> bool:
         return any(value < 0 for value in self.values)
 
-    def optimal_value_size(self) -> int:
+    def optimal_value_size(self) -> Literal[1, 2, 4, 8]:
         is_signed: bool = self.are_values_signed()
 
         return max(optimal_byte_size_for_value(value, is_signed) for value in self.values)

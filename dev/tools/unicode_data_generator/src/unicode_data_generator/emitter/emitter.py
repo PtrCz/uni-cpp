@@ -16,7 +16,9 @@ class Emitter:
         self._clear_current_output()
 
 
-    def emit_cpp(self, dataset: Dataset, encoder: Encoder):
+    def emit(self, dataset: Dataset, encoder: Encoder):
+        print(f'[*] Emitting {dataset.pretty_name()} files')
+
         dataset_dir = self.output_dir / dataset.identifier()
 
         self._emit_data_hpp_file(dataset, encoder, dataset_dir / 'data.hpp')
@@ -44,6 +46,7 @@ class Emitter:
 
 
     def _emit_data_hpp_file(self, dataset: Dataset, encoder: Encoder, filepath: Path):
+        print(f'[*] Emitting file: \'{dataset.identifier()}/data.hpp\'')
         self._clear_current_output()
 
         self._write_header_comments()
@@ -79,6 +82,8 @@ class Emitter:
 
 
     def _emit_data_file(self, dataset: Dataset, encoder: Encoder, filepath: Path, use_embed: bool):
+        print(f'[*] Emitting file: \'{dataset.identifier()}/{filepath.name}\'')
+
         def write_table_inline(name: str, table: EncodedTable | ExtraTable):
             value_type: str = self._get_int_type_name(table.optimal_value_size(), table.are_values_signed())
 

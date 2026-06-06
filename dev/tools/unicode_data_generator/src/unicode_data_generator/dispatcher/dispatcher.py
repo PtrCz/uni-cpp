@@ -3,6 +3,9 @@ from . import context
 from ..core import datasets
 from ..ucd.manager import UCDManager
 from ..ucd.parser import Parser
+from ..datasets.datasets import available_datasets
+from ..encoders.encoders import available_encoders
+from ..emitter.emitter import Emitter
 
 class CommandDispatcher:
     def __init__(self, global_context: context.GlobalContext):
@@ -39,7 +42,7 @@ class CommandDispatcher:
         parser = Parser(context.unicode_version, self.global_context.cache_dir)
 
         if parser.has_cached_data_from_files(necessary_ucd_files):
-            parser.load_data_from_files_from_cache(necessary_ucd_files)
+            code_point_data = parser.load_data_from_files_from_cache(necessary_ucd_files)
 
         else:
             ucd_manager = UCDManager(context.unicode_version, self.global_context.cache_dir)
@@ -47,7 +50,26 @@ class CommandDispatcher:
             for filepath in necessary_ucd_files:
                 ucd_manager.load_file(filepath)
 
-            parser.parse_files(ucd_manager.get_loaded_files())
+            code_point_data = parser.parse_files(ucd_manager.get_loaded_files())
+
+        ds = {available_datasets()[ds.name] for ds in datasets_}
+        
+        for dataset in ds:
+            print(f'[*] Generating {dataset.pretty_name()} data')
+
+            d = dataset(code_point_data)
+
+            d.test_data()
+            
+            encoder = available_encoders()['multistage_lookup_tables']
+            e = encoder(d, context.use_precomputed_tuning or False, context.unicode_version)
+
+            tables = e.encoded_tables()
+            e.test_data()
+
+            emitter = Emitter(self.global_context.output_dir, context.unicode_version)
+
+            emitter.emit(d, e)
 
             
     def analyze(self, context: context.AnalyzeContext):

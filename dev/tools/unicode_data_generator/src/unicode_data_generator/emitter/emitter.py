@@ -1,9 +1,12 @@
 from pathlib import Path
-from typing import Literal
+
+from .identifiers import header_guard_macro_for_file, namespace_for_dataset
+from .integers import format_int_as_hex, get_int_type_name
+
 from ..core.internal_error import internal_error
-from ..core.optimal_size import optimal_byte_size_for_value
-from ..encoders.interface import Encoder, EncodedTable
-from ..datasets.interface import Dataset, ExtraTable
+from ..encoders.interface import Encoder 
+from ..datasets.interface import Dataset
+from ..core.tables import Table
 
 from ..encoders import (
     multistage_lookup_tables
@@ -14,6 +17,11 @@ class Emitter:
         self.unicode_version = unicode_version
         self.output_dir = output_dir / unicode_version / 'cpp'
         self._clear_current_output()
+
+
+    @property
+    def _indent(self) -> str:
+        return '    ' * self._indent_level
 
 
     def emit(self, dataset: Dataset, encoder: Encoder):
@@ -32,7 +40,7 @@ class Emitter:
             self._emit_embed_data_file(dataset_dir / 'data' / (name + '.dat'), extra_table)
 
 
-    def _emit_embed_data_file(self, filepath: Path, table: EncodedTable | ExtraTable):
+    def _emit_embed_data_file(self, filepath: Path, table: Table):
         bytes_per_value: int = table.optimal_value_size()
         are_values_signed: bool = table.are_values_signed()
 
@@ -66,9 +74,9 @@ class Emitter:
         values = dataset.extra_values()
 
         for name, value in values.values.items():
-            type_name: str = self._get_int_type_name(value.optimal_size(), value.is_signed())
+            type_name: str = get_int_type_name(value.optimal_size(), value.is_signed())
 
-            self._write_line(f'inline constexpr {type_name} {name} = {self._format_int(value.value)};')
+            self._write_line(f'inline constexpr {type_name} {name} = {format_int_as_hex(value.value)};')
 
         if len(values.values) != 0:
             self._write_line()
@@ -84,19 +92,19 @@ class Emitter:
     def _emit_data_file(self, dataset: Dataset, encoder: Encoder, filepath: Path, use_embed: bool):
         print(f'[*] Emitting file: \'{dataset.identifier()}/{filepath.name}\'')
 
-        def write_table_inline(name: str, table: EncodedTable | ExtraTable):
-            value_type: str = self._get_int_type_name(table.optimal_value_size(), table.are_values_signed())
+        def write_table_inline(name: str, table: Table):
+            value_type: str = get_int_type_name(table.optimal_value_size(), table.are_values_signed())
 
             self._write_line(f'inline constexpr std::array<{value_type}, {len(table.values)}> {name}{{')
 
-            self._write_line(f'    {(', '.join(self._format_int(value) for value in table.values))}')
+            self._write_line(f'    {(', '.join(format_int_as_hex(value) for value in table.values))}')
 
             self._write_line('};')
 
 
-        def write_table_embed(name: str, table: EncodedTable | ExtraTable):
+        def write_table_embed(name: str, table: Table):
             data_file_size: int = table.optimal_value_size() * len(table.values)
-            value_type: str = self._get_int_type_name(table.optimal_value_size(), table.are_values_signed())
+            value_type: str = get_int_type_name(table.optimal_value_size(), table.are_values_signed())
 
             if table.optimal_value_size() == 1 and table.are_values_signed() == False:
                 self._write_line(f'inline constexpr std::array<{value_type}, {len(table.values)}> {name}{{')
@@ -134,7 +142,7 @@ class Emitter:
 
         self._write_namespace_start(dataset)
 
-        tables: list[EncodedTable | ExtraTable] = [
+        tables = [
             *sorted(encoder.encoded_tables().tables.values(), key=lambda table: table.name),
             *sorted(dataset.extra_tables().tables.values(), key=lambda table: table.name),
         ]
@@ -169,7 +177,7 @@ class Emitter:
 
 
     def _write_header_guard_start(self, dataset: Dataset, file_ident: str):
-        macro_ident = self._header_guard_macro_for_file(dataset, file_ident)
+        macro_ident = header_guard_macro_for_file(dataset, file_ident)
         
         self._write_line(f'#ifndef {macro_ident}')
         self._write_line(f'#define {macro_ident}')
@@ -177,13 +185,13 @@ class Emitter:
 
 
     def _write_header_guard_end(self, dataset: Dataset, file_ident: str):
-        macro_ident = self._header_guard_macro_for_file(dataset, file_ident)
+        macro_ident = header_guard_macro_for_file(dataset, file_ident)
 
         self._write_line(f'#endif // {macro_ident}')
 
 
     def _write_namespace_start(self, dataset: Dataset):
-        self._write_line(f'namespace {self._namespace_for_dataset(dataset)}')
+        self._write_line(f'namespace {namespace_for_dataset(dataset)}')
         self._write_line('{')
 
         self._indent_level += 1
@@ -192,27 +200,14 @@ class Emitter:
     def _write_namespace_end(self, dataset: Dataset):
         self._indent_level -= 1
 
-        self._write_line(f'}} // namespace {self._namespace_for_dataset(dataset)}')
+        self._write_line(f'}} // namespace {namespace_for_dataset(dataset)}')
         self._write_line()
-
-
-    def _namespace_for_dataset(self, dataset: Dataset) -> str:
-        identifier: str = ''.join(c if c.isalpha() else '_' for c in dataset.identifier().lower())
-
-        return f'upp::impl::unicode_data::{identifier}::impl'
-
-
-    def _header_guard_macro_for_file(self, dataset: Dataset, file_ident: str) -> str:
-        dataset_identifier: str = ''.join(c if c.isalpha() else '_' for c in dataset.identifier().upper())
-        file_identifier: str = ''.join(c if c.isalpha() else '_' for c in file_ident.upper())
-
-        return f'UNI_CPP_IMPL_UNICODE_DATA_DATA_{dataset_identifier}_{file_identifier}_HPP'
 
 
     def _write_lookup_function(self, dataset: Dataset, encoder: Encoder):
         data = dataset.primary_data()
 
-        property_type_name: str = self._get_int_type_name(data.optimal_value_size(), data.are_values_signed())
+        property_type_name: str = get_int_type_name(data.optimal_value_size(), data.are_values_signed())
 
         self._write_line(f'[[nodiscard]] constexpr {property_type_name} lookup(const std::uint32_t code_point) noexcept')
         self._write_line('{')
@@ -262,30 +257,6 @@ class Emitter:
             self._current_output += f'{self._indent}{line}\n'
 
 
-    def _format_int(self, value: int) -> str:
-        match optimal_byte_size_for_value(value, value < 0):
-            case 1:
-                return f'{value:#04X}'.replace('0X', '0x')
-            case 2:
-                return f'{value:#06X}'.replace('0X', '0x')
-            case 4:
-                return f'{value:#010X}'.replace('0X', '0x')
-            case 8:
-                return f'{value:#018X}'.replace('0X', '0x')
-
-
     def _clear_current_output(self):
         self._current_output: str = ''
         self._indent_level: int = 0
-
-
-    def _get_int_type_name(self, byte_size: Literal[1, 2, 4, 8], is_signed: bool) -> str:
-        if is_signed:
-            return f'std::int{byte_size * 8}_t'
-        else:
-            return f'std::uint{byte_size * 8}_t'
-
-
-    @property
-    def _indent(self) -> str:
-        return '    ' * self._indent_level

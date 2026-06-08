@@ -3,7 +3,7 @@ from . import context
 from ..core import datasets
 from ..ucd.manager import UCDManager
 from ..ucd.parser import Parser
-from ..datasets.datasets import available_datasets
+from ..datasets.datasets import available_datasets, available_test_datasets
 from ..encoders.encoders import available_encoders
 from ..emitter.emitter import Emitter
 
@@ -53,6 +53,7 @@ class CommandDispatcher:
             code_point_data = parser.parse_files(ucd_manager.get_loaded_files())
 
         ds = {available_datasets()[ds.name] for ds in datasets_}
+        test_ds = {available_test_datasets()[test_ds.name] for test_ds in test_datasets}
         
         for dataset in ds:
             print(f'[*] Generating {dataset.pretty_name()} data')
@@ -69,6 +70,13 @@ class CommandDispatcher:
             emitter = Emitter(self.global_context.output_dir, context.unicode_version)
 
             emitter.emit(d, e)
+
+        for test_dataset in test_ds:
+            print(f'[*] Generating {test_dataset.pretty_name()} test data')
+
+            d = test_dataset(code_point_data)
+
+            d.test_data()
 
             
     def analyze(self, context: context.AnalyzeContext):

@@ -5,15 +5,23 @@ from typing import Literal, NoReturn
 from ..core.internal_error import internal_error
 from ..core.test_fail import test_fail
 from .interface import Dataset, PrimaryData, ExtraTable, ExtraTables, ExtraValue, ExtraValues, EncoderId
+from .interface import TestDataset, TestData
 from ..ucd.code_point_data import CodePoint, CodePointData
-from ..core.ranges import code_point_range
+from ..core.ranges import code_point_range, usv_range
 
 type CaseName = Literal['lowercase', 'uppercase', 'titlecase', 'casefold']
 
-@dataclass
 class CaseMapping:
     name: CaseName
     data: CodePointData
+
+    def __init__(self, name: CaseName, data: CodePointData):
+        self.name = name
+        self.data = data
+
+        has_mapping = lambda code_point: self.code_point_has_non_identity_mapping(code_point)
+
+        self._greatest_code_point_with_mapping = max(filter(has_mapping, code_point_range()))
 
     def get_full_mapping(self, code_point: CodePoint) -> list[CodePoint]:
         match self.name:
@@ -27,6 +35,15 @@ class CaseMapping:
                 return self.data[code_point].casefold_mapping
             case _:
                 raise AssertionError()
+
+    def code_point_has_non_identity_mapping(self, code_point: CodePoint) -> bool:
+        mapping = self.get_full_mapping(code_point)
+
+        return len(mapping) != 1 or mapping[0] != code_point
+
+    @property    
+    def greatest_code_point_with_mapping(self) -> CodePoint:
+        return self._greatest_code_point_with_mapping
 
 
 def _cases(data: CodePointData) -> list[CaseMapping]:
@@ -248,11 +265,10 @@ class CaseMappingDataset(Dataset):
 
         for code_point in code_point_range():
             for case in cases:
-                mapping = case.get_full_mapping(code_point)
 
-                if len(mapping) != 1 or mapping[0] != code_point: # the code point doesn't map to itself
-                    case_data[case.name].greatest_code_point_with_mapping = code_point
-                    
+                if case.code_point_has_non_identity_mapping(code_point):
+                    mapping = case.get_full_mapping(code_point)
+
                     if len(mapping) != 1: # special mapping
                         special_mappings[case.name].append(mapping)
                             
@@ -260,6 +276,7 @@ class CaseMappingDataset(Dataset):
                         case_data[case.name].offsets.add(mapping[0] - code_point)
 
         for case in cases:
+            case_data[case.name].greatest_code_point_with_mapping = case.greatest_code_point_with_mapping
             case_data[case.name].unique_special_mappings = {tuple(m) for m in special_mappings[case.name]}
 
         return case_data
@@ -278,3 +295,70 @@ class CaseMappingDataset(Dataset):
                            'Failed to fit the case mapping index into 15-bits.\n'
                            'The case conversion data storage strategy has to be updated.\n' # see `dev/docs/case_conversion_tables.md` for the current strategy
                            'This function will not work for new Unicode versions until it is updated.', frame = inspect.stack()[1])
+            
+
+
+class CaseTestData(TestData):
+    case: CaseMapping
+
+
+class CaseMappingTestDataset(TestDataset):
+    def __init__(self, code_point_data: CodePointData):
+        self._data: list[CaseTestData] = []
+
+        for case_mapping in _cases(code_point_data):
+
+            test_data = CaseTestData(case_mapping.name + '_mappings')
+            test_data.case = case_mapping
+
+            for code_point in usv_range():
+                if self.should_code_point_be_tested(code_point, case_mapping):
+                    test_data[code_point] = case_mapping.get_full_mapping(code_point)
+
+            self._data.append(test_data)
+
+
+    def should_code_point_be_tested(self, code_point: CodePoint, case_mapping: CaseMapping) -> bool:
+        return any((
+            code_point < 0x500, # test for a few first code points
+            len(case_mapping.get_full_mapping(code_point)) != 1, # test for all special mappings (<200)
+            
+            # test for the greatest code point with mapping and a few code points next to it
+            case_mapping.greatest_code_point_with_mapping - 50 <= code_point <= case_mapping.greatest_code_point_with_mapping + 3
+        ))
+
+    @classmethod
+    def identifier(cls) -> str:
+        return 'case_mapping'
+
+    @classmethod
+    def pretty_name(cls) -> str:
+        return 'case mapping'
+
+
+    @classmethod
+    def necessary_ucd_files(cls) -> set[str]:
+        return {
+            'ucd/UnicodeData.txt',
+            'ucd/SpecialCasing.txt',
+            'ucd/CaseFolding.txt',
+        }
+    
+    def data(self) -> list[CaseTestData]:
+        return self._data
+    
+    def _test_data_impl(self) -> None | NoReturn:
+        data = self.data()
+        
+        for test_data in data:
+            for code_point in test_data.data.keys():
+                try:
+                    expected = test_data.case.get_full_mapping(code_point)
+
+                    actual = test_data[code_point]
+
+                    if actual != expected:
+                        return test_fail(code_point, expected, actual)
+                    
+                except Exception:
+                    test_fail(code_point, test_data.case.get_full_mapping(code_point), '<error>')

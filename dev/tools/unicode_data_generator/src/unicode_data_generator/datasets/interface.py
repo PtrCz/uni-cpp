@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from typing import NoReturn, Literal
 
-from ..ucd.code_point_data import CodePointData
+from ..ucd.code_point_data import CodePoint, CodePointData
 from ..core.optimal_size import optimal_byte_size_for_value
 from ..core.tables import Table, Tables
 
@@ -86,6 +87,54 @@ class Dataset(ABC):
     
     def test_data(self) -> None | NoReturn:
         print(f'[*] Testing generated {self.pretty_name()} data IR')
+
+        self._test_data_impl()
+
+        print('[+] Test passed')
+
+    @abstractmethod
+    def _test_data_impl(self) -> None | NoReturn:
+        pass
+
+
+@dataclass
+class TestData:
+    identifier: str
+    data: dict[CodePoint, list[int]] = field(default_factory=dict)
+
+    def __getitem__(self, key: CodePoint):
+        return self.data[key]
+
+    def __setitem__(self, key: CodePoint, value: list[int]):
+        self.data[key] = value
+
+
+class TestDataset(ABC):
+    @abstractmethod
+    def __init__(self, data: CodePointData):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def identifier(cls) -> str:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def pretty_name(cls) -> str:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def necessary_ucd_files(cls) -> set[str]:
+        pass
+
+    @abstractmethod
+    def data(self) -> Sequence[TestData]:
+        pass
+
+    def test_data(self) -> None | NoReturn:
+        print(f'[*] Testing generated {self.pretty_name()} test data')
 
         self._test_data_impl()
 

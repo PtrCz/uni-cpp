@@ -1,5 +1,5 @@
 from ..add_unicode_version_argument import add_unicode_version_argument
-from ...core.datasets import datasets
+from ...datasets.datasets import available_datasets
 
 def register(sub):
     parser = sub.add_parser(
@@ -11,7 +11,7 @@ def register(sub):
 
     parser.add_argument(
         'dataset',
-        choices=['all', *datasets().keys()],
+        choices=['all', *sorted(available_datasets().keys())],
         help='Choose which dataset to analyze',
     )
 

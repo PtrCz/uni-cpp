@@ -1,8 +1,8 @@
 from . import context
 
-from ..core import datasets
 from ..ucd.manager import UCDManager
 from ..ucd.parser import Parser
+from ..datasets.datasets import Dataset, TestDataset
 from ..datasets.datasets import available_datasets, available_test_datasets
 from ..encoders.encoders import available_encoders
 from ..emitter.emitter import Emitter
@@ -13,31 +13,31 @@ class CommandDispatcher:
         self.global_context = global_context
 
     def generate(self, context: context.GenerateContext):
-        datasets_: set[datasets.Dataset] = set()
-        test_datasets: set[datasets.Dataset] = set()
+        datasets: set[type[Dataset]] = set()
+        test_datasets: set[type[TestDataset]] = set()
 
         match context.target:
             case 'all':
-                datasets_ = set(datasets.datasets().values())
-                test_datasets = set(datasets.test_datasets().values())
+                datasets = set(available_datasets().values())
+                test_datasets = set(available_test_datasets().values())
 
             case 'tables':
                 if context.dataset == 'all':
-                    datasets_ = set(datasets.datasets().values())
+                    datasets = set(available_datasets().values())
                 else:
-                    datasets_ = {datasets.datasets()[context.dataset]} # type: ignore
+                    datasets = {available_datasets()[context.dataset]} # type: ignore
 
             case 'tests':
                 if context.dataset == 'all':
-                    test_datasets = set(datasets.test_datasets().values())
+                    test_datasets = set(available_test_datasets().values())
                 else:
-                    test_datasets = {datasets.test_datasets()[context.dataset]} # type: ignore
+                    test_datasets = {available_test_datasets()[context.dataset]} # type: ignore
 
         necessary_ucd_files: set[str] = set()
 
         necessary_ucd_files.update(
-            *(dataset.necessary_ucd_files for dataset in datasets_),
-            *(dataset.necessary_ucd_files for dataset in test_datasets),
+            *(dataset.necessary_ucd_files() for dataset in datasets),
+            *(test_dataset.necessary_ucd_files() for test_dataset in test_datasets),
         )
 
         parser = Parser(context.unicode_version, self.global_context.cache_dir)
@@ -53,10 +53,7 @@ class CommandDispatcher:
 
             code_point_data = parser.parse_files(ucd_manager.get_loaded_files())
 
-        ds = {available_datasets()[ds.name] for ds in datasets_}
-        test_ds = {available_test_datasets()[test_ds.name] for test_ds in test_datasets}
-        
-        for dataset in ds:
+        for dataset in datasets:
             print(f'[*] Generating {dataset.pretty_name()} data')
 
             d = dataset(code_point_data)
@@ -72,7 +69,7 @@ class CommandDispatcher:
 
             emitter.emit(d, e)
 
-        for test_dataset in test_ds:
+        for test_dataset in test_datasets:
             print(f'[*] Generating {test_dataset.pretty_name()} test data')
 
             d = test_dataset(code_point_data)
@@ -123,9 +120,9 @@ class CommandDispatcher:
     def list(self, context: context.ListContext):
         match context.target:
             case 'datasets':
-                for dataset in datasets.datasets().keys():
-                    print(dataset)
+                for dataset_id in sorted(available_datasets().keys()):
+                    print(dataset_id)
 
             case 'tests':
-                for test in datasets.test_datasets().keys():
-                    print(test)
+                for test_dataset_id in sorted(available_test_datasets().keys()):
+                    print(test_dataset_id)

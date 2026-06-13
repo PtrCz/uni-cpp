@@ -6,6 +6,7 @@ from ..ucd.parser import Parser
 from ..datasets.datasets import available_datasets, available_test_datasets
 from ..encoders.encoders import available_encoders
 from ..emitter.emitter import Emitter
+from ..emitter.test_emitter import TestEmitter
 
 class CommandDispatcher:
     def __init__(self, global_context: context.GlobalContext):
@@ -77,6 +78,10 @@ class CommandDispatcher:
             d = test_dataset(code_point_data)
 
             d.test_data()
+
+            emitter = TestEmitter(self.global_context.output_dir, context.unicode_version)
+
+            emitter.emit(d)
 
             
     def analyze(self, context: context.AnalyzeContext):

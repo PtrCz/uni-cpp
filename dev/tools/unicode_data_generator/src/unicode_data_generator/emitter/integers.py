@@ -5,6 +5,18 @@ from ..core.optimal_size import optimal_byte_size_for_value
 def format_int_as_hex(value: int) -> str:
     match optimal_byte_size_for_value(value, value < 0):
         case 1:
+            return f'{value:02X}'
+        case 2:
+            return f'{value:04X}'
+        case 4:
+            return f'{value:08X}'
+        case 8:
+            return f'{value:016X}'
+
+
+def format_int_as_hex_with_prefix(value: int) -> str:
+    match optimal_byte_size_for_value(value, value < 0):
+        case 1:
             return f'{value:#04X}'.replace('0X', '0x')
         case 2:
             return f'{value:#06X}'.replace('0X', '0x')

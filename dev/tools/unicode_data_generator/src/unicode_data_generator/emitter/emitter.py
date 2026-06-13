@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from .identifiers import header_guard_macro_for_file, namespace_for_dataset
-from .integers import format_int_as_hex, get_int_type_name
+from .integers import format_int_as_hex_with_prefix, get_int_type_name
 
 from ..core.internal_error import internal_error
 from ..encoders.interface import Encoder 
@@ -76,7 +76,7 @@ class Emitter:
         for name, value in values.values.items():
             type_name: str = get_int_type_name(value.optimal_size(), value.is_signed())
 
-            self._write_line(f'inline constexpr {type_name} {name} = {format_int_as_hex(value.value)};')
+            self._write_line(f'inline constexpr {type_name} {name} = {format_int_as_hex_with_prefix(value.value)};')
 
         if len(values.values) != 0:
             self._write_line()
@@ -97,7 +97,7 @@ class Emitter:
 
             self._write_line(f'inline constexpr std::array<{value_type}, {len(table.values)}> {name}{{')
 
-            self._write_line(f'    {(', '.join(format_int_as_hex(value) for value in table.values))}')
+            self._write_line(f'    {(', '.join(format_int_as_hex_with_prefix(value) for value in table.values))}')
 
             self._write_line('};')
 

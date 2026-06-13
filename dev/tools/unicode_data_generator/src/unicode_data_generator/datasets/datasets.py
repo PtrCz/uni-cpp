@@ -3,6 +3,7 @@ from .interface import Dataset, TestDataset
 
 from . import (
     case_mapping,
+    utf_encoding,
 )
 
 type DatasetId = str
@@ -20,6 +21,7 @@ def available_datasets() -> dict[DatasetId, Type[Dataset]]:
 def available_test_datasets() -> dict[TestDatasetId, Type[TestDataset]]:
     test_datasets: set[Type[TestDataset]] = {
         case_mapping.CaseMappingTestDataset,
+        utf_encoding.UtfEncodingTestDataset,
     }
 
     return {test_dataset.identifier(): test_dataset for test_dataset in test_datasets}

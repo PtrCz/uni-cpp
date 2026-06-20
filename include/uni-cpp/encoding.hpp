@@ -481,8 +481,8 @@ namespace upp
 
                 const std::uint32_t type = impl::utf8::dfa::character_class_from_byte[current_code_unit];
 
-                current_code_point = (state != impl::utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6)
-                                                                               : (0xFF >> type) & (current_code_unit);
+                current_code_point = (state != impl::utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6U)
+                                                                               : (0xFFU >> type) & (current_code_unit);
 
                 const std::uint32_t previous_state = state;
                 state                              = impl::utf8::dfa::state_transition_table[state + type];
@@ -568,8 +568,8 @@ namespace upp
 
                 const std::uint32_t type = impl::utf8::dfa::character_class_from_byte[current_code_unit];
 
-                current_code_point = (state != impl::utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6)
-                                                                               : (0xFF >> type) & (current_code_unit);
+                current_code_point = (state != impl::utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6U)
+                                                                               : (0xFFU >> type) & (current_code_unit);
 
                 state = impl::utf8::dfa::state_transition_table[state + type];
 
@@ -626,8 +626,8 @@ namespace upp
 
                 std::uint32_t type = impl::utf8::dfa::character_class_from_byte[current_code_unit];
 
-                current_code_point = (state != impl::utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6)
-                                                                               : (0xFF >> type) & (current_code_unit);
+                current_code_point = (state != impl::utf8::dfa::state::accept) ? (current_code_unit & 0x3FU) | (current_code_point << 6U)
+                                                                               : (0xFFU >> type) & (current_code_unit);
 
                 state = impl::utf8::dfa::state_transition_table[state + type];
 
@@ -848,7 +848,7 @@ namespace upp
                     }
 
                     std::uint32_t code_point =
-                        ((static_cast<std::uint32_t>(first_code_unit & 0x3FFU) << 10) | static_cast<std::uint32_t>(second_code_unit & 0x3FFU)) +
+                        ((static_cast<std::uint32_t>(first_code_unit & 0x3FFU) << 10U) | static_cast<std::uint32_t>(second_code_unit & 0x3FFU)) +
                         0x10'000U;
 
                     std::invoke(code_point_callback, uchar::from_unchecked(code_point));
@@ -926,7 +926,7 @@ namespace upp
                     }
 
                     std::uint32_t code_point =
-                        ((static_cast<std::uint32_t>(first_code_unit & 0x3FFU) << 10) | static_cast<std::uint32_t>(second_code_unit & 0x3FFU)) +
+                        ((static_cast<std::uint32_t>(first_code_unit & 0x3FFU) << 10U) | static_cast<std::uint32_t>(second_code_unit & 0x3FFU)) +
                         0x10'000U;
 
                     std::invoke(code_point_callback, uchar::from_unchecked(code_point));
@@ -965,7 +965,7 @@ namespace upp
                     ++it;
 
                     std::uint32_t code_point =
-                        ((static_cast<std::uint32_t>(first_code_unit & 0x3FFU) << 10) | static_cast<std::uint32_t>(second_code_unit & 0x3FFU)) +
+                        ((static_cast<std::uint32_t>(first_code_unit & 0x3FFU) << 10U) | static_cast<std::uint32_t>(second_code_unit & 0x3FFU)) +
                         0x10'000;
 
                     std::invoke(code_point_callback, uchar::from_unchecked(code_point));

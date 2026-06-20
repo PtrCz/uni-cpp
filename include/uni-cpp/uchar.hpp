@@ -466,7 +466,7 @@ namespace upp
             static constexpr std::array<std::uint8_t, 33> length_lookup_table{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 3,
                                                                               3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1};
 
-            return static_cast<std::size_t>(length_lookup_table[std::countl_zero(m_value | 1)]);
+            return static_cast<std::size_t>(length_lookup_table[std::countl_zero(m_value | 1U)]);
         }
 
         /// @brief Returns the number of UTF-16 code units required to encode this `uchar` in UTF-16.
@@ -502,20 +502,20 @@ namespace upp
                 break;
             }
             case 2uz: {
-                arr[0] = static_cast<char8_t>((m_value >> 6) | 0xC0U);
+                arr[0] = static_cast<char8_t>((m_value >> 6U) | 0xC0U);
                 arr[1] = static_cast<char8_t>((m_value & 0x3FU) | 0x80U);
                 break;
             }
             case 3uz: {
-                arr[0] = static_cast<char8_t>((m_value >> 12) | 0xE0U);
-                arr[1] = static_cast<char8_t>(((m_value >> 6) & 0x3FU) | 0x80U);
+                arr[0] = static_cast<char8_t>((m_value >> 12U) | 0xE0U);
+                arr[1] = static_cast<char8_t>(((m_value >> 6U) & 0x3FU) | 0x80U);
                 arr[2] = static_cast<char8_t>((m_value & 0x3FU) | 0x80U);
                 break;
             }
             case 4uz: {
-                arr[0] = static_cast<char8_t>((m_value >> 18) | 0xF0U);
-                arr[1] = static_cast<char8_t>(((m_value >> 12) & 0x3FU) | 0x80U);
-                arr[2] = static_cast<char8_t>(((m_value >> 6) & 0x3FU) | 0x80U);
+                arr[0] = static_cast<char8_t>((m_value >> 18U) | 0xF0U);
+                arr[1] = static_cast<char8_t>(((m_value >> 12U) & 0x3FU) | 0x80U);
+                arr[2] = static_cast<char8_t>(((m_value >> 6U) & 0x3FU) | 0x80U);
                 arr[3] = static_cast<char8_t>((m_value & 0x3FU) | 0x80U);
                 break;
             }
@@ -552,8 +552,8 @@ namespace upp
             case 2uz: {
                 const std::uint32_t code = m_value - 0x10'000;
 
-                arr[0] = static_cast<char16_t>(0xD800 | (code >> 10));
-                arr[1] = static_cast<char16_t>(0xDC00 | (code & 0x3FF));
+                arr[0] = static_cast<char16_t>(0xD800U | (code >> 10U));
+                arr[1] = static_cast<char16_t>(0xDC00U | (code & 0x3FFU));
                 break;
             }
             default: std::unreachable();

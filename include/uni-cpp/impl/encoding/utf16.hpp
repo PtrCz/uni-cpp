@@ -53,7 +53,7 @@ namespace upp
 
         [[nodiscard]] constexpr std::uint32_t decode_valid_surrogate_pair(char16_t high_surrogate, char16_t low_surrogate) noexcept
         {
-            return ((static_cast<std::uint32_t>(high_surrogate & 0x3FFU) << 10) | static_cast<std::uint32_t>(low_surrogate & 0x3FFU)) + 0x10'000U;
+            return ((static_cast<std::uint32_t>(high_surrogate & 0x3FFU) << 10U) | static_cast<std::uint32_t>(low_surrogate & 0x3FFU)) + 0x10'000U;
         }
     } // namespace impl::utf16
 } // namespace upp

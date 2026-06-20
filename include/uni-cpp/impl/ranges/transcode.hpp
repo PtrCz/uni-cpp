@@ -720,7 +720,7 @@ namespace upp::ranges
                     const std::uint32_t type = upp::impl::utf8::dfa::character_class_from_byte[code_unit];
 
                     code_point =
-                        (state != upp::impl::utf8::dfa::state::accept) ? (code_unit & 0x3FU) | (code_point << 6) : (0xFF >> type) & (code_unit);
+                        (state != upp::impl::utf8::dfa::state::accept) ? (code_unit & 0x3FU) | (code_point << 6U) : (0xFFU >> type) & (code_unit);
 
                     const std::uint32_t previous_state = state;
                     state                              = upp::impl::utf8::dfa::state_transition_table[state + type];

@@ -57,6 +57,11 @@ namespace upp_test
         std::string line;
         while (std::getline(file, line))
         {
+            if (const std::size_t hash_pos = line.find('#'); hash_pos != std::string::npos)
+            {
+                line = line.substr(0, hash_pos);
+            }
+
             if (line.empty())
                 continue;
 

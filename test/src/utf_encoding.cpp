@@ -29,7 +29,7 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
 
     SECTION("large dataset test", runtime)
     {
-        const auto test_data = upp_test::load_test_data<std::uint8_t>("utf_8_encoding.txt");
+        const auto test_data = upp_test::load_test_data<std::uint8_t>("utf8_encoding.txt");
 
         for (const auto& [code_point, data] : test_data)
         {
@@ -64,7 +64,7 @@ TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
 
     SECTION("large dataset test", runtime)
     {
-        const auto test_data = upp_test::load_test_data<std::uint16_t>("utf_16_encoding.txt");
+        const auto test_data = upp_test::load_test_data<std::uint16_t>("utf16_encoding.txt");
 
         for (const auto& [code_point, data] : test_data)
         {

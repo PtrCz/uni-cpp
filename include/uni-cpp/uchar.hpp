@@ -21,7 +21,7 @@
 #include <optional>
 #include <expected>
 
-#include "impl/unicode_data/case_conversion.hpp"
+#include "impl/unicode_data/case_mapping.hpp"
 #include "impl/encoding/ascii.hpp"
 #include "impl/encoding/utf32.hpp"
 
@@ -576,7 +576,7 @@ namespace upp
         ///
         [[nodiscard]] constexpr to_lowercase_t to_lowercase() const noexcept
         {
-            return to_case_impl<to_lowercase_t, impl::unicode_data::case_conversion::case_mapping_type::lowercase>();
+            return to_case_impl<to_lowercase_t, impl::unicode_data::case_mapping::case_mapping_type::lowercase>();
         }
 
         /// @brief Returns a sequence of `uchar`s that are the uppercase mapping of this `uchar`.
@@ -593,7 +593,7 @@ namespace upp
         ///
         [[nodiscard]] constexpr to_uppercase_t to_uppercase() const noexcept
         {
-            return to_case_impl<to_uppercase_t, impl::unicode_data::case_conversion::case_mapping_type::uppercase>();
+            return to_case_impl<to_uppercase_t, impl::unicode_data::case_mapping::case_mapping_type::uppercase>();
         }
 
         /// @brief Returns a sequence of `uchar`s that are the titlecase mapping of this `uchar`.
@@ -613,7 +613,7 @@ namespace upp
         ///
         [[nodiscard]] constexpr to_titlecase_t to_titlecase() const noexcept
         {
-            return to_case_impl<to_titlecase_t, impl::unicode_data::case_conversion::case_mapping_type::titlecase>();
+            return to_case_impl<to_titlecase_t, impl::unicode_data::case_mapping::case_mapping_type::titlecase>();
         }
 
     private:
@@ -622,10 +622,10 @@ namespace upp
         {
         }
 
-        template<typename ResultType, impl::unicode_data::case_conversion::case_mapping_type MappingType>
+        template<typename ResultType, impl::unicode_data::case_mapping::case_mapping_type MappingType>
         [[nodiscard]] constexpr ResultType to_case_impl() const noexcept
         {
-            const auto mapping = impl::unicode_data::case_conversion::lookup_case_mapping<MappingType>(m_value);
+            const auto mapping = impl::unicode_data::case_mapping::lookup_case_mapping<MappingType>(m_value);
 
             const std::array<uchar, 3> data = {uchar{mapping.code_points[0]}, uchar{mapping.code_points[1]}, uchar{mapping.code_points[2]}};
 

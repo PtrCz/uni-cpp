@@ -2,6 +2,7 @@ from . import context
 
 from ..ucd.manager import UCDManager
 from ..ucd.parser import Parser
+from ..ucd.code_point_data import CodePointData
 from ..datasets.datasets import Dataset, TestDataset
 from ..datasets.datasets import available_datasets, available_test_datasets
 from ..encoders.encoders import available_encoders
@@ -40,20 +41,11 @@ class CommandDispatcher:
             *(test_dataset.necessary_ucd_files() for test_dataset in test_datasets),
         )
 
-        parser = Parser(context.unicode_version, self.global_context.cache_dir)
+        code_point_data = self.get_code_point_data_from_ucd_files(necessary_ucd_files, context.unicode_version)
 
-        if parser.has_cached_data_from_files(necessary_ucd_files):
-            code_point_data = parser.load_data_from_files_from_cache(necessary_ucd_files)
+        sorted_datasets: list[type[Dataset]] = sorted(datasets, key=lambda dataset: dataset.identifier())
 
-        else:
-            ucd_manager = UCDManager(context.unicode_version, self.global_context.cache_dir)
-
-            for filepath in necessary_ucd_files:
-                ucd_manager.load_file(filepath)
-
-            code_point_data = parser.parse_files(ucd_manager.get_loaded_files())
-
-        for dataset in datasets:
+        for dataset in sorted_datasets:
             print(f'[*] Generating {dataset.pretty_name()} data')
 
             d = dataset(code_point_data)
@@ -69,7 +61,9 @@ class CommandDispatcher:
 
             emitter.emit(d, e)
 
-        for test_dataset in test_datasets:
+        sorted_test_datasets: list[type[TestDataset]] = sorted(test_datasets, key=lambda test_dataset: test_dataset.identifier())
+
+        for test_dataset in sorted_test_datasets:
             print(f'[*] Generating {test_dataset.pretty_name()} test data')
 
             d = test_dataset(code_point_data)
@@ -82,7 +76,36 @@ class CommandDispatcher:
 
             
     def analyze(self, context: context.AnalyzeContext):
-        print(f'Analyze: {context}')
+        if context.dataset == 'all':
+            datasets: set[type[Dataset]] = set(available_datasets().values())
+        else:
+            datasets: set[type[Dataset]] = {available_datasets()[context.dataset]}
+
+        necessary_ucd_files: set[str] = set()
+        necessary_ucd_files.update(*(dataset.necessary_ucd_files() for dataset in datasets))
+
+        code_point_data = self.get_code_point_data_from_ucd_files(necessary_ucd_files, context.unicode_version)
+
+        sorted_datasets: list[type[Dataset]] = sorted(datasets, key=lambda dataset: dataset.identifier())
+
+        for dataset in sorted_datasets:
+            d = dataset(code_point_data)
+            d.analyze(self.global_context.output_dir, context.unicode_version)
+
+
+    def get_code_point_data_from_ucd_files(self, files: set[str], unicode_version: str) -> CodePointData:
+        parser = Parser(unicode_version, self.global_context.cache_dir)
+
+        if parser.has_cached_data_from_files(files):
+            return parser.load_data_from_files_from_cache(files)
+
+        else:
+            ucd_manager = UCDManager(unicode_version, self.global_context.cache_dir)
+
+            for filepath in files:
+                ucd_manager.load_file(filepath)
+
+            return parser.parse_files(ucd_manager.get_loaded_files())
 
 
     def clean(self, context: context.CleanContext):

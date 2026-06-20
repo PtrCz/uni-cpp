@@ -9,6 +9,8 @@ from .interface import TestDataset, TestData
 from ..ucd.code_point_data import CodePoint, CodePointData
 from ..core.ranges import code_point_range, usv_range
 
+mapping_types = ['mappings', 'simple_mappings', 'special_mappings']
+
 type CaseName = Literal['lowercase', 'uppercase', 'titlecase', 'casefold']
 
 class CaseMapping:
@@ -190,6 +192,93 @@ class CaseMappingDataset(Dataset):
                 value=self.mapping_data[case.name].greatest_code_point_with_mapping
             ) for case in self.cases
         })
+
+
+    def _init_analysis_data(self) -> dict[CaseName, dict]:
+        case_data: dict[CaseName, dict] = {}
+
+        for case in self.cases:
+            case_data[case.name] = dict()
+
+            for mapping_type in mapping_types:
+                case_data[case.name][mapping_type] = {
+                    'count': 0,
+                    'unique_mappings': set(),
+                }
+
+        for mapping_type in mapping_types:
+            case_data['titlecase'][mapping_type]['distinct_from_uppercase'] = 0
+            case_data['casefold'][mapping_type]['distinct_from_lowercase'] = 0
+
+        return case_data
+    
+
+    def _update_analysis_data(self, case_data: dict[CaseName, dict]):
+        for code_point in usv_range():
+            for case in self.cases:
+                mapping = case.get_full_mapping(code_point)
+
+                if case.code_point_has_non_identity_mapping(code_point):
+                    case_data[case.name]['mappings']['count'] += 1
+                    case_data[case.name]['mappings']['unique_mappings'].add(tuple(mapping))
+
+                    if len(mapping) != 1: # special mapping
+                        case_data[case.name]['special_mappings']['count'] += 1
+                        case_data[case.name]['special_mappings']['unique_mappings'].add(tuple(mapping))
+
+                    else: # simple mapping
+                        case_data[case.name]['simple_mappings']['count'] += 1
+                        case_data[case.name]['simple_mappings']['unique_mappings'].add(tuple(mapping))
+
+            titlecase_mapping = self.code_point_data[code_point].titlecase_mapping
+
+            if titlecase_mapping != self.code_point_data[code_point].uppercase_mapping:
+                case_data['titlecase']['mappings']['distinct_from_uppercase'] += 1
+                case_data['titlecase']['special_mappings' if len(titlecase_mapping) != 1 else 'simple_mappings']['distinct_from_uppercase'] += 1
+
+            casefold_mapping = self.code_point_data[code_point].casefold_mapping
+
+            if casefold_mapping != self.code_point_data[code_point].lowercase_mapping:
+                case_data['casefold']['mappings']['distinct_from_lowercase'] += 1
+                case_data['casefold']['special_mappings' if len(casefold_mapping) != 1 else 'simple_mappings']['distinct_from_lowercase'] += 1
+
+
+    def _dump_analysis(self, case_data: dict[CaseName, dict]) -> list[str]:
+        output: list[str] = []
+
+        for mapping_type, mapping_type_prefix in zip(mapping_types, ['', 'simple ', 'special ']):
+            for case in self.cases:
+                count: int = case_data[case.name][mapping_type]['count']
+                unique: int = len(case_data[case.name][mapping_type]['unique_mappings'])
+
+                line: str = f'{mapping_type_prefix}{case.name} mappings: {count} ({unique} unique)'
+
+                if case.name == 'titlecase':
+                    distinct_count = case_data[case.name][mapping_type]['distinct_from_uppercase']
+                    line += f' ({distinct_count} mappings distinct from the uppercase mappings)'
+
+                elif case.name == 'casefold':
+                    distinct_count = case_data[case.name][mapping_type]['distinct_from_lowercase']
+                    line += f' ({distinct_count} mappings distinct from the lowercase mappings)'
+
+                output.append(line)
+            
+            output.append('')
+
+        for case in self.cases:
+            output.append(f'greatest code point with a non-identity {case.name} mapping: U+{case.greatest_code_point_with_mapping:06X}')
+
+        output.append('')
+        output.append(f'unique offsets in simple mappings: (COUNT = {len(self.offsets_union)}) {str(sorted(self.offsets_union))}')
+
+        return output
+
+
+    def _analyze_impl(self) -> list[str]:
+        case_data = self._init_analysis_data()
+        self._update_analysis_data(case_data)
+
+        return self._dump_analysis(case_data)
 
 
     def lookup(self, code_point: CodePoint, case: CaseMapping, case_index: int) -> list[CodePoint]:

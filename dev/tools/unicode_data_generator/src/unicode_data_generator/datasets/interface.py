@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import NoReturn, Literal
+from pathlib import Path
 
 from ..ucd.code_point_data import CodePoint, CodePointData
 from ..core.optimal_size import optimal_byte_size_for_value
@@ -11,6 +12,9 @@ from ..core.tables import Table, Tables
 class PrimaryData:
     data: list[int]
     
+    def __getitem__(self, index: int):
+        return self.data[index]
+
     def are_values_signed(self) -> bool:
         return any(value < 0 for value in self.data)
 
@@ -85,6 +89,29 @@ class Dataset(ABC):
     def extra_values(self) -> ExtraValues:
         return ExtraValues(dict())
     
+    def analyze(self, output_dir: Path, unicode_version: str):
+        print(f'[*] Analyzing {self.pretty_name()} dataset:')
+        print()
+
+        analysis: list[str] = self._analyze_impl()
+
+        for line in analysis:
+            print(line)
+
+        print()
+
+        filepath: Path = output_dir / unicode_version / 'analysis' / (self.identifier() + '.txt')
+
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(filepath, 'w', encoding='utf-8') as file:
+            for line in analysis:
+                file.write(line + '\n')
+
+    @abstractmethod
+    def _analyze_impl(self) -> list[str]:
+        pass
+
     def test_data(self) -> None | NoReturn:
         print(f'[*] Testing generated {self.pretty_name()} data IR')
 

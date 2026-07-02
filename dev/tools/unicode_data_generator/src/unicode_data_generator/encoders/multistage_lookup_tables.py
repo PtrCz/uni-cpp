@@ -141,7 +141,13 @@ class MultistageLookupTables(Encoder):
         stage2 = EncodedTable('stage2', [])
         stage3 = EncodedTable('stage3', [])
 
-        for value in data.data:
+        assert data.mlt_encode_keys_up_to is None or data.mlt_encode_keys_up_to >= data.max_key_with_non_default_value()
+
+        encode_keys_up_to: int = data.mlt_encode_keys_up_to or data.max_key_with_non_default_value()
+
+        for iter in range(encode_keys_up_to + 1):
+            value: int = data[iter]
+
             stage3_index = list_utilities.index_or_append(stage3.values, value)
 
             current_block.append(stage3_index)
@@ -213,12 +219,29 @@ class MultistageLookupTables(Encoder):
 
 
     def _test_data_impl(self) -> None | NoReturn:
-        for code_point, property in enumerate(self.data.data):
+        max_key_with_non_default_value: int = self.data.max_key_with_non_default_value()
+
+        # When mlt_encode_keys_up_to is None, its safe to lookup any key, so we lookup `max_key + 1` to test it.
+        # When it's not None, it's only safe to lookup keys up to `mlt_encode_keys_up_to`, so we do exactly that.
+
+        check_keys_up_to: int = self.data.max_key_with_non_default_value() + 1 \
+                                if self.data.mlt_encode_keys_up_to is None \
+                                else self.data.mlt_encode_keys_up_to
+
+        for key in range(check_keys_up_to + 1):
+            expected_value: int = self.data[key]
+
             try:
+                if self.data.mlt_encode_keys_up_to is None and key > max_key_with_non_default_value:
+                    if expected_value == self.data.default_value:
+                        continue
+                    else:
+                        test_fail(key, expected_value, self.data.default_value)
+
                 # For the lookup algorithm read `dev/docs/multistage-lookup-tables.md`
 
                 # STAGE 1
-                stage1_index: int = code_point // self.block_size
+                stage1_index: int = key // self.block_size
                 stage1_value = self._encoded_tables['stage1'].values[stage1_index]
 
                 if self.stage1_needs_extra_lookup:
@@ -227,7 +250,7 @@ class MultistageLookupTables(Encoder):
                     offset: int = stage1_value
 
                 # STAGE 2
-                stage2_index = offset + code_point % self.block_size
+                stage2_index = offset + key % self.block_size
                 stage2_value = self._encoded_tables['stage2'].values[stage2_index]
 
                 # STAGE 3
@@ -236,11 +259,11 @@ class MultistageLookupTables(Encoder):
                 else:
                     lookup_result = self._encoded_tables['stage3'].values[stage2_value]
                     
-                if lookup_result != property:
-                    test_fail(code_point, property, lookup_result)
+                if lookup_result != expected_value:
+                    test_fail(key, expected_value, lookup_result)
 
             except Exception:
-                test_fail(code_point, property, '<error>')
+                test_fail(key, expected_value, '<error>')
 
 
 def precomputed_block_sizes() -> dict[UnicodeVersion, dict[DatasetId, BlockSize]]:

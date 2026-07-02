@@ -9,7 +9,7 @@ from ..datasets.interface import Dataset
 from ..core.tables import Table
 
 from ..encoders import (
-    multistage_lookup_tables
+    multistage_lookup_tables,
 )
 
 class Emitter:
@@ -97,7 +97,8 @@ class Emitter:
 
             self._write_line(f'inline constexpr std::array<{value_type}, {len(table.values)}> {name}{{')
 
-            self._write_line(f'    {(', '.join(format_int_as_hex_with_prefix(value) for value in table.values))}')
+            format_as: int = max(abs(v) for v in table.values)
+            self._write_line(f'    {(', '.join(format_int_as_hex_with_prefix(value, format_as=format_as) for value in table.values))}')
 
             self._write_line('};')
 
@@ -209,7 +210,7 @@ class Emitter:
 
         property_type_name: str = get_int_type_name(data.optimal_value_size(), data.are_values_signed())
 
-        self._write_line(f'[[nodiscard]] constexpr {property_type_name} lookup(const std::uint32_t code_point) noexcept')
+        self._write_line(f'[[nodiscard]] constexpr {property_type_name} lookup(const std::uint64_t key) noexcept')
         self._write_line('{')
 
         self._indent_level += 1
@@ -218,8 +219,14 @@ class Emitter:
 
             self._write_line('// See `dev/docs/multistage-lookup-tables.md`.')
             self._write_line()
-            self._write_line(f'const std::uint32_t quot = code_point / {encoder.block_size};')
-            self._write_line(f'const std::uint32_t rem  = code_point % {encoder.block_size};')
+
+            if data.mlt_encode_keys_up_to is None:
+                self._write_line(f'if (key > {format_int_as_hex_with_prefix(data.max_key_with_non_default_value())})')
+                self._write_line(f'    return {format_int_as_hex_with_prefix(data.default_value)};')
+                self._write_line()
+
+            self._write_line(f'const std::uint64_t quot = key / {encoder.block_size};')
+            self._write_line(f'const std::uint64_t rem  = key % {encoder.block_size};')
             self._write_line()
             
             if encoder.stage1_needs_extra_lookup:

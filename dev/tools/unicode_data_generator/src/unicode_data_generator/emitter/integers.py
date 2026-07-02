@@ -14,8 +14,10 @@ def format_int_as_hex(value: int) -> str:
             return f'{value:016X}'
 
 
-def format_int_as_hex_with_prefix(value: int) -> str:
-    match optimal_byte_size_for_value(value, value < 0):
+def format_int_as_hex_with_prefix(value: int, *, format_as: int | None = None) -> str:
+    _format_as: int = format_as or value
+
+    match optimal_byte_size_for_value(_format_as, _format_as < 0):
         case 1:
             return f'{value:#04X}'.replace('0X', '0x')
         case 2:

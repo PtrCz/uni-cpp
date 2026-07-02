@@ -128,7 +128,7 @@ class CaseMappingDataset(Dataset):
             negated_uppercase_mapping_offsets,
             negated_titlecase_mapping_offsets,
             self.mapping_data['casefold'].offsets,
-        ))
+        ), key=lambda offset: (offset != 0, offset))
         
         self.unique_special_mappings: list[tuple[CodePoint, ...]] = sorted(set().union(
             *(self.mapping_data[case.name].unique_special_mappings for case in self.cases)
@@ -136,7 +136,7 @@ class CaseMappingDataset(Dataset):
 
 
     def _generate_primary_data(self) -> PrimaryData:
-        data: list[int] = []
+        data: dict[CodePoint, int] = dict()
 
         for code_point in range(0, self.greatest_code_point_with_mapping + 1):
             property_value: int = 0
@@ -166,9 +166,9 @@ class CaseMappingDataset(Dataset):
 
                 property_value |= (value << (16 * case_index))
 
-            data.append(property_value)
+            data[code_point] = property_value
 
-        return PrimaryData(data)
+        return PrimaryData(data, default_value=0, mlt_encode_keys_up_to=self.greatest_code_point_with_mapping)
     
 
     def _generate_extra_tables(self) -> ExtraTables:
@@ -285,7 +285,7 @@ class CaseMappingDataset(Dataset):
         if code_point > self.mapping_data[case.name].greatest_code_point_with_mapping:
             return [code_point]
 
-        value = self._primary_data.data[code_point]
+        value = self._primary_data[code_point]
 
         bit_offset = 16 * case_index
         case_value = (value >> bit_offset) & 0xFFFF

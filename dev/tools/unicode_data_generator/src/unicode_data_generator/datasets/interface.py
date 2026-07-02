@@ -8,20 +8,61 @@ from ..ucd.code_point_data import CodePoint, CodePointData
 from ..core.optimal_size import optimal_byte_size_for_value
 from ..core.tables import Table, Tables
 
-@dataclass
 class PrimaryData:
-    data: list[int]
+    data: dict[int, int]
+    _default_value: int
+    _mlt_encode_keys_up_to: int | None
     
-    def __getitem__(self, index: int):
-        return self.data[index]
+    def __init__(self, data: dict[int, int] | None = None, *, default_value: int, mlt_encode_keys_up_to: int | None = None):
+        if data is None:
+            self.data = dict()
+        else:
+            self.data = {key: value for key, value in data.items() if value != default_value}
+
+        assert not any(key < 0 for key in self.data.keys())
+
+        self._default_value = default_value
+        self._mlt_encode_keys_up_to = mlt_encode_keys_up_to # Multistage Lookup Tables setting to override the default maximal key chosen
+    
+    def __getitem__(self, key: int) -> int:
+        assert key >= 0
+
+        if key in self.data:
+            return self.data[key]
+        else:
+            return self.default_value
+        
+    def __setitem__(self, key: int, value: int):
+        assert key >= 0
+
+        if value != self.default_value:
+            self.data[key] = value
+
+    def __missing__(self, key: int) -> int:
+        assert key >= 0
+
+        self.data[key] = self.default_value
+
+        return self.data[key]
+
+    @property
+    def default_value(self) -> int:
+        return self._default_value
+    
+    @property
+    def mlt_encode_keys_up_to(self) -> int | None:
+        return self._mlt_encode_keys_up_to
+    
+    def max_key_with_non_default_value(self) -> int:
+        return max(key for key in self.data.keys() if self.data[key] != self.default_value)
 
     def are_values_signed(self) -> bool:
-        return any(value < 0 for value in self.data)
+        return any(value < 0 for value in (*self.data.values(), self.default_value))
 
     def optimal_value_size(self) -> Literal[1, 2, 4, 8]:
         is_signed: bool = self.are_values_signed()
 
-        return max(optimal_byte_size_for_value(value, is_signed) for value in self.data)
+        return max(optimal_byte_size_for_value(value, is_signed) for value in (*self.data.values(), self.default_value))
 
 
 ExtraTable = Table

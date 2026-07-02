@@ -1,10 +1,14 @@
 from typing import NoReturn
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import os
 
 from .interface import Encoder, EncodedTable, EncodedTables
+from ..datasets.interface import PrimaryData
 from ..datasets.datasets import DatasetId
 from ..core.test_fail import test_fail
 from ..core.progress_bar import ProgressBar
 from ..core.optimal_size import optimal_byte_size_for_value
+from ..core import list_utilities
 
 type UnicodeVersion = str
 type BlockSize = int
@@ -35,7 +39,7 @@ class MultistageLookupTables(Encoder):
 
         print(f'[*] Encoding {self.dataset.pretty_name()} data using multistage lookup tables')
 
-        tables = self._generate(block_size)
+        tables = MultistageLookupTables._generate(self.data, block_size)
 
         self.block_size = block_size
 
@@ -51,39 +55,83 @@ class MultistageLookupTables(Encoder):
         progress_bar = ProgressBar()
         progress_bar.print_empty()
 
-        # The total number of calls made to `generate_tables` function while fine-tuning.
+        # The total number of calls made to `MultistageLookupTables._generate()` function while fine-tuning.
         # The `greatest_block_size_initially_checked // step` is from the block_sizes definition below and the `15 * 2` is from 2 loop iterations below. 
         total_check_count = 15 * 2 + greatest_block_size_initially_checked // step
-        current_check_count = 0
+        completed_checks = 0
 
-        block_sizes = [n * step for n in range(1, greatest_block_size_initially_checked // step + 1)]
+        
+        def find_best_block_size(block_sizes: list[BlockSize], executor: ProcessPoolExecutor) -> BlockSize:
+            nonlocal completed_checks
 
-        def total_size_for_given_block_size(block_size: BlockSize) -> int:
-            nonlocal current_check_count
-            current_check_count += 1
+            futures = [
+                executor.submit(
+                    MultistageLookupTables._evaluate_block_size,
+                    self.data,
+                    block_size
+                )
+                for block_size in block_sizes
+            ]
 
-            progress_bar.update(current_check_count / total_check_count)
-            
-            return self._generate(block_size).total_size()
+            best_block_size: BlockSize | None = None
+            best_total_size: int | None = None
 
-        # Calculates the total size of tables for each block size in `block_sizes` and returns the `block_size` resulting in the smallest total size
-        best_block_size = min(block_sizes, key=total_size_for_given_block_size)
+            for future in as_completed(futures):
+                block_size, total_size = future.result()
 
-        # Increase the precision with each iteration
-        while step >= 8:
-            prev_step = step
-            step //= 8
+                completed_checks += 1
+                progress_bar.update(completed_checks / total_check_count)
 
-            block_sizes = [n * step + best_block_size - prev_step for n in range(1, 16)]
+                if (best_total_size is None or total_size < best_total_size):
+                    best_total_size = total_size
+                    best_block_size = block_size
 
-            best_block_size = min(block_sizes, key=total_size_for_given_block_size)
+            assert best_block_size is not None
+
+            return best_block_size
+
+
+        block_sizes = [
+            n * step
+            for n in range(
+                1,
+                greatest_block_size_initially_checked // step + 1
+            )
+        ]
+
+        max_workers: int = max(1, (os.cpu_count() or 1) // 4)
+
+        with ProcessPoolExecutor(max_workers=min(max_workers, 61)) as executor:
+            best_block_size = find_best_block_size(block_sizes, executor)
+
+            # Increase the precision with each iteration
+            while step >= 8:
+                prev_step = step
+                step //= 8
+
+                block_sizes = [
+                    n * step + best_block_size - prev_step
+                    for n in range(1, 16)
+                ]
+
+                best_block_size = find_best_block_size(block_sizes, executor)
 
         progress_bar.clear()
 
         print(f'[+] Most optimal block size found: {best_block_size}')
         return best_block_size
     
-    def _generate(self, block_size: BlockSize) -> EncodedTables:
+
+    @classmethod
+    def _evaluate_block_size(cls, data: PrimaryData, block_size: BlockSize) -> tuple[BlockSize, int]:
+        return (
+            block_size,
+            cls._generate(data, block_size).total_size()
+        )
+
+
+    @classmethod
+    def _generate(cls, data: PrimaryData, block_size: BlockSize) -> EncodedTables:
         current_block = []
         blocks = []
 
@@ -93,13 +141,13 @@ class MultistageLookupTables(Encoder):
         stage2 = EncodedTable('stage2', [])
         stage3 = EncodedTable('stage3', [])
 
-        for value in self.data.data:
-            stage3_index = _index_or_append(stage3.values, value)
+        for value in data.data:
+            stage3_index = list_utilities.index_or_append(stage3.values, value)
 
             current_block.append(stage3_index)
 
             if len(current_block) == block_size:
-                block_index = _index_or_append(blocks, current_block)
+                block_index = list_utilities.index_or_append(blocks, current_block)
 
                 stage1_block_indexes.append(block_index)
 
@@ -113,15 +161,15 @@ class MultistageLookupTables(Encoder):
         
         # overlap the blocks as much as possible to compress the data
 
-        overlapped = _shortest_superarray(blocks)
+        overlapped = list_utilities.shortest_superarray(blocks)
         stage2.values = overlapped
 
         for block_index in stage1_block_indexes:
-            stage1.values.append(_find_sublist(blocks[block_index], overlapped))
+            stage1.values.append(list_utilities.find_sublist(overlapped, blocks[block_index]))
 
         tables = EncodedTables()
 
-        # check for possible optimizations (see `format` above for the optimizations)
+        # check for possible optimizations
 
         if stage1.optimal_value_size() > 1:
             unique_stage2_offsets = EncodedTable('stage2_offsets', sorted(set(stage1.values)))
@@ -216,61 +264,3 @@ def precomputed_block_sizes() -> dict[UnicodeVersion, dict[DatasetId, BlockSize]
             'case_mapping': 40,
         },
     }
-
-
-def _index_or_append(l: list, value) -> int:
-    try:
-        return l.index(value)
-    
-    except ValueError:
-        l.append(value)
-        return len(l) - 1
-    
-
-# from: https://stackoverflow.com/a/17870684
-def _find_sublist(sublist: list, list: list) -> int:
-    sublist_length = len(sublist)
-
-    for ind in (i for i,e in enumerate(list) if e==sublist[0]):
-        if list[ind:ind + sublist_length]==sublist:
-            return ind
-    
-    raise AssertionError()
-
-
-def _overlap(a: list, b: list) -> int:
-    max_overlap = 0
-    for i in range(1, min(len(a), len(b)) + 1):
-        if a[-i:] == b[:i]:
-            max_overlap = i
-    return max_overlap
-
-
-def _merge_arrays(arr1: list, arr2: list) -> list:
-    overlap_ab = _overlap(arr1, arr2)
-    overlap_ba = _overlap(arr2, arr1)
-    if overlap_ab >= overlap_ba:
-        return arr1 + arr2[overlap_ab:]
-    else:
-        return arr2 + arr1[overlap_ba:]
-
-
-def _shortest_superarray(arrays: list[list]) -> list:
-    while len(arrays) > 1:
-        max_olap = -1
-        best_pair = (0, 1)
-        merged = []
-        for i in range(len(arrays)):
-            for j in range(len(arrays)):
-                if i != j:
-                    merged_candidate = _merge_arrays(arrays[i], arrays[j])
-                    olap = len(arrays[i]) + len(arrays[j]) - len(merged_candidate)
-                    if olap > max_olap:
-                        max_olap = olap
-                        best_pair = (i, j)
-                        merged = merged_candidate
-        i, j = best_pair
-        new_arrays = [arrays[k] for k in range(len(arrays)) if k != i and k != j]
-        new_arrays.append(merged)
-        arrays = new_arrays
-    return arrays[0]

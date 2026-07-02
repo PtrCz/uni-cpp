@@ -7,9 +7,11 @@ from .code_point_data import CodePointData
 from ..core.internal_error import internal_error
 
 from .parsers import (
-    unicode_data,
-    special_casing,
     case_folding,
+    derived_normalization_props,
+    hangul_syllable_type,
+    special_casing,
+    unicode_data,
 )
 
 class Parser:
@@ -41,9 +43,11 @@ class Parser:
 
     def _reorder_files(self, files: dict[FilePath, FileContents]) -> list[tuple[FilePath, FileContents]]:
         priority = [
+            'ucd/HangulSyllableType.txt',
             'ucd/UnicodeData.txt',
             'ucd/SpecialCasing.txt',
             'ucd/CaseFolding.txt',
+            'ucd/DerivedNormalizationProps.txt',
         ]
 
         order = {k: i for i, k in enumerate(priority)}
@@ -57,6 +61,9 @@ class Parser:
         print(f'[*] Parsing file: \'{filepath}\'')
 
         match filepath:
+            case 'ucd/HangulSyllableType.txt':
+                hangul_syllable_type.HangulSyllableTypeParser(contents).update_code_point_data(code_point_data)
+
             case 'ucd/UnicodeData.txt':
                 unicode_data.UnicodeDataParser(contents).update_code_point_data(code_point_data)
 
@@ -65,6 +72,9 @@ class Parser:
 
             case 'ucd/CaseFolding.txt':
                 case_folding.CaseFoldingParser(contents).update_code_point_data(code_point_data)
+
+            case 'ucd/DerivedNormalizationProps.txt':
+                derived_normalization_props.DerivedNormalizationPropsParser(contents).update_code_point_data(code_point_data)
 
             case _:
                 internal_error('Failed to parse an unknown UCD file!')

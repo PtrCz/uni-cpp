@@ -94,6 +94,7 @@ class CaseMappingDataset(Dataset):
     @classmethod
     def necessary_ucd_files(cls) -> set[str]:
         return {
+            'ucd/HangulSyllableType.txt',
             'ucd/UnicodeData.txt',
             'ucd/SpecialCasing.txt',
             'ucd/CaseFolding.txt',
@@ -428,6 +429,7 @@ class CaseMappingTestDataset(TestDataset):
     @classmethod
     def necessary_ucd_files(cls) -> set[str]:
         return {
+            'ucd/HangulSyllableType.txt',
             'ucd/UnicodeData.txt',
             'ucd/SpecialCasing.txt',
             'ucd/CaseFolding.txt',

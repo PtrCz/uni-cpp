@@ -18,6 +18,16 @@ class CodePointProperties:
 
     general_category: str
 
+    hangul_syllable_type: str
+
+    decomposition_mapping: list[CodePoint]
+    decomposition_type: str | None
+
+    full_canonical_decomposition: list[CodePoint]
+    full_compatibility_decomposition: list[CodePoint]
+
+    full_composition_exclusion: bool
+
     @classmethod
     def default_properties_for_code_point(cls, code_point: CodePoint):
         return cls(
@@ -34,4 +44,14 @@ class CodePointProperties:
             casefold_mapping=[code_point],
 
             general_category='Cn',
+
+            hangul_syllable_type='Not_Applicable',
+
+            decomposition_mapping=[code_point],
+            decomposition_type=None,
+
+            full_canonical_decomposition=[code_point],
+            full_compatibility_decomposition=[code_point],
+
+            full_composition_exclusion=False,
         )

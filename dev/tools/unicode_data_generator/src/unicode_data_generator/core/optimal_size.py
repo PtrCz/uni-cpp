@@ -24,3 +24,19 @@ def optimal_byte_size_for_value(value: int, is_signed: bool) -> Literal[1, 2, 4,
             return 8
         else:
             internal_error('Unsigned integer value is too large')
+
+def min_num_of_bits_required_to_store_value(value: int, is_signed: bool) -> int:
+    if is_signed:
+        if value >= 0:
+            # Needs an extra bit for the sign
+            return max(1, value.bit_length() + 1)
+        
+        else:
+            # Use two's complement
+            return (-value - 1).bit_length() + 1
+
+    else:
+        if value < 0:
+            internal_error('Unsigned integer value cannot be negative')
+
+        return max(1, value.bit_length())

@@ -10,6 +10,7 @@ from ..core.tables import Table
 
 from ..encoders import (
     multistage_lookup_tables,
+    minimal_perfect_hash_function,
 )
 
 class Emitter:
@@ -69,6 +70,11 @@ class Emitter:
         self._write_line('#include "data_inline.hpp"')
         self._write_line('#endif')
         self._write_line()
+
+        if encoder.identifier() == 'minimal_perfect_hash_function':
+            self._write_line('#include "../../hash.hpp"')
+            self._write_line()
+
         self._write_namespace_start(dataset)
 
         values = dataset.extra_values()
@@ -241,6 +247,44 @@ class Emitter:
             else:
                 self._write_line('const auto stage2_value = stage2[stage2_offset + rem];')
                 self._write_line('return stage3[stage2_value];')
+
+        elif type(encoder) is minimal_perfect_hash_function.MinimalPerfectHashFunction:
+            
+            self._write_line('// MPHF based on \'Easy Perfect Minimal Hashing\' by Steve Hanov')
+            self._write_line('// See https://stevehanov.ca/blog/throw-away-the-keys-easy-minimal-perfect-hashing')
+            self._write_line()
+
+            intermediate_arr_length: str = f'{format_int_as_hex_with_prefix(len(encoder.encoded_tables()['intermediate'].values))}U'
+            values_arr_length: str = f'{format_int_as_hex_with_prefix(len(encoder.encoded_tables()['values'].values))}U'
+
+            value_type_name: str = get_int_type_name(encoder.encoded_tables()['values'].optimal_value_size(), encoder.encoded_tables()['values'].are_values_signed())
+
+            self._write_line(f'const auto lookup_result = [](const std::uint64_t key) static -> {value_type_name} {{')
+            self._indent_level += 1
+
+            self._write_line(f'const auto d = intermediate[hash(key, 0ULL) % {intermediate_arr_length}];')
+            self._write_line()
+
+            if encoder.encoded_tables()['intermediate'].are_values_signed():
+                self._write_line('if (d < 0)')
+                self._write_line('    return values[-d - 1];')
+                self._write_line()
+
+            self._write_line(f'return values[hash(key, d) % {values_arr_length}];')
+
+            self._indent_level -= 1
+            self._write_line('}(key);')
+            self._write_line()
+
+            key_mask: int = (1 << (encoder.key_bits)) - 1
+            
+            lookup_result_uses_64bits: bool = encoder.encoded_tables()['values'].optimal_value_size() == 8
+            self._write_line(f'const std::uint64_t actual_key = lookup_result & {format_int_as_hex_with_prefix(key_mask)}U{'LL' if lookup_result_uses_64bits else ''};')
+            self._write_line()
+            self._write_line('if (actual_key != key)')
+            self._write_line(f'    return {format_int_as_hex_with_prefix(data.default_value)};')
+            self._write_line()
+            self._write_line(f'return lookup_result >> {encoder.key_bits}U;')
 
         else:
             internal_error('Failed to emit a lookup function for an unknown encoder!')

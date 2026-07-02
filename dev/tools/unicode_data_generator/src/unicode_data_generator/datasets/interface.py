@@ -5,7 +5,7 @@ from typing import NoReturn, Literal
 from pathlib import Path
 
 from ..ucd.code_point_data import CodePoint, CodePointData
-from ..core.optimal_size import optimal_byte_size_for_value
+from ..core.optimal_size import optimal_byte_size_for_value, min_num_of_bits_required_to_store_value
 from ..core.tables import Table, Tables
 
 class PrimaryData:
@@ -63,6 +63,14 @@ class PrimaryData:
         is_signed: bool = self.are_values_signed()
 
         return max(optimal_byte_size_for_value(value, is_signed) for value in (*self.data.values(), self.default_value))
+    
+    def min_num_of_bits_required_to_store_the_largest_value(self) -> int:
+        is_signed: bool = self.are_values_signed()
+        
+        return max(min_num_of_bits_required_to_store_value(value, is_signed) for value in (*self.data.values(), self.default_value))
+    
+    def min_num_of_bits_required_to_store_the_largest_key_with_non_default_value(self) -> int:
+        return max(min_num_of_bits_required_to_store_value(key, is_signed=False) for key in self.data.keys() if self.data[key] != self.default_value)
 
 
 ExtraTable = Table

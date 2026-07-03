@@ -270,20 +270,26 @@ def precomputed_block_sizes() -> dict[UnicodeVersion, dict[DatasetId, BlockSize]
     return {
         '15.0.0': {
             'case_mapping': 64,
+            'decomposition': 64,
         },
         '15.1.0': {
             'case_mapping': 64,
+            'decomposition': 64,
         },
         '16.0.0': {
             'case_mapping': 64,
+            'decomposition': 48,
         },
         '17.0.0': {
             'case_mapping': 40,
+            'decomposition': 48,
         },
         '18.0.0': {
             'case_mapping': 40,
+            'decomposition': 48,
         },
         'latest': {
             'case_mapping': 40,
+            'decomposition': 48,
         },
     }

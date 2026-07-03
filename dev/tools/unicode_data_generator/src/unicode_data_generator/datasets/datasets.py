@@ -4,6 +4,7 @@ from .interface import Dataset, TestDataset
 from . import (
     case_mapping,
     composition_mapping,
+    decomposition,
     utf_encoding,
 )
 
@@ -15,6 +16,7 @@ def available_datasets() -> dict[DatasetId, Type[Dataset]]:
     datasets: set[Type[Dataset]] = {
         case_mapping.CaseMappingDataset,
         composition_mapping.CompositionMappingDataset,
+        decomposition.DecompositionDataset,
     }
 
     return {dataset.identifier(): dataset for dataset in datasets}
@@ -24,6 +26,7 @@ def available_test_datasets() -> dict[TestDatasetId, Type[TestDataset]]:
     test_datasets: set[Type[TestDataset]] = {
         case_mapping.CaseMappingTestDataset,
         composition_mapping.CompositionMappingTestDataset,
+        decomposition.DecompositionTestDataset,
         utf_encoding.UtfEncodingTestDataset,
     }
 

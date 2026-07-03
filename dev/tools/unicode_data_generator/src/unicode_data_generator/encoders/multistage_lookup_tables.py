@@ -269,31 +269,37 @@ class MultistageLookupTables(Encoder):
 def precomputed_block_sizes() -> dict[UnicodeVersion, dict[DatasetId, BlockSize]]:
     return {
         '15.0.0': {
+            'canonical_combining_class': 55,
             'case_mapping': 64,
             'decomposition': 64,
             'general_category': 128,
         },
         '15.1.0': {
+            'canonical_combining_class': 55,
             'case_mapping': 64,
             'decomposition': 64,
             'general_category': 128,
         },
         '16.0.0': {
+            'canonical_combining_class': 55,
             'case_mapping': 64,
             'decomposition': 48,
             'general_category': 168,
         },
         '17.0.0': {
+            'canonical_combining_class': 55,
             'case_mapping': 40,
             'decomposition': 48,
             'general_category': 164,
         },
         '18.0.0': {
+            'canonical_combining_class': 55,
             'case_mapping': 40,
             'decomposition': 48,
             'general_category': 168,
         },
         'latest': {
+            'canonical_combining_class': 55,
             'case_mapping': 40,
             'decomposition': 48,
             'general_category': 164,

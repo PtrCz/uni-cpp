@@ -18,6 +18,8 @@ class CodePointProperties:
 
     general_category: str
 
+    canonical_combining_class: int
+
     hangul_syllable_type: str
 
     decomposition_mapping: list[CodePoint]
@@ -44,6 +46,8 @@ class CodePointProperties:
             casefold_mapping=[code_point],
 
             general_category='Cn',
+
+            canonical_combining_class=0,
 
             hangul_syllable_type='Not_Applicable',
 

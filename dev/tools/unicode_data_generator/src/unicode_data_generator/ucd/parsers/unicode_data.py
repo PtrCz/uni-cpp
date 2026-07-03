@@ -33,6 +33,9 @@ class UnicodeDataParser:
                 if len(data_fields[2]) != 0:
                     data[code_point].general_category = data_fields[2]
 
+                if len(data_fields[3]) != 0 and data_fields[3] != '0':
+                    data[code_point].canonical_combining_class = int(data_fields[3])
+
                 self._update_decomposition_mapping_data(data, code_point, data_fields)
 
         self._calculate_full_decompositions(data)

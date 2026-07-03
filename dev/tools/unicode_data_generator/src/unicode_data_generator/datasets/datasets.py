@@ -2,6 +2,7 @@ from typing import Type
 from .interface import Dataset, TestDataset
 
 from . import (
+    canonical_combining_class,
     case_mapping,
     composition_mapping,
     decomposition,
@@ -15,6 +16,7 @@ type TestDatasetId = str
 
 def available_datasets() -> dict[DatasetId, Type[Dataset]]:
     datasets: set[Type[Dataset]] = {
+        canonical_combining_class.CanonicalCombiningClassDataset,
         case_mapping.CaseMappingDataset,
         composition_mapping.CompositionMappingDataset,
         decomposition.DecompositionDataset,

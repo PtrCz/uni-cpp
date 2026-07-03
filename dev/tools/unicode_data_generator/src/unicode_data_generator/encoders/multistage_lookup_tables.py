@@ -271,25 +271,31 @@ def precomputed_block_sizes() -> dict[UnicodeVersion, dict[DatasetId, BlockSize]
         '15.0.0': {
             'case_mapping': 64,
             'decomposition': 64,
+            'general_category': 128,
         },
         '15.1.0': {
             'case_mapping': 64,
             'decomposition': 64,
+            'general_category': 128,
         },
         '16.0.0': {
             'case_mapping': 64,
             'decomposition': 48,
+            'general_category': 168,
         },
         '17.0.0': {
             'case_mapping': 40,
             'decomposition': 48,
+            'general_category': 164,
         },
         '18.0.0': {
             'case_mapping': 40,
             'decomposition': 48,
+            'general_category': 168,
         },
         'latest': {
             'case_mapping': 40,
             'decomposition': 48,
+            'general_category': 164,
         },
     }

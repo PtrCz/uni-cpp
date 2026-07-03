@@ -5,6 +5,7 @@ from . import (
     case_mapping,
     composition_mapping,
     decomposition,
+    general_category,
     utf_encoding,
 )
 
@@ -17,6 +18,7 @@ def available_datasets() -> dict[DatasetId, Type[Dataset]]:
         case_mapping.CaseMappingDataset,
         composition_mapping.CompositionMappingDataset,
         decomposition.DecompositionDataset,
+        general_category.GeneralCategoryDataset,
     }
 
     return {dataset.identifier(): dataset for dataset in datasets}
@@ -27,6 +29,7 @@ def available_test_datasets() -> dict[TestDatasetId, Type[TestDataset]]:
         case_mapping.CaseMappingTestDataset,
         composition_mapping.CompositionMappingTestDataset,
         decomposition.DecompositionTestDataset,
+        general_category.GeneralCategoryTestDataset,
         utf_encoding.UtfEncodingTestDataset,
     }
 

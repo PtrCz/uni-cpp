@@ -5,6 +5,7 @@ from . import (
     canonical_combining_class,
     case_mapping,
     composition_mapping,
+    core_properties,
     decomposition,
     general_category,
     utf_encoding,
@@ -19,6 +20,7 @@ def available_datasets() -> dict[DatasetId, Type[Dataset]]:
         canonical_combining_class.CanonicalCombiningClassDataset,
         case_mapping.CaseMappingDataset,
         composition_mapping.CompositionMappingDataset,
+        core_properties.CorePropertiesDataset,
         decomposition.DecompositionDataset,
         general_category.GeneralCategoryDataset,
     }

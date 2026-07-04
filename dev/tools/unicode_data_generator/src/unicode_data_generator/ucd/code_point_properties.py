@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 
 type CodePoint = int
 
@@ -15,6 +16,34 @@ class CodePointProperties:
     uppercase_mapping: list[CodePoint]
     titlecase_mapping: list[CodePoint]
     casefold_mapping: list[CodePoint]
+
+    lowercase: bool
+    uppercase: bool
+
+    cased: bool
+    case_ignorable: bool
+
+    alphabetic: bool
+    white_space: bool
+    math: bool
+    quotation_mark: bool
+    dash: bool
+
+    pattern_syntax: bool
+    pattern_white_space: bool
+
+    id_start: bool
+    id_continue: bool
+    xid_start: bool
+    xid_continue: bool
+
+    id_compat_math_start: bool
+    id_compat_math_continue: bool
+
+    nfd_quick_check: bool
+    nfkd_quick_check: bool
+    nfc_quick_check: Literal['N', 'M', 'Y']
+    nfkc_quick_check: Literal['N', 'M', 'Y']
 
     general_category: str
 
@@ -44,6 +73,34 @@ class CodePointProperties:
             uppercase_mapping=[code_point],
             titlecase_mapping=[code_point],
             casefold_mapping=[code_point],
+
+            lowercase=False,
+            uppercase=False,
+
+            cased=False,
+            case_ignorable=False,
+
+            alphabetic=False,
+            white_space=False,
+            math=False,
+            quotation_mark=False,
+            dash=False,
+
+            pattern_syntax=False,
+            pattern_white_space=False,
+
+            id_start=False,
+            id_continue=False,
+            xid_start=False,
+            xid_continue=False,
+
+            id_compat_math_start=False,
+            id_compat_math_continue=False,
+
+            nfd_quick_check=True,
+            nfkd_quick_check=True,
+            nfc_quick_check='Y',
+            nfkc_quick_check='Y',
 
             general_category='Cn',
 

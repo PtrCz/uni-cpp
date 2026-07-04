@@ -8,8 +8,10 @@ from ..core.internal_error import internal_error
 
 from .parsers import (
     case_folding,
+    derived_core_properties,
     derived_normalization_props,
     hangul_syllable_type,
+    prop_list,
     special_casing,
     unicode_data,
 )
@@ -48,6 +50,8 @@ class Parser:
             'ucd/SpecialCasing.txt',
             'ucd/CaseFolding.txt',
             'ucd/DerivedNormalizationProps.txt',
+            'ucd/PropList.txt',
+            'ucd/DerivedCoreProperties.txt',
         ]
 
         order = {k: i for i, k in enumerate(priority)}
@@ -75,6 +79,12 @@ class Parser:
 
             case 'ucd/DerivedNormalizationProps.txt':
                 derived_normalization_props.DerivedNormalizationPropsParser(contents).update_code_point_data(code_point_data)
+
+            case 'ucd/PropList.txt':
+                prop_list.PropListParser(contents).update_code_point_data(code_point_data)
+
+            case 'ucd/DerivedCoreProperties.txt':
+                derived_core_properties.DerivedCorePropertiesParser(contents).update_code_point_data(code_point_data)
 
             case _:
                 internal_error('Failed to parse an unknown UCD file!')

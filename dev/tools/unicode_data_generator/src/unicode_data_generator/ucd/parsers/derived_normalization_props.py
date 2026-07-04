@@ -20,5 +20,25 @@ class DerivedNormalizationPropsParser:
                 case 'Full_Composition_Exclusion':
                     data[code_point].full_composition_exclusion = True
 
+                case 'NFD_QC':
+                    if data_fields[1] == 'N':
+                        data[code_point].nfd_quick_check = False
+
+                case 'NFC_QC':
+                    if data_fields[1] == 'N':
+                        data[code_point].nfc_quick_check = 'N'
+                    elif data_fields[1] == 'M':
+                        data[code_point].nfc_quick_check = 'M'
+
+                case 'NFKD_QC':
+                    if data_fields[1] == 'N':
+                        data[code_point].nfkd_quick_check = False
+
+                case 'NFKC_QC':
+                    if data_fields[1] == 'N':
+                        data[code_point].nfkc_quick_check = 'N'
+                    elif data_fields[1] == 'M':
+                        data[code_point].nfkc_quick_check = 'M'
+
                 case _:
                     continue

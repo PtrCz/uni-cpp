@@ -92,5 +92,31 @@ return stage2_value if stage2_holds_properties_inplace else stage3[stage2_value]
 <a name="applications"></a>
 ## Applications
 
-Multistage Lookup Tables are used in this library to store and retrieve:
-- Character case mappings. For more details read [this](./case_conversion_tables.md).
+This library uses Multistage Lookup Tables to efficiently store and retrieve the following Unicode character properties and data:
+- Canonical combining class values.
+- Character case mappings. For details, see [Compact Unicode Case Mapping Lookup Tables](./case_mapping_tables.md).
+- Binary core properties:
+    - `Lowercase`
+    - `Uppercase`
+    - `Cased`
+    - `Case_Ignorable`
+    - `Alphabetic`
+    - `White_Space`
+    - `Math`
+    - `Quotation_Mark`
+    - `Dash`
+    - `Pattern_Syntax`
+    - `Pattern_White_Space`
+    - `ID_Start`
+    - `ID_Continue`
+    - `XID_Start`
+    - `XID_Continue`
+    - `ID_Compat_Math_Start`
+    - `ID_Compat_Math_Continue`
+- Normalization `Quick_Check` properties:
+    - `NFD_Quick_Check`
+    - `NFKD_Quick_Check`
+    - `NFC_Quick_Check`
+    - `NFKC_Quick_Check`
+- Full canonical decompositions, full compatibility decompositions, and decomposition types.
+- The `General_Category` property.

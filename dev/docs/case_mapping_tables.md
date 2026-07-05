@@ -23,7 +23,7 @@ In this document, there are two types of case mappings used:
 - **Simple Mappings (1-to-1)**: These are mappings where one code point maps to exactly one other. For example, the lowercase letter `a` has an uppercase mapping to `A`. Another form of a simple mapping is when a code point has no defined case mapping; in such cases, it maps to itself. For example, the character `=` has a simple uppercase mapping to `=` (itself).
 - **Special Mappings (1-to-N)**: These are mappings that expand one code point into multiple, such as German `ß` having an uppercase mapping to `SS`.
 
-> **Note**: Context- or language-dependent mappings, such as the Turkish dotted and dotless I or the Greek final sigma, are represented in these tables by their context- and language-*independent* mapping equivalents.
+> **Note:** Context- or language-dependent mappings, such as the Turkish dotted and dotless I or the Greek final sigma, are represented in these tables by their context- and language-*independent* mapping equivalents.
 
 <a name="introduction"></a>
 ## Introduction

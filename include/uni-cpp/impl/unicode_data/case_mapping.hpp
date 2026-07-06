@@ -50,7 +50,7 @@ namespace upp::impl::unicode_data::case_mapping
     template<case_mapping_type MappingType, typename UChar = upp::uchar>
     [[nodiscard]] constexpr inplace_vector<UChar, 3> lookup_case_mapping(const std::uint32_t code_point) noexcept
     {
-        // Read `dev/docs/case_conversion_tables.md` to understand this function.
+        // Read `dev/docs/case_mapping_tables.md` to understand this function.
 
         if (code_point > impl::greatest_code_point_with_mapping<MappingType>())
             return inplace_vector<UChar, 3>{UChar::from_unchecked(code_point)}; // code point maps to itself

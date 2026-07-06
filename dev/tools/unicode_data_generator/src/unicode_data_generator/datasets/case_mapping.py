@@ -375,7 +375,7 @@ class CaseMappingDataset(Dataset):
     def _assert_special_mapping_has_expected_length(self, special_mapping: list[CodePoint]):
         if len(special_mapping) not in {2, 3}:
             internal_error('Special case mapping has an unexpected length!\n'
-                           'The special case mapping data storage strategy has to be updated.\n' # see `dev/docs/case_conversion_tables.md` for the current strategy
+                           'The special case mapping data storage strategy has to be updated.\n' # see `dev/docs/case_mapping_tables.md` for the current strategy
                            'This function will not work for new Unicode versions until it is updated.', frame = inspect.stack()[1])
         
 
@@ -383,7 +383,7 @@ class CaseMappingDataset(Dataset):
         if value < 0 or value > 0x7FFF:
             internal_error('Generating case conversion lookup data failed!\n'
                            'Failed to fit the case mapping index into 15-bits.\n'
-                           'The case conversion data storage strategy has to be updated.\n' # see `dev/docs/case_conversion_tables.md` for the current strategy
+                           'The case conversion data storage strategy has to be updated.\n' # see `dev/docs/case_mapping_tables.md` for the current strategy
                            'This function will not work for new Unicode versions until it is updated.', frame = inspect.stack()[1])
             
 

@@ -61,7 +61,7 @@ namespace upp
 
     /// @brief The Unicode standard version supported by this library.
     ///
-    inline constexpr version_t unicode_version{.major = 16, .minor = 0, .patch = 0};
+    inline constexpr version_t unicode_version{.major = 17, .minor = 0, .patch = 0};
 } // namespace upp
 
 #endif // UNI_CPP_VERSION_HPP

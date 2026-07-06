@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.30)
 
 project("uni-cpp" VERSION 0.3.0 LANGUAGES CXX)
 
-set(UNI_CPP_UNICODE_VERSION "16.0.0")
+set(UNI_CPP_UNICODE_VERSION "17.0.0")
 
 message(STATUS "[uni-cpp] Unicode version: ${UNI_CPP_UNICODE_VERSION}")
 

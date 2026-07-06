@@ -187,6 +187,15 @@ namespace upp::impl
             using pointer         = value_type*;
             using const_pointer   = value_type const*;
 
+            constexpr aligned_storage_trivial() noexcept
+            {
+                if consteval
+                {
+                    // In constant evaluation the array can't be uninitialized.
+                    m_data.fill(T{});
+                }
+            }
+
         protected:
             UNI_CPP_IMPL_LYNIPV_CXX14_CONSTEXPR pointer         ptr(size_type idx) noexcept { return std::addressof(m_data[idx]); }
             UNI_CPP_IMPL_LYNIPV_CXX14_CONSTEXPR const_pointer   ptr(size_type idx) const noexcept { return std::addressof(m_data[idx]); }
@@ -265,6 +274,15 @@ namespace upp::impl
         private:
             struct alignas(T) inner_storage
             {
+                constexpr inner_storage() noexcept
+                {
+                    if consteval
+                    {
+                        // In constant evaluation the array can't be uninitialized.
+                        data.fill(std::uint8_t{});
+                    }
+                }
+
                 std::array<unsigned char, sizeof(T)> data;
                 pointer                              ptr() noexcept { return UNI_CPP_IMPL_LYNIPV_LAUNDER(reinterpret_cast<pointer>(data.data())); }
                 const_pointer ptr() const noexcept { return UNI_CPP_IMPL_LYNIPV_LAUNDER(reinterpret_cast<const_pointer>(data.data())); }

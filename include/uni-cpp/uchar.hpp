@@ -24,6 +24,7 @@
 #include "impl/unicode_data/case_mapping.hpp"
 #include "impl/encoding/ascii.hpp"
 #include "impl/encoding/utf32.hpp"
+#include "impl/inplace_vector.hpp"
 
 #include <concepts>
 #include <iterator>
@@ -80,11 +81,10 @@ namespace upp
         /// @tparam MaxSize The capacity of the buffer.
         ///
         template<typename T, std::size_t MaxSize>
-            requires(MaxSize > 0 && MaxSize <= 255)
         class immutable_inplace_buffer
         {
         public:
-            using const_iterator         = const T*;
+            using const_iterator         = inplace_vector<T, MaxSize>::const_iterator;
             using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
         public:
@@ -96,47 +96,31 @@ namespace upp
             constexpr immutable_inplace_buffer& operator=(const immutable_inplace_buffer&) noexcept = default;
             constexpr immutable_inplace_buffer& operator=(immutable_inplace_buffer&&) noexcept      = default;
 
-            [[nodiscard]] constexpr const_iterator         begin() const noexcept { return m_data.data(); }
-            [[nodiscard]] constexpr const_iterator         cbegin() const noexcept { return begin(); }
-            [[nodiscard]] constexpr const_iterator         end() const noexcept { return m_data.data() + m_size; }
-            [[nodiscard]] constexpr const_iterator         cend() const noexcept { return end(); }
-            [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
-            [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept { return rbegin(); }
-            [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
-            [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept { return rend(); }
+            [[nodiscard]] constexpr const_iterator         begin() const noexcept { return m_data.begin(); }
+            [[nodiscard]] constexpr const_iterator         cbegin() const noexcept { return m_data.cbegin(); }
+            [[nodiscard]] constexpr const_iterator         end() const noexcept { return m_data.end(); }
+            [[nodiscard]] constexpr const_iterator         cend() const noexcept { return m_data.cend(); }
+            [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept { return m_data.rbegin(); }
+            [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept { return m_data.crbegin(); }
+            [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept { return m_data.rend(); }
+            [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept { return m_data.crend(); }
 
-            [[nodiscard]] constexpr std::size_t size() const noexcept { return static_cast<std::size_t>(m_size); }
+            [[nodiscard]] constexpr std::size_t size() const noexcept { return m_data.size(); }
 
             [[nodiscard]] constexpr const T* data() const noexcept { return m_data.data(); }
 
-            [[nodiscard]] constexpr bool operator==(const immutable_inplace_buffer& other) const noexcept
-            {
-                if (m_size != other.m_size)
-                    return false;
-
-                for (auto it1 = cbegin(), it2 = other.cbegin(); it1 != cend(); ++it1, ++it2)
-                {
-                    if (*it1 != *it2)
-                        return false;
-                }
-                return true;
-            }
+            [[nodiscard]] constexpr bool operator==(const immutable_inplace_buffer& other) const noexcept = default;
 
         protected:
-            /// @brief Constructs the buffer with given data and size.
+            /// @brief Constructs the buffer with the given data.
             ///
-            /// @param p_data The array of elements to initialize with.
-            /// @param p_size The number of valid elements in the array.
-            ///
-            constexpr immutable_inplace_buffer(std::array<T, MaxSize> p_data, std::uint8_t p_size) noexcept
-                : m_data(p_data)
-                , m_size(p_size)
+            constexpr immutable_inplace_buffer(inplace_vector<T, MaxSize>&& p_data) noexcept
+                : m_data{std::move(p_data)}
             {
             }
 
         private:
-            std::array<T, MaxSize> m_data;
-            std::uint8_t           m_size;
+            inplace_vector<T, MaxSize> m_data;
         };
 
         template<typename T, std::size_t MaxSize>
@@ -164,8 +148,7 @@ namespace upp
         class to_case : public immutable_inplace_buffer<T, 3>
         {
         private:
-            using base                   = immutable_inplace_buffer<T, 3>;
-            static constexpr auto m_case = Case;
+            using base = immutable_inplace_buffer<T, 3>;
             friend uchar;
 
         public:
@@ -485,44 +468,40 @@ namespace upp
         ///
         [[nodiscard]] constexpr encode_utf8_t encode_utf8() const noexcept
         {
-            std::array<char8_t, 4> arr;
-            const std::size_t      size_utf8 = length_utf8();
+            using buffer_t = impl::inplace_vector<char8_t, 4>;
 
-            if consteval
-            {
-                // In constant evaluation the array can't be partially uninitialized.
-                // At runtime it's fine, because the uninitialized part is never read.
-                arr.fill(0);
-            }
+            // clang-format off
 
-            switch (size_utf8)
+            switch (length_utf8())
             {
             case 1uz: {
-                arr[0] = static_cast<char8_t>(m_value);
-                break;
+                return encode_utf8_t{buffer_t{static_cast<char8_t>(m_value)}};
             }
             case 2uz: {
-                arr[0] = static_cast<char8_t>((m_value >> 6U) | 0xC0U);
-                arr[1] = static_cast<char8_t>((m_value & 0x3FU) | 0x80U);
-                break;
+                return encode_utf8_t{buffer_t{
+                    static_cast<char8_t>((m_value >> 6U) | 0xC0U),
+                    static_cast<char8_t>((m_value & 0x3FU) | 0x80U)
+                }};
             }
             case 3uz: {
-                arr[0] = static_cast<char8_t>((m_value >> 12U) | 0xE0U);
-                arr[1] = static_cast<char8_t>(((m_value >> 6U) & 0x3FU) | 0x80U);
-                arr[2] = static_cast<char8_t>((m_value & 0x3FU) | 0x80U);
-                break;
+                return encode_utf8_t{buffer_t{
+                    static_cast<char8_t>((m_value >> 12U) | 0xE0U),
+                    static_cast<char8_t>(((m_value >> 6U) & 0x3FU) | 0x80U),
+                    static_cast<char8_t>((m_value & 0x3FU) | 0x80U)
+                }};
             }
             case 4uz: {
-                arr[0] = static_cast<char8_t>((m_value >> 18U) | 0xF0U);
-                arr[1] = static_cast<char8_t>(((m_value >> 12U) & 0x3FU) | 0x80U);
-                arr[2] = static_cast<char8_t>(((m_value >> 6U) & 0x3FU) | 0x80U);
-                arr[3] = static_cast<char8_t>((m_value & 0x3FU) | 0x80U);
-                break;
+                return encode_utf8_t{buffer_t{
+                    static_cast<char8_t>((m_value >> 18U) | 0xF0U),
+                    static_cast<char8_t>(((m_value >> 12U) & 0x3FU) | 0x80U),
+                    static_cast<char8_t>(((m_value >> 6U) & 0x3FU) | 0x80U),
+                    static_cast<char8_t>((m_value & 0x3FU) | 0x80U)
+                }};
             }
             default: std::unreachable();
             }
 
-            return encode_utf8_t(arr, static_cast<std::uint8_t>(size_utf8));
+            // clang-format on
         }
 
         /// @brief Returns a sequence of UTF-16 code units representing this character encoded in UTF-16.
@@ -533,33 +512,25 @@ namespace upp
         ///
         [[nodiscard]] constexpr encode_utf16_t encode_utf16() const noexcept
         {
-            std::array<char16_t, 2> arr;
-            const std::size_t       size_utf16 = length_utf16();
+            using buffer_t = impl::inplace_vector<char16_t, 2>;
 
-            if consteval
-            {
-                // In constant evaluation the array can't be partially uninitialized.
-                // At runtime it's fine, because the uninitialized part is never read.
-                arr.fill(0);
-            }
-
-            switch (size_utf16)
+            switch (length_utf16())
             {
             case 1uz: {
-                arr[0] = static_cast<char16_t>(m_value);
-                break;
+                return encode_utf16_t{buffer_t{static_cast<char16_t>(m_value)}};
             }
             case 2uz: {
                 const std::uint32_t code = m_value - 0x10'000;
 
-                arr[0] = static_cast<char16_t>(0xD800U | (code >> 10U));
-                arr[1] = static_cast<char16_t>(0xDC00U | (code & 0x3FFU));
-                break;
+                return encode_utf16_t{buffer_t{
+                    // clang-format off
+                    static_cast<char16_t>(0xD800U | (code >> 10U)),
+                    static_cast<char16_t>(0xDC00U | (code & 0x3FFU))
+                    // clang-format on
+                }};
             }
             default: std::unreachable();
             }
-
-            return encode_utf16_t(arr, static_cast<std::uint8_t>(size_utf16));
         }
 
         /// @brief Returns a sequence of `uchar`s that are the lowercase mapping of this `uchar`.
@@ -625,11 +596,7 @@ namespace upp
         template<typename ResultType, impl::unicode_data::case_mapping::case_mapping_type MappingType>
         [[nodiscard]] constexpr ResultType to_case_impl() const noexcept
         {
-            const auto mapping = impl::unicode_data::case_mapping::lookup_case_mapping<MappingType>(m_value);
-
-            const std::array<uchar, 3> data = {uchar{mapping.code_points[0]}, uchar{mapping.code_points[1]}, uchar{mapping.code_points[2]}};
-
-            return ResultType{data, mapping.length};
+            return ResultType{impl::unicode_data::case_mapping::lookup_case_mapping<MappingType>(m_value)};
         }
 
     private:

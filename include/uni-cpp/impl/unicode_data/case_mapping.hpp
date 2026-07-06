@@ -1,25 +1,18 @@
 #ifndef UNI_CPP_IMPL_UNICODE_DATA_CASE_MAPPING_HPP
 #define UNI_CPP_IMPL_UNICODE_DATA_CASE_MAPPING_HPP
 
+#include "../inplace_vector.hpp"
+
 #include "data/case_mapping.hpp"
 #include <utility>
 
+namespace upp
+{
+    class uchar;
+};
+
 namespace upp::impl::unicode_data::case_mapping
 {
-    namespace impl
-    {
-        struct case_mapping
-        {
-            std::array<std::uint32_t, 3> code_points;
-            std::uint8_t                 length;
-
-            [[nodiscard]] static constexpr case_mapping single_code_point_mapping(const std::uint32_t code_point) noexcept
-            {
-                return case_mapping{.code_points = {code_point, 0, 0}, .length = 1};
-            }
-        };
-    } // namespace impl
-
     enum class case_mapping_type : std::uint8_t
     {
         lowercase = 0,
@@ -54,13 +47,13 @@ namespace upp::impl::unicode_data::case_mapping
         }
     } // namespace impl
 
-    template<case_mapping_type MappingType>
-    [[nodiscard]] constexpr impl::case_mapping lookup_case_mapping(const std::uint32_t code_point) noexcept
+    template<case_mapping_type MappingType, typename UChar = upp::uchar>
+    [[nodiscard]] constexpr inplace_vector<UChar, 3> lookup_case_mapping(const std::uint32_t code_point) noexcept
     {
         // Read `dev/docs/case_conversion_tables.md` to understand this function.
 
         if (code_point > impl::greatest_code_point_with_mapping<MappingType>())
-            return impl::case_mapping::single_code_point_mapping(code_point); // code point maps to itself
+            return inplace_vector<UChar, 3>{UChar::from_unchecked(code_point)}; // code point maps to itself
 
         const auto lookup_value = impl::lookup_value_for_mapping_type<MappingType>(code_point);
 
@@ -71,20 +64,25 @@ namespace upp::impl::unicode_data::case_mapping
         {
             const std::uint64_t special_mapping = impl::special_mappings[index];
 
-            const auto length_bit = (special_mapping & (1ULL << 63U)) >> 63U; // MSB is the length bit
-
             static constexpr std::uint64_t single_code_point_21bit_mask = 0b0001'1111'1111'1111'1111'1111;
 
-            return impl::case_mapping{
-                // clang-format off
-                .code_points = {
-                    static_cast<std::uint32_t>( special_mapping         & single_code_point_21bit_mask),
-                    static_cast<std::uint32_t>((special_mapping >> 21U) & single_code_point_21bit_mask),
-                    static_cast<std::uint32_t>((special_mapping >> 42U) & single_code_point_21bit_mask)
-                },
-                // clang-format on
-                .length = static_cast<std::uint8_t>(length_bit + 2) // Add 2 to the length bit to get the mapping's length
-            };
+            if (special_mapping & (1ULL << 63U)) // MSB is the length bit
+            {
+                return inplace_vector<UChar, 3>{
+                    // clang-format off
+                    UChar::from_unchecked(static_cast<std::uint32_t>( special_mapping         & single_code_point_21bit_mask)),
+                    UChar::from_unchecked(static_cast<std::uint32_t>((special_mapping >> 21U) & single_code_point_21bit_mask)),
+                    UChar::from_unchecked(static_cast<std::uint32_t>((special_mapping >> 42U) & single_code_point_21bit_mask))
+                    // clang-format on
+                };
+            }
+            else
+            {
+                return inplace_vector<UChar, 3>{
+                    UChar::from_unchecked(static_cast<std::uint32_t>(special_mapping & single_code_point_21bit_mask)),
+                    UChar::from_unchecked(static_cast<std::uint32_t>(special_mapping >> 21U))
+                };
+            }
         }
         else // simple mapping (1 to 1)
         {
@@ -93,7 +91,7 @@ namespace upp::impl::unicode_data::case_mapping
             if constexpr (MappingType == case_mapping_type::uppercase || MappingType == case_mapping_type::titlecase)
                 mapping_offset = -mapping_offset; // uppercase and titlecase mappings use negated offsets
 
-            return impl::case_mapping::single_code_point_mapping(code_point + mapping_offset);
+            return inplace_vector<UChar, 3>{UChar::from_unchecked(code_point + mapping_offset)};
         }
     }
 } // namespace upp::impl::unicode_data::case_mapping

@@ -1,7 +1,7 @@
 #ifndef UNI_CPP_IMPL_UNICODE_DATA_CASE_MAPPING_HPP
 #define UNI_CPP_IMPL_UNICODE_DATA_CASE_MAPPING_HPP
 
-#include "data/case_mapping/data.hpp"
+#include "data/case_mapping.hpp"
 #include <utility>
 
 namespace upp::impl::unicode_data::case_mapping

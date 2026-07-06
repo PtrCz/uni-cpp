@@ -3,8 +3,8 @@
 
 // General Category data: 35'590 bytes
 
-#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_GENERAL_CATEGORY_DATA_INLINE_HPP
-#define UNI_CPP_IMPL_UNICODE_DATA_DATA_GENERAL_CATEGORY_DATA_INLINE_HPP
+#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_GENERAL_CATEGORY_HPP
+#define UNI_CPP_IMPL_UNICODE_DATA_DATA_GENERAL_CATEGORY_HPP
 
 #include <cstdint>
 #include <array>
@@ -1564,6 +1564,18 @@ namespace upp::impl::unicode_data::general_category::impl
         0x653A, 0x65D6, 0x6668, 0x66B0, 0x671C, 0x6764, 0x677C, 0x6790, 0x67B4, 0x6844, 0x68A0, 0x6924, 0x69B8, 0x6A59, 0x6AFD, 0x6B8D, 0x6BCB,
         0x6C1F, 0x6C37, 0x6C61, 0x6CA1, 0x6CDD, 0x6D4D, 0x6DEE
     };
+
+    [[nodiscard]] constexpr std::uint8_t lookup(const std::uint64_t key) noexcept
+    {
+        // See `dev/docs/multistage-lookup-tables.md`.
+
+        const std::uint64_t quot = key / 164;
+        const std::uint64_t rem  = key % 164;
+
+        const std::uint32_t stage2_offset = stage2_offsets[stage1[quot]];
+
+        return stage2[stage2_offset + rem];
+    }
 } // namespace upp::impl::unicode_data::general_category::impl
 
-#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_GENERAL_CATEGORY_DATA_INLINE_HPP
+#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_GENERAL_CATEGORY_HPP

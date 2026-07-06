@@ -3,8 +3,8 @@
 
 // Decomposition data: 83'939 bytes
 
-#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_DECOMPOSITION_DATA_INLINE_HPP
-#define UNI_CPP_IMPL_UNICODE_DATA_DATA_DECOMPOSITION_DATA_INLINE_HPP
+#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_DECOMPOSITION_HPP
+#define UNI_CPP_IMPL_UNICODE_DATA_DATA_DECOMPOSITION_HPP
 
 #include <cstdint>
 #include <array>
@@ -1956,6 +1956,22 @@ namespace upp::impl::unicode_data::decomposition::impl
         0x000285D2, 0x000285ED, 0x0002872E, 0x00028BFA, 0x00028D77, 0x00029145, 0x000291DF, 0x0002921A, 0x0002940A, 0x00029496, 0x000295B6,
         0x00029B30, 0x0002A0CE, 0x0002A105, 0x0002A20E, 0x0002A291, 0x0002A392, 0x0002A600
     };
+
+    [[nodiscard]] constexpr std::uint64_t lookup(const std::uint64_t key) noexcept
+    {
+        // See `dev/docs/multistage-lookup-tables.md`.
+
+        if (key > 0x0002FA1D)
+            return 0x00;
+
+        const std::uint64_t quot = key / 48;
+        const std::uint64_t rem  = key % 48;
+
+        const std::uint32_t stage2_offset = stage2_offsets[stage1[quot]];
+
+        const auto stage2_value = stage2[stage2_offset + rem];
+        return stage3[stage2_value];
+    }
 } // namespace upp::impl::unicode_data::decomposition::impl
 
-#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_DECOMPOSITION_DATA_INLINE_HPP
+#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_DECOMPOSITION_HPP

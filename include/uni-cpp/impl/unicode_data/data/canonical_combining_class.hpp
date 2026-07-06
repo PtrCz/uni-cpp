@@ -3,8 +3,8 @@
 
 // Canonical Combining Class data: 5'535 bytes
 
-#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_CANONICAL_COMBINING_CLASS_DATA_INLINE_HPP
-#define UNI_CPP_IMPL_UNICODE_DATA_DATA_CANONICAL_COMBINING_CLASS_DATA_INLINE_HPP
+#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_CANONICAL_COMBINING_CLASS_HPP
+#define UNI_CPP_IMPL_UNICODE_DATA_DATA_CANONICAL_COMBINING_CLASS_HPP
 
 #include <cstdint>
 #include <array>
@@ -261,6 +261,21 @@ namespace upp::impl::unicode_data::canonical_combining_class::impl
         0x0811, 0x0837, 0x084F, 0x0883, 0x08B5, 0x08C5, 0x08F2, 0x0910, 0x0944, 0x095A, 0x095D, 0x096C, 0x0985, 0x099E, 0x09B8, 0x09D6,
         0x09FB, 0x0A0E, 0x0A3D, 0x0A4F, 0x0A72, 0x0A7A, 0x0AAE, 0x0ADD, 0x0B14, 0x0B45, 0x0B6C
     };
+
+    [[nodiscard]] constexpr std::uint8_t lookup(const std::uint64_t key) noexcept
+    {
+        // See `dev/docs/multistage-lookup-tables.md`.
+
+        if (key > 0x0001E94A)
+            return 0x00;
+
+        const std::uint64_t quot = key / 55;
+        const std::uint64_t rem  = key % 55;
+
+        const std::uint32_t stage2_offset = stage2_offsets[stage1[quot]];
+
+        return stage2[stage2_offset + rem];
+    }
 } // namespace upp::impl::unicode_data::canonical_combining_class::impl
 
-#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_CANONICAL_COMBINING_CLASS_DATA_INLINE_HPP
+#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_CANONICAL_COMBINING_CLASS_HPP

@@ -3,8 +3,8 @@
 
 // Core Properties data: 33'912 bytes
 
-#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_CORE_PROPERTIES_DATA_INLINE_HPP
-#define UNI_CPP_IMPL_UNICODE_DATA_DATA_CORE_PROPERTIES_DATA_INLINE_HPP
+#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_CORE_PROPERTIES_HPP
+#define UNI_CPP_IMPL_UNICODE_DATA_DATA_CORE_PROPERTIES_HPP
 
 #include <cstdint>
 #include <array>
@@ -1487,6 +1487,44 @@ namespace upp::impl::unicode_data::core_properties::impl
         0x00120016, 0x00120015, 0x00000240, 0x00127818, 0x00560218, 0x00121808, 0x00507818, 0x00121810, 0x00120100, 0x00125000, 0x00120080,
         0x00120140, 0x00120088, 0x00120048, 0x00125818, 0x00285010, 0x00285018, 0x00287810, 0x00138040, 0x00125040, 0x00560016
     };
+
+    inline constexpr std::uint8_t lowercase_bit               = 0x00;
+    inline constexpr std::uint8_t uppercase_bit               = 0x01;
+    inline constexpr std::uint8_t cased_bit                   = 0x02;
+    inline constexpr std::uint8_t case_ignorable_bit          = 0x03;
+    inline constexpr std::uint8_t alphabetic_bit              = 0x04;
+    inline constexpr std::uint8_t white_space_bit             = 0x05;
+    inline constexpr std::uint8_t math_bit                    = 0x06;
+    inline constexpr std::uint8_t quotation_mark_bit          = 0x07;
+    inline constexpr std::uint8_t dash_bit                    = 0x08;
+    inline constexpr std::uint8_t pattern_syntax_bit          = 0x09;
+    inline constexpr std::uint8_t pattern_white_space_bit     = 0x0A;
+    inline constexpr std::uint8_t id_start_bit                = 0x0B;
+    inline constexpr std::uint8_t id_continue_bit             = 0x0C;
+    inline constexpr std::uint8_t xid_start_bit               = 0x0D;
+    inline constexpr std::uint8_t xid_continue_bit            = 0x0E;
+    inline constexpr std::uint8_t id_compat_math_start_bit    = 0x0F;
+    inline constexpr std::uint8_t id_compat_math_continue_bit = 0x10;
+    inline constexpr std::uint8_t nfd_quick_check_bit         = 0x11;
+    inline constexpr std::uint8_t nfkd_quick_check_bit        = 0x12;
+    inline constexpr std::uint8_t nfc_quick_check_bit         = 0x13;
+    inline constexpr std::uint8_t nfkc_quick_check_bit        = 0x15;
+    inline constexpr std::uint8_t quick_check_no              = 0x00;
+    inline constexpr std::uint8_t quick_check_maybe           = 0x01;
+    inline constexpr std::uint8_t quick_check_yes             = 0x02;
+
+    [[nodiscard]] constexpr std::uint32_t lookup(const std::uint64_t key) noexcept
+    {
+        // See `dev/docs/multistage-lookup-tables.md`.
+
+        const std::uint64_t quot = key / 144;
+        const std::uint64_t rem  = key % 144;
+
+        const std::uint32_t stage2_offset = stage2_offsets[stage1[quot]];
+
+        const auto stage2_value = stage2[stage2_offset + rem];
+        return stage3[stage2_value];
+    }
 } // namespace upp::impl::unicode_data::core_properties::impl
 
-#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_CORE_PROPERTIES_DATA_INLINE_HPP
+#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_CORE_PROPERTIES_HPP

@@ -3,11 +3,13 @@
 
 // Composition Mapping data: 9'610 bytes
 
-#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_COMPOSITION_MAPPING_DATA_INLINE_HPP
-#define UNI_CPP_IMPL_UNICODE_DATA_DATA_COMPOSITION_MAPPING_DATA_INLINE_HPP
+#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_COMPOSITION_MAPPING_HPP
+#define UNI_CPP_IMPL_UNICODE_DATA_DATA_COMPOSITION_MAPPING_HPP
 
 #include <cstdint>
 #include <array>
+
+#include "../hash.hpp"
 
 namespace upp::impl::unicode_data::composition_mapping::impl
 {
@@ -213,6 +215,28 @@ namespace upp::impl::unicode_data::composition_mapping::impl
         0x00079AC060E00074, 0x0007D4C060001F51, 0x000780C060E00062, 0x0007CC8060001F30, 0x0001344060C00430, 0x0000800061E00041, 0x00011D8061E00474,
         0x00079300602000D5, 0x0007FE006000039F
     };
+
+    [[nodiscard]] constexpr std::uint32_t lookup(const std::uint64_t key) noexcept
+    {
+        // MPHF based on 'Easy Perfect Minimal Hashing' by Steve Hanov
+        // See https://stevehanov.ca/blog/throw-away-the-keys-easy-minimal-perfect-hashing
+
+        const auto lookup_result = [](const std::uint64_t key) static -> std::uint64_t {
+            const auto d = intermediate[hash(key, 0ULL) % 0x03C1U];
+
+            if (d < 0)
+                return values[-d - 1];
+
+            return values[hash(key, d) % 0x03C1U];
+        }(key);
+
+        const std::uint64_t actual_key = lookup_result & 0x0000003FFFFFFFFFULL;
+
+        if (actual_key != key)
+            return 0x00110000;
+
+        return lookup_result >> 38U;
+    }
 } // namespace upp::impl::unicode_data::composition_mapping::impl
 
-#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_COMPOSITION_MAPPING_DATA_INLINE_HPP
+#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_COMPOSITION_MAPPING_HPP

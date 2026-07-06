@@ -3,8 +3,8 @@
 
 // Case Mapping data: 12'512 bytes
 
-#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_CASE_MAPPING_DATA_INLINE_HPP
-#define UNI_CPP_IMPL_UNICODE_DATA_DATA_CASE_MAPPING_DATA_INLINE_HPP
+#ifndef UNI_CPP_IMPL_UNICODE_DATA_DATA_CASE_MAPPING_HPP
+#define UNI_CPP_IMPL_UNICODE_DATA_DATA_CASE_MAPPING_HPP
 
 #include <cstdint>
 #include <array>
@@ -401,6 +401,24 @@ namespace upp::impl::unicode_data::case_mapping::impl
         0x0000000073201F6C, 0x0000000073201F6D, 0x0000000073201F6E, 0x0000000073201F6F, 0x0000000077201F70, 0x0000000077201F74, 0x0000000077201F7C,
         0x0000000068A01FBA, 0x0000000073201FBA, 0x0000000068A01FCA, 0x0000000073201FCA, 0x0000000068A01FFA, 0x0000000073201FFA
     };
+
+    inline constexpr std::uint32_t greatest_code_point_with_lowercase_mapping = 0x0001E921;
+    inline constexpr std::uint32_t greatest_code_point_with_uppercase_mapping = 0x0001E943;
+    inline constexpr std::uint32_t greatest_code_point_with_titlecase_mapping = 0x0001E943;
+    inline constexpr std::uint32_t greatest_code_point_with_casefold_mapping  = 0x0001E921;
+
+    [[nodiscard]] constexpr std::uint64_t lookup(const std::uint64_t key) noexcept
+    {
+        // See `dev/docs/multistage-lookup-tables.md`.
+
+        const std::uint64_t quot = key / 40;
+        const std::uint64_t rem  = key % 40;
+
+        const std::uint32_t stage2_offset = stage2_offsets[stage1[quot]];
+
+        const auto stage2_value = stage2[stage2_offset + rem];
+        return stage3[stage2_value];
+    }
 } // namespace upp::impl::unicode_data::case_mapping::impl
 
-#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_CASE_MAPPING_DATA_INLINE_HPP
+#endif // UNI_CPP_IMPL_UNICODE_DATA_DATA_CASE_MAPPING_HPP

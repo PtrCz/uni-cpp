@@ -13,6 +13,7 @@
 /// - Safe conversion between ASCII and Unicode characters
 /// - UTF-8 and UTF-16 encoding of characters
 /// - Case conversion for characters
+/// - Full canonical and compatibility decompositions of code points
 /// - Checking character properties
 ///
 
@@ -22,6 +23,7 @@
 #include <expected>
 
 #include "impl/unicode_data/case_mapping.hpp"
+#include "impl/unicode_data/decomposition.hpp"
 #include "impl/encoding/ascii.hpp"
 #include "impl/encoding/utf32.hpp"
 #include "impl/inplace_vector.hpp"
@@ -75,7 +77,8 @@ namespace upp
         ///
         /// This serves as the base class for:
         /// - `encode_utf8_t`, `encode_utf16_t`,
-        /// - `to_lowercase_t`, `to_uppercase_t` and `to_titlecase_t`.
+        /// - `to_lowercase_t`, `to_uppercase_t`, `to_titlecase_t`,
+        /// - `full_decomposition_t` and `full_compatibility_decomposition_t`.
         ///
         /// @tparam T Type of the elements stored in the buffer.
         /// @tparam MaxSize The capacity of the buffer.
@@ -149,6 +152,20 @@ namespace upp
         {
         private:
             using base = immutable_inplace_buffer<T, 3>;
+            friend uchar;
+
+        public:
+            using base::base;
+        };
+
+        /// @tparam Kind Used to make `full_decomposition_t` and `full_compatibility_decomposition_t` distinct types.
+        /// @tparam T Always `uchar`; only a template parameter due to forward declaration constraints.
+        ///
+        template<unicode_data::decomposition::decomposition_kind Kind, typename T = uchar>
+        class decomposition_t : public immutable_inplace_buffer<T, 18>
+        {
+        private:
+            using base = immutable_inplace_buffer<T, 18>;
             friend uchar;
 
         public:
@@ -270,6 +287,33 @@ namespace upp
         inline constexpr std::uint32_t max_usv = 0x10FFFFU;
     }
 
+    /// @brief The decomposition type of a code point.
+    ///
+    /// Code points with a compatibility decomposition mapping have an associated decomposition type.
+    /// The decomposition type generally indicates the formatting information removed by the compatibility decomposition.
+    /// Code points with a canonical decomposition mapping have no decomposition type.
+    ///
+    enum class decomposition_type : std::uint8_t
+    {
+        // Note: zero is used in the data tables to indicate a `None` value
+        font = 1, ///< Font variant (for example, a blackletter form)
+        no_break, ///< No-break version of a space or hyphen
+        initial,  ///< Initial presentation form (Arabic)
+        medial,   ///< Medial presentation form (Arabic)
+        final,    ///< Final presentation form (Arabic)
+        isolated, ///< Isolated presentation form (Arabic)
+        circle,   ///< Encircled form
+        super,    ///< Superscript form
+        sub,      ///< Subscript form
+        vertical, ///< Vertical layout presentation form
+        wide,     ///< Wide (or zenkaku) compatibility character
+        narrow,   ///< Narrow (or hankaku) compatibility character
+        small,    ///< Small variant form (CNS compatibility)
+        square,   ///< CJK squared font variant
+        fraction, ///< Vulgar fraction form
+        compat    ///< Otherwise unspecified compatibility character
+    };
+
     /// @brief A Unicode character type representing a single [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value).
     ///
     /// @headerfile "" <uni-cpp/uchar.hpp>
@@ -288,6 +332,11 @@ namespace upp
         using to_uppercase_t = impl::to_case<impl::to_case_enum::upper>;
         /// A sized range of `uchar`s returned by the `to_titlecase` method. See its documentation for more.
         using to_titlecase_t = impl::to_case<impl::to_case_enum::title>;
+
+        /// A sized range of `uchar`s returned by the `full_decomposition` method. See its documentation for more.
+        using full_decomposition_t = impl::decomposition_t<impl::unicode_data::decomposition::decomposition_kind::canonical>;
+        /// A sized range of `uchar`s returned by the `full_compatibility_decomposition` method. See its documentation for more.
+        using full_compatibility_decomposition_t = impl::decomposition_t<impl::unicode_data::decomposition::decomposition_kind::compatibility>;
 
     public:
         /// @brief Default constructor. Initializes the value to the Null character (`U+0000`).
@@ -585,6 +634,71 @@ namespace upp
         [[nodiscard]] constexpr to_titlecase_t to_titlecase() const noexcept
         {
             return to_case_impl<to_titlecase_t, impl::unicode_data::case_mapping::case_mapping_type::titlecase>();
+        }
+
+        /// @brief The [full canonical decomposition](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G7425) of this `uchar`.
+        ///
+        /// @return A `std::ranges::contiguous_range` of `uchar`s representing the full canonical decomposition of this `uchar`.
+        ///
+        /// If this `uchar` does not have a defined canonical decomposition, it maps to itself.
+        ///
+        /// @par Example
+        ///
+        /// U+00E0 LATIN SMALL LETTER A WITH GRAVE has a canonical decomposition to the sequence
+        /// <U+0061 LATIN SMALL LETTER A, U+0300 COMBINING GRAVE ACCENT>.
+        ///
+        /// @see full_compatibility_decomposition, decomposition_type
+        ///
+        [[nodiscard]] constexpr full_decomposition_t full_decomposition() const noexcept
+        {
+            static constexpr auto kind = impl::unicode_data::decomposition::decomposition_kind::canonical;
+
+            return full_decomposition_t{impl::unicode_data::decomposition::lookup_decomposition<kind>(m_value)};
+        }
+
+        /// @brief The [full compatibility decomposition](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G749) of this `uchar`.
+        ///
+        /// @return A `std::ranges::contiguous_range` of `uchar`s representing the full compatibility decomposition of this `uchar`.
+        ///
+        /// If this `uchar` does not have a defined compatibility decomposition, it maps to itself.
+        ///
+        /// @par Example
+        ///
+        /// U+00B5 MICRO SIGN has a compatibility decomposition to U+03BC GREEK SMALL LETTER MU.
+        ///
+        /// U+03D3 GREEK UPSILON WITH ACUTE AND HOOK SYMBOL canonically decomposes to the sequence
+        /// <U+03D2 GREEK UPSILON WITH HOOK SYMBOL, U+0301 COMBINING ACUTE ACCENT>. That sequence has a compatibility decomposition of
+        /// <U+03A5 GREEK CAPITAL LETTER UPSILON, U+0301 COMBINING ACUTE ACCENT>. Thus, the full compatibility decomposition of
+        /// U+03D3 GREEK UPSILON WITH ACUTE AND HOOK SYMBOL is the sequence <U+03A5 GREEK CAPITAL LETTER UPSILON, U+0301 COMBINING ACUTE ACCENT>.
+        ///
+        /// @see full_decomposition, decomposition_type
+        ///
+        [[nodiscard]] constexpr full_compatibility_decomposition_t full_compatibility_decomposition() const noexcept
+        {
+            static constexpr auto kind = impl::unicode_data::decomposition::decomposition_kind::compatibility;
+
+            return full_compatibility_decomposition_t{impl::unicode_data::decomposition::lookup_decomposition<kind>(m_value)};
+        }
+
+        /// @brief Returns the decomposition type of this code point, if one exists.
+        ///
+        /// Code points with a compatibility decomposition mapping have an associated decomposition type.
+        /// The decomposition type generally indicates the formatting information removed by the compatibility decomposition.
+        /// Code points with a canonical decomposition mapping have no decomposition type.
+        ///
+        /// @return For code points with a compatibility decomposition mapping, the associated decomposition type;
+        ///         for code points with a canonical decomposition mapping, or no defined decomposition mapping, `std::nullopt`.
+        ///
+        /// @see upp::decomposition_type, full_decomposition, full_compatibility_decomposition
+        ///
+        [[nodiscard]] constexpr std::optional<upp::decomposition_type> decomposition_type() const noexcept
+        {
+            const std::uint8_t type = impl::unicode_data::decomposition::lookup_decomposition_type(m_value);
+
+            if (type == 0)
+                return {};
+
+            return {static_cast<upp::decomposition_type>(type)};
         }
 
     private:

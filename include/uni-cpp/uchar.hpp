@@ -24,6 +24,7 @@
 
 #include "impl/unicode_data/case_mapping.hpp"
 #include "impl/unicode_data/decomposition.hpp"
+#include "impl/unicode_data/data/canonical_combining_class.hpp"
 #include "impl/encoding/ascii.hpp"
 #include "impl/encoding/utf32.hpp"
 #include "impl/inplace_vector.hpp"
@@ -743,6 +744,13 @@ namespace upp
                 return {};
 
             return {static_cast<upp::decomposition_type>(type)};
+        }
+
+        /// @brief Returns the [canonical combining class](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G32493) of this code point.
+        ///
+        [[nodiscard]] constexpr std::uint8_t canonical_combining_class() const noexcept
+        {
+            return impl::unicode_data::canonical_combining_class::impl::lookup(m_value);
         }
 
     private:

@@ -24,6 +24,7 @@
 
 #include "impl/unicode_data/case_mapping.hpp"
 #include "impl/unicode_data/decomposition.hpp"
+#include "impl/unicode_data/composition.hpp"
 #include "impl/unicode_data/data/canonical_combining_class.hpp"
 #include "impl/encoding/ascii.hpp"
 #include "impl/encoding/utf32.hpp"
@@ -438,6 +439,16 @@ namespace upp
         /// Commonly used to represent invalid or unrecognized characters, such as those resulting from decoding errors.
         ///
         [[nodiscard]] static constexpr uchar replacement_character() noexcept { return uchar{std::uint32_t{0xFFFD}}; }
+
+        /// @brief Returns the composition of two code points, if one exists.
+        ///
+        /// @param code_point1 The starter code point.
+        /// @param code_point2 The code point to compose with the starter.
+        ///
+        [[nodiscard]] static constexpr std::optional<uchar> composition(uchar code_point1, uchar code_point2) noexcept
+        {
+            return impl::unicode_data::composition_mapping::composition<upp::uchar>(code_point1.value(), code_point2.value());
+        }
 
         /// @brief Compares two `uchar` values for equality.
         ///

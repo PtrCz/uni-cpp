@@ -77,7 +77,7 @@ namespace upp
         ///
         /// This serves as the base class for:
         /// - `encode_utf8_t`, `encode_utf16_t`,
-        /// - `to_lowercase_t`, `to_uppercase_t`, `to_titlecase_t`,
+        /// - `to_lowercase_t`, `to_uppercase_t`, `to_titlecase_t`, `to_casefold_t`,
         /// - `full_decomposition_t` and `full_compatibility_decomposition_t`.
         ///
         /// @tparam T Type of the elements stored in the buffer.
@@ -141,10 +141,11 @@ namespace upp
         {
             lower,
             upper,
-            title
+            title,
+            fold
         };
 
-        /// @tparam Case Used to make `to_lowercase_t`, `to_uppercase_t` and `to_titlecase_t` distinct types.
+        /// @tparam Case Used to make `to_lowercase_t`, `to_uppercase_t`, `to_titlecase_t` and `to_casefold_t` distinct types.
         /// @tparam T Always `uchar`; only a template parameter due to forward declaration constraints.
         ///
         template<to_case_enum Case, typename T = uchar>
@@ -332,6 +333,8 @@ namespace upp
         using to_uppercase_t = impl::to_case<impl::to_case_enum::upper>;
         /// A sized range of `uchar`s returned by the `to_titlecase` method. See its documentation for more.
         using to_titlecase_t = impl::to_case<impl::to_case_enum::title>;
+        /// A sized range of `uchar`s returned by the `to_casefold` method. See its documentation for more.
+        using to_casefold_t = impl::to_case<impl::to_case_enum::fold>;
 
         /// A sized range of `uchar`s returned by the `full_decomposition` method. See its documentation for more.
         using full_decomposition_t = impl::decomposition_t<impl::unicode_data::decomposition::decomposition_kind::canonical>;
@@ -582,58 +585,99 @@ namespace upp
             }
         }
 
-        /// @brief Returns a sequence of `uchar`s that are the lowercase mapping of this `uchar`.
+        /// @brief Returns the lowercase mapping of this `uchar`.
         ///
-        /// If this `uchar` does not have a lowercase mapping, it maps to itself.
+        /// Most lowercase mappings consist of a single `uchar`, but some consist of multiple.
+        /// For example, U+0130 LATIN CAPITAL LETTER I WITH DOT ABOVE has a lowercase
+        /// mapping to the sequence <U+0069 LATIN SMALL LETTER I, U+0307 COMBINING DOT ABOVE>.
+        /// If this `uchar` does not have a lowercase mapping, the result is the `uchar` itself.
         ///
         /// This conversion is performed without tailoring; it is independent of context and language.
         ///
         /// See [Unicode Standard Chapter 4.2 (Case)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124722)
         /// and [Unicode Standard Chapter 3.13 (Default Case Algorithms)](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G33992).
         ///
-        /// @return A sized range of `uchar`s that are the lowercase mapping.
-        /// @see to_uppercase, to_titlecase
+        /// @note If you want to perform case-insensitive matching of characters, use `to_casefold` instead. It is specifically designed
+        ///       for that purpose and it slightly differs in its mappings. See `to_casefold` documentation.
+        ///
+        /// @return A range of `uchar`s.
+        /// @see to_uppercase, to_casefold, to_titlecase
         ///
         [[nodiscard]] constexpr to_lowercase_t to_lowercase() const noexcept
         {
             return to_case_impl<to_lowercase_t, impl::unicode_data::case_mapping::case_mapping_type::lowercase>();
         }
 
-        /// @brief Returns a sequence of `uchar`s that are the uppercase mapping of this `uchar`.
+        /// @brief Returns the uppercase mapping of this `uchar`.
         ///
-        /// If this `uchar` does not have an uppercase mapping, it maps to itself.
+        /// Most uppercase mappings consist of a single `uchar`, but some consist of multiple.
+        /// For example, U+00DF LATIN SMALL LETTER SHARP S has an uppercase
+        /// mapping to the sequence <U+0053 LATIN CAPITAL LETTER S, U+0053 LATIN CAPITAL LETTER S>.
+        /// If this `uchar` does not have an uppercase mapping, the result is the `uchar` itself.
         ///
         /// This conversion is performed without tailoring; it is independent of context and language.
         ///
         /// See [Unicode Standard Chapter 4.2 (Case)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124722)
         /// and [Unicode Standard Chapter 3.13 (Default Case Algorithms)](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G33992).
         ///
-        /// @return A sized range of `uchar`s that are the uppercase mapping.
-        /// @see to_lowercase, to_titlecase
+        /// @note If you want to perform case-insensitive matching of characters, use `to_casefold` instead. It is specifically designed
+        ///       for that purpose. See `to_casefold` documentation.
+        ///
+        /// @return A range of `uchar`s.
+        /// @see to_lowercase, to_titlecase, to_casefold
         ///
         [[nodiscard]] constexpr to_uppercase_t to_uppercase() const noexcept
         {
             return to_case_impl<to_uppercase_t, impl::unicode_data::case_mapping::case_mapping_type::uppercase>();
         }
 
-        /// @brief Returns a sequence of `uchar`s that are the titlecase mapping of this `uchar`.
+        /// @brief Returns the titlecase mapping of this `uchar`.
         ///
-        /// If this `uchar` does not have a titlecase mapping, it maps to itself.
+        /// Most titlecase mappings consist of a single `uchar`, but some consist of multiple.
+        /// For example, U+00DF LATIN SMALL LETTER SHARP S has a titlecase
+        /// mapping to the sequence <U+0053 LATIN CAPITAL LETTER S, U+0073 LATIN SMALL LETTER S>.
+        /// If this `uchar` does not have a titlecase mapping, the result is the `uchar` itself.
         ///
         /// This conversion is performed without tailoring; it is independent of context and language.
         ///
         /// See [Unicode Standard Chapter 4.2 (Case)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124722)
         /// and [Unicode Standard Chapter 3.13 (Default Case Algorithms)](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G33992).
         ///
-        /// @note Titlecase in Unicode is **NOT** the same as uppercase.
+        /// @note Titlecase in Unicode is **not** the same as uppercase.
+        ///       For example, `ß` has an uppercase mapping to `SS`, but a titlecase mapping to `Ss`.
         ///       See [Unicode Standard Chapter 4.2 (Case)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124722).
         ///
-        /// @return A sized range of `uchar`s that are the titlecase mapping.
-        /// @see to_lowercase, to_uppercase
+        /// @return A range of `uchar`s.
+        /// @see to_uppercase, to_lowercase, to_casefold
         ///
         [[nodiscard]] constexpr to_titlecase_t to_titlecase() const noexcept
         {
             return to_case_impl<to_titlecase_t, impl::unicode_data::case_mapping::case_mapping_type::titlecase>();
+        }
+
+        /// @brief Returns the casefold mapping of this `uchar`.
+        ///
+        /// Most casefold mappings consist of a single `uchar`, but some consist of multiple.
+        /// For example, U+00DF LATIN SMALL LETTER SHARP S has a casefold
+        /// mapping to the sequence <U+0073 LATIN SMALL LETTER S, U+0073 LATIN SMALL LETTER S>.
+        /// If this `uchar` does not have a casefold mapping, the result is the `uchar` itself.
+        ///
+        /// This conversion is performed without tailoring; it is independent of context and language.
+        /// See [Unicode 3.13.3 Default Case Folding](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G53253).
+        ///
+        /// @note Case folding in Unicode is **not** the same as applying lowercase. Case folding is a mapping
+        ///       intended for case-insensitive matching of characters and sequences. For example, the `ß` character
+        ///       has a lowercase mapping to `ß` (itself), but its case folding is `ss`. That's because `ß` has an uppercase
+        ///       mapping to `SS`, which when case folded becomes `ss`, matching the case folding of `ß`.
+        ///       See [Unicode 3.13.3 Default Case Folding](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G53253)
+        ///       and [Unicode 5.18.4 Caseless Matching](https://www.unicode.org/versions/latest/core-spec/chapter-5/#G21790).
+        ///
+        /// @return A range of `uchar`s.
+        /// @see to_lowercase, to_uppercase, to_titlecase
+        ///
+        [[nodiscard]] constexpr to_casefold_t to_casefold() const noexcept
+        {
+            return to_case_impl<to_casefold_t, impl::unicode_data::case_mapping::case_mapping_type::casefold>();
         }
 
         /// @brief The [full canonical decomposition](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G7425) of this `uchar`.

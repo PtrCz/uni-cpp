@@ -26,6 +26,7 @@
 #include "impl/unicode_data/decomposition.hpp"
 #include "impl/unicode_data/composition.hpp"
 #include "impl/unicode_data/data/canonical_combining_class.hpp"
+#include "impl/unicode_data/data/general_category.hpp"
 #include "impl/encoding/ascii.hpp"
 #include "impl/encoding/utf32.hpp"
 #include "impl/inplace_vector.hpp"
@@ -315,6 +316,83 @@ namespace upp
         square,   ///< CJK squared font variant
         fraction, ///< Vulgar fraction form
         compat    ///< Otherwise unspecified compatibility character
+    };
+
+    /// @brief The general category of a code point.
+    ///
+    /// Each Unicode code point is assigned a normative `General_Category` value.
+    /// The `General_Category` value for a character serves as a basic classification of that character, based on its primary usage.
+    /// Many characters have multiple uses, and not all such uses can be captured by a single, simple partition property such as `General_Category`.
+    /// Thus, many letters often serve dual functions as numerals in traditional numeral systems. Examples can be found in the Roman numeral system,
+    /// in Greek usage of letters as numbers, in Hebrew, and similarly for many scripts. In such cases the `General_Category` is assigned based on
+    /// the primary letter usage of the character, even though it may also have numeric values, occur in numeric expressions,
+    /// or be used symbolically in mathematical expressions, and so on.
+    ///
+    /// See [The Unicode Standard, Chapter 4.5 (General Category)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124142).
+    ///
+    enum class general_category : std::uint8_t
+    {
+        uppercase_letter,      ///< An uppercase letter
+        lowercase_letter,      ///< A lowercase letter
+        titlecase_letter,      ///< A digraph encoded as a single character, with first part uppercase
+        modifier_letter,       ///< A modifier letter
+        other_letter,          ///< Other letters, including syllables and ideographs
+        nonspacing_mark,       ///< A nonspacing combining mark (zero advance width)
+        spacing_mark,          ///< A spacing combining mark (positive advance width)
+        enclosing_mark,        ///< An enclosing combining mark
+        decimal_number,        ///< A decimal digit
+        letter_number,         ///< A letter-like numeric character
+        other_number,          ///< A numeric character of other type
+        connector_punctuation, ///< A connecting punctuation mark, like a tie
+        dash_punctuation,      ///< A dash or hyphen punctuation mark
+        open_punctuation,      ///< An opening punctuation mark (of a pair)
+        close_punctuation,     ///< A closing punctuation mark (of a pair)
+        initial_punctuation,   ///< An initial quotation mark
+        final_punctuation,     ///< A final quotation mark
+        other_punctuation,     ///< A punctuation mark of other type
+        math_symbol,           ///< A symbol of mathematical use
+        currency_symbol,       ///< A currency sign
+        modifier_symbol,       ///< A non-letter-like modifier symbol
+        other_symbol,          ///< A symbol of other type
+        space_separator,       ///< A space character (of various non-zero widths)
+        line_separator,        ///< U+2028 LINE SEPARATOR only
+        paragraph_separator,   ///< U+2029 PARAGRAPH SEPARATOR only
+        control,               ///< A C0 or C1 control code
+        format,                ///< A format control character
+        surrogate,             ///< A surrogate code point
+        private_use,           ///< A private-use character
+        unassigned,            ///< A reserved unassigned code point or a noncharacter
+
+        lu = uppercase_letter,      ///< Abbreviated alias for `uppercase_letter`
+        ll = lowercase_letter,      ///< Abbreviated alias for `lowercase_letter`
+        lt = titlecase_letter,      ///< Abbreviated alias for `titlecase_letter`
+        lm = modifier_letter,       ///< Abbreviated alias for `modifier_letter`
+        lo = other_letter,          ///< Abbreviated alias for `other_letter`
+        mn = nonspacing_mark,       ///< Abbreviated alias for `nonspacing_mark`
+        mc = spacing_mark,          ///< Abbreviated alias for `spacing_mark`
+        me = enclosing_mark,        ///< Abbreviated alias for `enclosing_mark`
+        nd = decimal_number,        ///< Abbreviated alias for `decimal_number`
+        nl = letter_number,         ///< Abbreviated alias for `letter_number`
+        no = other_number,          ///< Abbreviated alias for `other_number`
+        pc = connector_punctuation, ///< Abbreviated alias for `connector_punctuation`
+        pd = dash_punctuation,      ///< Abbreviated alias for `dash_punctuation`
+        ps = open_punctuation,      ///< Abbreviated alias for `open_punctuation`
+        pe = close_punctuation,     ///< Abbreviated alias for `close_punctuation`
+        pi = initial_punctuation,   ///< Abbreviated alias for `initial_punctuation`
+        pf = final_punctuation,     ///< Abbreviated alias for `final_punctuation`
+        po = other_punctuation,     ///< Abbreviated alias for `other_punctuation`
+        sm = math_symbol,           ///< Abbreviated alias for `math_symbol`
+        sc = currency_symbol,       ///< Abbreviated alias for `currency_symbol`
+        sk = modifier_symbol,       ///< Abbreviated alias for `modifier_symbol`
+        so = other_symbol,          ///< Abbreviated alias for `other_symbol`
+        zs = space_separator,       ///< Abbreviated alias for `space_separator`
+        zl = line_separator,        ///< Abbreviated alias for `line_separator`
+        zp = paragraph_separator,   ///< Abbreviated alias for `paragraph_separator`
+        cc = control,               ///< Abbreviated alias for `control`
+        cf = format,                ///< Abbreviated alias for `format`
+        cs = surrogate,             ///< Abbreviated alias for `surrogate`
+        co = private_use,           ///< Abbreviated alias for `private_use`
+        cn = unassigned,            ///< Abbreviated alias for `unassigned`
     };
 
     /// @brief A Unicode character type representing a single [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value).
@@ -762,6 +840,25 @@ namespace upp
         [[nodiscard]] constexpr std::uint8_t canonical_combining_class() const noexcept
         {
             return impl::unicode_data::canonical_combining_class::impl::lookup(m_value);
+        }
+
+        /// @brief Returns the [general category](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124142) of this code point.
+        ///
+        /// Each Unicode code point is assigned a normative `General_Category` value.
+        /// The `General_Category` value for a character serves as a basic classification of that character, based on its primary usage.
+        /// Many characters have multiple uses, and not all such uses can be captured by a single, simple partition property such as `General_Category`.
+        /// Thus, many letters often serve dual functions as numerals in traditional numeral systems. Examples can be found in the Roman numeral system,
+        /// in Greek usage of letters as numbers, in Hebrew, and similarly for many scripts. In such cases the `General_Category` is assigned based on
+        /// the primary letter usage of the character, even though it may also have numeric values, occur in numeric expressions,
+        /// or be used symbolically in mathematical expressions, and so on.
+        ///
+        /// See [The Unicode Standard, Chapter 4.5 (General Category)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124142).
+        ///
+        /// @see upp::general_category
+        ///
+        [[nodiscard]] constexpr upp::general_category general_category() const noexcept
+        {
+            return static_cast<upp::general_category>(impl::unicode_data::general_category::impl::lookup(m_value));
         }
 
     private:

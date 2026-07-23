@@ -75,15 +75,17 @@ namespace upp::impl::unicode_data::decomposition
     {
         // See `dev/docs/decomposition_tables.md`
 
-        if (is_precomposed_hangul_syllable(code_point))
-            return hangul_syllable_decomposition<UChar>(code_point);
-
         const std::uint32_t encoded_value = impl::lookup_value_for_decomposition_kind<DecompositionKind>(code_point);
 
         const auto length = static_cast<std::uint8_t>(encoded_value >> 14U);
 
         if (length == 0U)
+        {
+            if (is_precomposed_hangul_syllable(code_point))
+                return hangul_syllable_decomposition<UChar>(code_point);
+
             return inplace_vector<UChar, 18>{UChar::from_unchecked(code_point)};
+        }
 
         const auto offset = encoded_value & 0x3FFFU;
 

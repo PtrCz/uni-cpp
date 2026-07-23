@@ -27,6 +27,7 @@
 #include "impl/unicode_data/composition.hpp"
 #include "impl/unicode_data/data/canonical_combining_class.hpp"
 #include "impl/unicode_data/data/general_category.hpp"
+#include "impl/unicode_data/data/core_properties.hpp"
 #include "impl/encoding/ascii.hpp"
 #include "impl/encoding/utf32.hpp"
 #include "impl/inplace_vector.hpp"
@@ -393,6 +394,22 @@ namespace upp
         cs = surrogate,             ///< Abbreviated alias for `surrogate`
         co = private_use,           ///< Abbreviated alias for `private_use`
         cn = unassigned,            ///< Abbreviated alias for `unassigned`
+    };
+
+    /// @brief The normalization `Quick_Check` property value of a code point.
+    ///
+    /// See [Unicode Standard Annex #15, Detecting Normalization Forms](https://www.unicode.org/reports/tr15/#Detecting_Normalization_Forms).
+    ///
+    enum class quick_check : std::uint8_t
+    {
+        /// Characters that cannot ever occur in the respective normalization form
+        no = impl::unicode_data::core_properties::impl::quick_check_no,
+
+        /// Characters that may occur in the respective normalization form, depending on the context
+        maybe = impl::unicode_data::core_properties::impl::quick_check_maybe,
+
+        /// All other characters. This is the default value for the `Quick_Check` properties
+        yes = impl::unicode_data::core_properties::impl::quick_check_yes,
     };
 
     /// @brief A Unicode character type representing a single [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value).
@@ -861,6 +878,54 @@ namespace upp
             return static_cast<upp::general_category>(impl::unicode_data::general_category::impl::lookup(m_value));
         }
 
+        /// @brief Returns the `NFD_Quick_Check` property value of this code point.
+        ///
+        /// @return Either `upp::quick_check::no` or `upp::quick_check::yes`. `upp::quick_check::maybe` is never returned for this normalization form.
+        ///
+        /// See [Unicode Standard Annex #15, Detecting Normalization Forms](https://www.unicode.org/reports/tr15/#Detecting_Normalization_Forms).
+        ///
+        /// @see upp::quick_check
+        ///
+        [[nodiscard]] constexpr quick_check nfd_quick_check() const noexcept
+        {
+            return static_cast<quick_check>(get_property_value<impl::unicode_data::core_properties::impl::nfd_quick_check_bit, 1uz>());
+        }
+
+        /// @brief Returns the `NFKD_Quick_Check` property value of this code point.
+        ///
+        /// @return Either `upp::quick_check::no` or `upp::quick_check::yes`. `upp::quick_check::maybe` is never returned for this normalization form.
+        ///
+        /// See [Unicode Standard Annex #15, Detecting Normalization Forms](https://www.unicode.org/reports/tr15/#Detecting_Normalization_Forms).
+        ///
+        /// @see upp::quick_check
+        ///
+        [[nodiscard]] constexpr quick_check nfkd_quick_check() const noexcept
+        {
+            return static_cast<quick_check>(get_property_value<impl::unicode_data::core_properties::impl::nfkd_quick_check_bit, 1uz>());
+        }
+
+        /// @brief Returns the `NFC_Quick_Check` property value of this code point.
+        ///
+        /// See [Unicode Standard Annex #15, Detecting Normalization Forms](https://www.unicode.org/reports/tr15/#Detecting_Normalization_Forms).
+        ///
+        /// @see upp::quick_check
+        ///
+        [[nodiscard]] constexpr quick_check nfc_quick_check() const noexcept
+        {
+            return static_cast<quick_check>(get_property_value<impl::unicode_data::core_properties::impl::nfc_quick_check_bit, 2uz>());
+        }
+
+        /// @brief Returns the `NFKC_Quick_Check` property value of this code point.
+        ///
+        /// See [Unicode Standard Annex #15, Detecting Normalization Forms](https://www.unicode.org/reports/tr15/#Detecting_Normalization_Forms).
+        ///
+        /// @see upp::quick_check
+        ///
+        [[nodiscard]] constexpr quick_check nfkc_quick_check() const noexcept
+        {
+            return static_cast<quick_check>(get_property_value<impl::unicode_data::core_properties::impl::nfkc_quick_check_bit, 2uz>());
+        }
+
     private:
         explicit constexpr uchar(std::uint32_t value) noexcept
             : m_value(value)
@@ -871,6 +936,22 @@ namespace upp
         [[nodiscard]] constexpr ResultType to_case_impl() const noexcept
         {
             return ResultType{impl::unicode_data::case_mapping::lookup_case_mapping<MappingType>(m_value)};
+        }
+
+        template<std::size_t BitOffset, std::size_t BitLength>
+        [[nodiscard]] constexpr std::uint8_t get_property_value() const noexcept
+        {
+            const std::uint32_t encoded = impl::unicode_data::core_properties::impl::lookup(m_value);
+
+            static constexpr std::uint32_t mask = (1U << BitLength) - 1;
+
+            return static_cast<std::uint8_t>((encoded >> BitOffset) & mask);
+        }
+
+        template<std::size_t BitOffset>
+        [[nodiscard]] constexpr bool get_boolean_property() const noexcept
+        {
+            return static_cast<bool>(get_property_value<BitOffset, 1uz>());
         }
 
     private:

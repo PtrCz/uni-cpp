@@ -8,7 +8,7 @@ from .interface import Dataset, PrimaryData, EncoderId, ExtraValue, ExtraValues
 from ..ucd.code_point_data import CodePoint, CodePointData
 from ..core.ranges import usv_range
 
-TRISTATE_VALUES: list[Literal['N', 'M', 'Y']] = ['N', 'M', 'Y']
+TRISTATE_VALUES: list[Literal['N', 'M', 'Y']] = ['N', 'Y', 'M']
 
 
 @dataclass

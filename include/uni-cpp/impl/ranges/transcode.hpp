@@ -153,66 +153,6 @@ namespace upp::ranges
 
     namespace impl::transcode_view_impl
     {
-        /// @brief Buffer index value used in non-forward ranges to indicate that the transcoding iterator is at the sentinel.
-        ///
-        /// For non-forward ranges, the underlying iterator being at the sentinel doesn't necessarily mean that the `transcode_view` iterator is.
-        /// That's because, for non-forward ranges, the underlying iterator is **after** the current code units being transcoded.
-        /// If the underlying iterator is at the sentinel, the `transcode_view` could be still transcoding the last sequence of code units, or it could actually be at the sentinel.
-        ///
-        /// This value is used to distinguish between those two cases. It signals that the transcoding iterator is actually at the sentinel.
-        ///
-        inline constexpr std::int8_t buffer_index_at_sentinel = -1;
-
-        template<typename>
-        struct iterator_category_impl
-        {
-        };
-
-        template<typename Range>
-            requires std::ranges::forward_range<Range>
-        struct iterator_category_impl<Range>
-        {
-        private:
-            [[nodiscard]] static consteval auto impl() noexcept
-            {
-                using category = std::iterator_traits<std::ranges::iterator_t<Range>>::iterator_category;
-
-                if constexpr (std::derived_from<category, std::bidirectional_iterator_tag>)
-                {
-                    return std::bidirectional_iterator_tag{};
-                }
-                else if constexpr (std::derived_from<category, std::forward_iterator_tag>)
-                {
-                    return std::forward_iterator_tag{};
-                }
-                else
-                {
-                    return category{};
-                }
-            }
-
-        public:
-            using iterator_category = decltype(impl());
-        };
-
-        template<typename It>
-        struct iterator_guard
-        {
-            constexpr iterator_guard(It&, It&) {}
-        };
-
-        /// @brief RAII guard for iterator rollback of forward iterators.
-        ///
-        template<typename It>
-            requires std::forward_iterator<It>
-        struct iterator_guard<It>
-        {
-            constexpr ~iterator_guard() { current = std::move(original); }
-
-            It& current;
-            It  original;
-        };
-
         struct iterator_type_tag
         {
         };
@@ -428,7 +368,7 @@ namespace upp::ranges
 
     private:
         template<bool Const>
-        class iterator : public impl::transcode_view_impl::iterator_category_impl<View>, private impl::transcode_view_impl::iterator_type_tag
+        class iterator : public impl::input_iterator_category_impl<View>, private impl::transcode_view_impl::iterator_type_tag
         {
         private:
             using parent_t = impl::maybe_const<Const, transcode_view>;
@@ -436,24 +376,8 @@ namespace upp::ranges
 
             using error_type = encoding_traits<SourceEncoding>::error_type;
 
-            [[nodiscard]] static consteval auto iterator_concept_impl() noexcept
-            {
-                if constexpr (std::ranges::bidirectional_range<base_t>)
-                {
-                    return std::bidirectional_iterator_tag{};
-                }
-                else if constexpr (std::ranges::forward_range<base_t>)
-                {
-                    return std::forward_iterator_tag{};
-                }
-                else if constexpr (std::ranges::input_range<base_t>)
-                {
-                    return std::input_iterator_tag{};
-                }
-            }
-
         public:
-            using iterator_concept = decltype(iterator_concept_impl());
+            using iterator_concept = decltype(impl::bidirectional_range_iterator_concept_impl<base_t>());
 
             /// @brief Value type of the iterator.
             ///
@@ -462,7 +386,6 @@ namespace upp::ranges
             /// - `ToType` otherwise.
             ///
             using value_type      = std::conditional_t<Kind == transcode_view_kind::expected, std::expected<ToType, error_type>, ToType>;
-            using reference_type  = value_type;
             using difference_type = std::ptrdiff_t;
 
         public:
@@ -595,7 +518,7 @@ namespace upp::ranges
                 {
                     if constexpr (!std::ranges::forward_range<base_t>)
                     {
-                        m_buffer_index = impl::transcode_view_impl::buffer_index_at_sentinel;
+                        m_buffer_index = impl::buffer_index_at_sentinel;
                     }
                 }
             }
@@ -643,7 +566,7 @@ namespace upp::ranges
             constexpr void advance_code_point()
             {
                 if constexpr (std::ranges::forward_range<base_t>)
-                    std::advance(m_current, m_to_increment);
+                    std::ranges::advance(m_current, m_to_increment);
 
                 if (m_current != end())
                 {
@@ -654,7 +577,7 @@ namespace upp::ranges
                     if constexpr (std::ranges::forward_range<base_t>)
                         m_buffer_index = 0;
                     else
-                        m_buffer_index = impl::transcode_view_impl::buffer_index_at_sentinel;
+                        m_buffer_index = impl::buffer_index_at_sentinel;
                 }
             }
 
@@ -911,7 +834,7 @@ namespace upp::ranges
                 m_success.emplace();
 
                 read_result result{[&] {
-                    impl::transcode_view_impl::iterator_guard<std::ranges::iterator_t<base_t>> guard{m_current, m_current};
+                    impl::iterator_guard<std::ranges::iterator_t<base_t>> guard{m_current, m_current};
 
                     if constexpr (SourceEncoding == encoding::ascii)
                     {
@@ -1233,7 +1156,7 @@ namespace upp::ranges
                 }
                 else
                 {
-                    return x.m_current == y.m_end && x.m_buffer_index == impl::transcode_view_impl::buffer_index_at_sentinel;
+                    return x.m_current == y.m_end && x.m_buffer_index == impl::buffer_index_at_sentinel;
                 }
             }
 

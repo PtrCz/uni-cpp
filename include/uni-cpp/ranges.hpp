@@ -12,5 +12,6 @@
 #include "impl/ranges/valid_code_unit_range.hpp"
 #include "impl/ranges/cast_code_units_to.hpp"
 #include "impl/ranges/transcode.hpp"
+#include "impl/ranges/normalize.hpp"
 
 #endif // UNI_CPP_RANGES_HPP

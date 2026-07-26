@@ -6,6 +6,7 @@
 /// @brief Ranges library base and internal macros.
 ///
 
+#include "../../uchar.hpp"
 #include "../../encoding.hpp"
 
 #include <cstddef>
@@ -64,6 +65,14 @@ namespace upp::ranges
     template<typename Range>
     concept code_unit_range = std::ranges::input_range<Range> && code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>;
 
+    /// @brief Identifies types that are input ranges of code points (or more precisely, @ref upp::uchar "uchars").
+    ///
+    /// @headerfile "" <uni-cpp/ranges.hpp>
+    ///
+    template<typename Range>
+    concept code_point_range =
+        std::ranges::input_range<Range> && std::same_as<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::uchar>;
+
     namespace impl
     {
         template<bool Const, typename T>
@@ -71,6 +80,63 @@ namespace upp::ranges
 
         template<typename Range>
         concept range_supports_empty = std::ranges::range<Range> && requires(Range& rg) { std::ranges::empty(rg); };
+
+        template<typename It>
+        struct iterator_guard
+        {
+            constexpr iterator_guard(It&, It&) noexcept {}
+        };
+
+        /// @brief RAII guard for iterator rollback of forward iterators.
+        ///
+        template<typename It>
+            requires std::forward_iterator<It>
+        struct iterator_guard<It>
+        {
+            constexpr ~iterator_guard() { current = std::move(original); }
+
+            It& current;
+            It  original;
+        };
+
+        /// @brief Buffer index value used in non-forward range adaptors to indicate that the transformation iterator is at the sentinel.
+        ///
+        /// For non-forward ranges, the underlying iterator being at the sentinel doesn't necessarily mean that the transformation iterator is.
+        /// That's because, for non-forward ranges, the underlying iterator is **after** the current elements being transformed.
+        /// If the underlying iterator is at the sentinel, the transforming view could be still transforming the last sequence of elements, or it could actually be at the sentinel.
+        ///
+        /// This value is used to distinguish between those two cases. It signals that the transformation iterator is actually at the sentinel.
+        ///
+        inline constexpr std::int8_t buffer_index_at_sentinel = -1;
+
+        template<typename>
+        struct input_iterator_category_impl
+        {
+        };
+
+        template<typename Range>
+            requires std::ranges::forward_range<Range>
+        struct input_iterator_category_impl<Range>
+        {
+            using iterator_category = std::input_iterator_tag;
+        };
+
+        template<typename Base>
+        [[nodiscard]] consteval auto bidirectional_range_iterator_concept_impl() noexcept
+        {
+            if constexpr (std::ranges::bidirectional_range<Base>)
+            {
+                return std::bidirectional_iterator_tag{};
+            }
+            else if constexpr (std::ranges::forward_range<Base>)
+            {
+                return std::forward_iterator_tag{};
+            }
+            else if constexpr (std::ranges::input_range<Base>)
+            {
+                return std::input_iterator_tag{};
+            }
+        }
     } // namespace impl
 } // namespace upp::ranges
 

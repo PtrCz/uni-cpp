@@ -25,13 +25,13 @@ namespace upp::ranges
 {
     namespace impl::norm
     {
-        enum class decompose_view_kind : std::uint8_t
+        enum class decomposition_kind : std::uint8_t
         {
             canonical,
             compatibility
         };
 
-        template<std::ranges::view View, decompose_view_kind Kind>
+        template<std::ranges::view View, decomposition_kind Kind>
             requires code_point_range<View>
         class decompose_view : public UNI_CPP_IMPL_VIEW_INTERFACE(decompose_view<View, Kind>)
         {
@@ -216,12 +216,12 @@ namespace upp::ranges
 
                 [[nodiscard]] static constexpr auto decomposition_of(uchar code_point) noexcept
                 {
-                    if constexpr (Kind == decompose_view_kind::canonical)
+                    if constexpr (Kind == decomposition_kind::canonical)
                     {
                         return upp::impl::unicode_data::decomposition::lookup_decomposition<
                             upp::impl::unicode_data::decomposition::decomposition_kind::canonical>(code_point.value());
                     }
-                    else if constexpr (Kind == decompose_view_kind::compatibility)
+                    else if constexpr (Kind == decomposition_kind::compatibility)
                     {
                         return upp::impl::unicode_data::decomposition::lookup_decomposition<
                             upp::impl::unicode_data::decomposition::decomposition_kind::compatibility>(code_point.value());
@@ -257,7 +257,7 @@ namespace upp::ranges
                 upp::impl::inplace_vector<uchar, 18> m_buffer{};
                 std::uint8_t                         m_buffer_index = 0;
 
-                template<std::ranges::view View2, decompose_view_kind Kind2>
+                template<std::ranges::view View2, decomposition_kind Kind2>
                     requires code_point_range<View2>
                 friend class decompose_view;
             };
@@ -299,7 +299,7 @@ namespace upp::ranges
                 {
                 }
 
-                template<std::ranges::view View2, decompose_view_kind Kind2>
+                template<std::ranges::view View2, decomposition_kind Kind2>
                     requires code_point_range<View2>
                 friend class decompose_view;
             };
@@ -308,7 +308,7 @@ namespace upp::ranges
             View m_base = View();
         };
 
-        template<typename Range, decompose_view_kind Kind>
+        template<typename Range, decomposition_kind Kind>
         decompose_view(Range&&, nontype_t<Kind>) -> decompose_view<std::views::all_t<Range>, Kind>;
 
         using signed_size_t = decltype(0z);
@@ -748,9 +748,9 @@ namespace upp::ranges
             View m_base = View();
         };
 
-        template<std::ranges::view View>
+        template<std::ranges::view View, decomposition_kind Kind>
             requires code_point_range<View>
-        class canonically_compose_view : public UNI_CPP_IMPL_VIEW_INTERFACE(canonically_compose_view<View>)
+        class to_nfc_view : public UNI_CPP_IMPL_VIEW_INTERFACE(to_nfc_view<View, Kind>)
         {
         private:
             template<bool>
@@ -760,11 +760,18 @@ namespace upp::ranges
             class sentinel;
 
         public:
-            canonically_compose_view()
+            to_nfc_view()
                 requires std::default_initializable<View>
             = default;
 
-            constexpr explicit canonically_compose_view(View base)
+            constexpr explicit to_nfc_view(View base)
+                : m_base(std::move(base))
+            {
+            }
+
+            /// Tagged constructor for CTAD.
+            ///
+            constexpr to_nfc_view(View base, nontype_t<Kind>)
                 : m_base(std::move(base))
             {
             }
@@ -838,7 +845,7 @@ namespace upp::ranges
             class iterator : public impl::input_iterator_category_impl<View>
             {
             private:
-                using parent_t = impl::maybe_const<Const, canonically_compose_view>;
+                using parent_t = impl::maybe_const<Const, to_nfc_view>;
                 using base_t   = impl::maybe_const<Const, View>;
 
             public:
@@ -954,12 +961,142 @@ namespace upp::ranges
                     }
                 }
 
-                /// @pre The expression `m_buffer[0].canonical_combining_class() == 0` does not invoke UB and evaluates to `true`.
+                [[nodiscard]] static constexpr auto decomposition_of(uchar code_point) noexcept
+                {
+                    if constexpr (Kind == decomposition_kind::canonical)
+                    {
+                        return upp::impl::unicode_data::decomposition::lookup_decomposition<
+                            upp::impl::unicode_data::decomposition::decomposition_kind::canonical>(code_point.value());
+                    }
+                    else if constexpr (Kind == decomposition_kind::compatibility)
+                    {
+                        return upp::impl::unicode_data::decomposition::lookup_decomposition<
+                            upp::impl::unicode_data::decomposition::decomposition_kind::compatibility>(code_point.value());
+                    }
+                    else
+                        static_assert(false);
+                }
+
+                [[nodiscard]] static constexpr quick_check qc(uchar code_point) noexcept
+                {
+                    if constexpr (Kind == decomposition_kind::canonical)
+                    {
+                        return code_point.nfc_quick_check();
+                    }
+                    else if constexpr (Kind == decomposition_kind::compatibility)
+                    {
+                        return code_point.nfkc_quick_check();
+                    }
+                    else
+                        static_assert(false);
+                }
+
+                constexpr void fully_decompose_the_buffer()
+                {
+                    using buffer_t = decltype(m_buffer);
+
+                    buffer_t new_buffer;
+
+                    // Note: this `reserve` call almost never actually allocates.
+                    // It only does so in the extremely rare case of m_buffer being larger than its in-place buffer.
+                    new_buffer.reserve(m_buffer.size());
+
+                    for (const uchar code_point : m_buffer)
+                    {
+                        const auto decomposition = decomposition_of(code_point);
+
+                        new_buffer.append(decomposition.begin(), decomposition.end());
+                    }
+
+                    m_buffer = std::move(new_buffer);
+                }
+
+                constexpr void canonically_order_the_buffer()
+                {
+                    // Unlike in canonically_order_view, the buffer may contain starters here.
+
+                    for (std::size_t i = 0uz; i < m_buffer.size();)
+                    {
+                        const std::uint8_t first_ccc = m_buffer[i].canonical_combining_class();
+
+                        if (first_ccc == 0)
+                        {
+                            ++i;
+                            continue;
+                        }
+
+                        // Beginning of a non-starter run
+
+                        const std::size_t beginning = i++;
+
+                        bool is_canonically_ordered = true;
+
+                        for (std::uint8_t prev_ccc = first_ccc; i < m_buffer.size(); ++i)
+                        {
+                            const std::uint8_t ccc = m_buffer[i].canonical_combining_class();
+
+                            if (ccc == 0)
+                                break;
+
+                            if (is_canonically_ordered)
+                                is_canonically_ordered = prev_ccc <= ccc;
+
+                            prev_ccc = ccc;
+                        }
+
+                        if (!is_canonically_ordered)
+                        {
+                            // Stable insertion sort of non-starters
+
+                            for (std::size_t j = beginning + 1uz; j < i; ++j)
+                            {
+                                const uchar        code_point  = m_buffer[j];
+                                const std::uint8_t current_ccc = code_point.canonical_combining_class();
+
+                                std::size_t k = j;
+
+                                while (k > beginning)
+                                {
+                                    const std::uint8_t prev_ccc = m_buffer[k - 1].canonical_combining_class();
+
+                                    if (prev_ccc <= current_ccc)
+                                        break;
+
+                                    m_buffer[k] = m_buffer[k - 1];
+                                    --k;
+                                }
+
+                                m_buffer[k] = code_point;
+                            }
+                        }
+                    }
+                }
+
+                /// @pre `m_buffer` cannot be empty.
                 ///
                 constexpr void canonically_compose_the_buffer()
                 {
-                    auto last_starter_it = m_buffer.begin();
-                    auto it              = m_buffer.begin() + 1;
+                    // Note: Since this function is called after decomposition, there may not be any starters in the buffer.
+                    // For example, if the buffer initially contained the U+0F73 starter, after full decomposition it contains [U+0F71, U+0F72],
+                    // both of which, are not starters. All we know is that the buffer cannot be empty.
+
+                    auto it = m_buffer.begin();
+
+                    while (true)
+                    {
+                        if (it->canonical_combining_class() == 0)
+                            break;
+
+                        ++it;
+
+                        if (it == m_buffer.end())
+                        {
+                            // If no starter was found, there is nothing to compose.
+                            return;
+                        }
+                    }
+
+                    auto last_starter_it = it++;
 
                     std::uint8_t prev_ccc = 0;
 
@@ -1056,6 +1193,11 @@ namespace upp::ranges
                         if constexpr (std::ranges::forward_range<base_t>)
                             m_advance_to = std::move(it);
 
+                        fully_decompose_the_buffer();
+                        canonically_order_the_buffer();
+
+                        // Non-starters never compose, skip the composition step.
+
                         return;
                     }
 
@@ -1063,16 +1205,29 @@ namespace upp::ranges
                     {
                         const uchar code_point = *it;
 
-                        if (code_point.canonical_combining_class() == 0 && code_point.nfc_quick_check() == quick_check::yes)
+                        if (code_point.canonical_combining_class() == 0 && qc(code_point) == quick_check::yes)
                             break;
 
                         m_buffer.emplace_back(code_point);
                     }
 
-                    canonically_compose_the_buffer();
-
                     if constexpr (std::ranges::forward_range<base_t>)
                         m_advance_to = std::move(it);
+
+                    if (m_buffer.size() == 1uz && qc(first) == quick_check::yes)
+                    {
+                        // The buffer only has a single starter with qc == yes,
+                        // and the next code point is also a starter with qc == yes,
+                        // or there is no next code point (end of range).
+                        // This is the most trivial case. Don't do anything.
+                        return;
+                    }
+
+                    // The non-trivial case. Can't skip anything.
+
+                    fully_decompose_the_buffer();
+                    canonically_order_the_buffer();
+                    canonically_compose_the_buffer();
                 }
 
                 /// @brief Advances the underlying iterator the necessary amount and updates the buffer.
@@ -1113,9 +1268,24 @@ namespace upp::ranges
 
                         if (code_point.canonical_combining_class() == 0)
                         {
-                            if (code_point.nfc_quick_check() == quick_check::yes)
+                            if (qc(code_point) == quick_check::yes)
                             {
+                                if (m_buffer.size() == 1uz)
+                                {
+                                    // The buffer only has a single starter with qc == yes,
+                                    // and the next code point (going forward) is also a starter with qc == yes,
+                                    // or there is no next code point (end of range).
+                                    // This is the most trivial case. Don't do anything.
+
+                                    m_buffer_index = 0z;
+                                    return;
+                                }
+
+                                // The non-trivial case. Can't skip anything.
+
                                 reverse_buffer();
+                                fully_decompose_the_buffer();
+                                canonically_order_the_buffer();
                                 canonically_compose_the_buffer();
 
                                 m_buffer_index = m_buffer.size() - 1uz;
@@ -1140,6 +1310,8 @@ namespace upp::ranges
                         m_buffer.resize(m_buffer.size() - code_points_since_last_starter);
 
                         reverse_buffer();
+                        fully_decompose_the_buffer();
+                        canonically_order_the_buffer();
                         canonically_compose_the_buffer();
 
                         m_buffer_index = m_buffer.size() - 1uz;
@@ -1149,6 +1321,9 @@ namespace upp::ranges
                         // No starter found. There is no need to canonically compose the buffer.
 
                         reverse_buffer();
+                        fully_decompose_the_buffer();
+                        canonically_order_the_buffer();
+
                         m_buffer_index = m_buffer.size() - 1uz;
                     }
                 }
@@ -1157,7 +1332,7 @@ namespace upp::ranges
                 std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
                 parent_t*                       m_parent  = nullptr;
 
-                upp::impl::small_vector<uchar, 32u> m_buffer{};
+                upp::impl::small_vector<uchar, 64u> m_buffer{};
                 signed_size_t                       m_buffer_index = 0z;
 
                 std::optional<std::ranges::iterator_t<base_t>> m_advance_to;
@@ -1166,16 +1341,16 @@ namespace upp::ranges
                 // NOLINTNEXTLINE(bugprone-signed-char-misuse)
                 static constexpr signed_size_t s_buffer_index_at_sentinel = static_cast<signed_size_t>(impl::buffer_index_at_sentinel);
 
-                template<std::ranges::view View2>
+                template<std::ranges::view View2, decomposition_kind Kind2>
                     requires code_point_range<View2>
-                friend class canonically_compose_view;
+                friend class to_nfc_view;
             };
 
             template<bool Const>
             class sentinel
             {
             private:
-                using parent_t = impl::maybe_const<Const, canonically_compose_view>;
+                using parent_t = impl::maybe_const<Const, to_nfc_view>;
                 using base_t   = impl::maybe_const<Const, View>;
 
                 // NOLINTNEXTLINE(bugprone-signed-char-misuse)
@@ -1218,16 +1393,19 @@ namespace upp::ranges
                 {
                 }
 
-                template<std::ranges::view View2>
+                template<std::ranges::view View2, decomposition_kind Kind2>
                     requires code_point_range<View2>
-                friend class canonically_compose_view;
+                friend class to_nfc_view;
             };
 
         private:
             View m_base = View();
         };
 
-        template<typename View, decompose_view_kind Kind>
+        template<typename Range, decomposition_kind Kind>
+        to_nfc_view(Range&&, nontype_t<Kind>) -> to_nfc_view<std::views::all_t<Range>, Kind>;
+
+        template<typename View, decomposition_kind Kind>
         struct decomposing_normalization_traits
         {
         private:
@@ -1253,11 +1431,11 @@ namespace upp::ranges
             [[nodiscard]] static constexpr auto sentinel_base_projection(const const_sent_t& sent) { return sent.base().base(); }
         };
 
-        template<typename View, decompose_view_kind Kind>
+        template<typename View, decomposition_kind Kind>
         struct composing_normalization_traits
         {
         private:
-            using view_t = canonically_compose_view<canonically_order_view<decompose_view<View, Kind>>>;
+            using view_t = to_nfc_view<View, Kind>;
 
             using iter_t       = std::ranges::iterator_t<view_t&>;
             using const_iter_t = std::ranges::iterator_t<const view_t&>;
@@ -1266,30 +1444,30 @@ namespace upp::ranges
             using const_sent_t = std::ranges::sentinel_t<const view_t&>;
 
         public:
-            [[nodiscard]] static constexpr auto base_projection(const view_t& view) { return view.base().base().base(); }
-            [[nodiscard]] static constexpr auto base_projection(view_t&& view) { return std::move(view).base().base().base(); }
+            [[nodiscard]] static constexpr auto base_projection(const view_t& view) { return view.base(); }
+            [[nodiscard]] static constexpr auto base_projection(view_t&& view) { return std::move(view).base(); }
 
-            [[nodiscard]] static constexpr const auto& iterator_base_projection(const iter_t& it) { return it.base().base().base(); }
-            [[nodiscard]] static constexpr auto        iterator_base_projection(iter_t&& it) { return std::move(it).base().base().base(); }
+            [[nodiscard]] static constexpr const auto& iterator_base_projection(const iter_t& it) { return it.base(); }
+            [[nodiscard]] static constexpr auto        iterator_base_projection(iter_t&& it) { return std::move(it).base(); }
 
-            [[nodiscard]] static constexpr const auto& iterator_base_projection(const const_iter_t& it) { return it.base().base().base(); }
-            [[nodiscard]] static constexpr auto        iterator_base_projection(const_iter_t&& it) { return std::move(it).base().base().base(); }
+            [[nodiscard]] static constexpr const auto& iterator_base_projection(const const_iter_t& it) { return it.base(); }
+            [[nodiscard]] static constexpr auto        iterator_base_projection(const_iter_t&& it) { return std::move(it).base(); }
 
-            [[nodiscard]] static constexpr auto sentinel_base_projection(const sent_t& sent) { return sent.base().base().base(); }
-            [[nodiscard]] static constexpr auto sentinel_base_projection(const const_sent_t& sent) { return sent.base().base().base(); }
+            [[nodiscard]] static constexpr auto sentinel_base_projection(const sent_t& sent) { return sent.base(); }
+            [[nodiscard]] static constexpr auto sentinel_base_projection(const const_sent_t& sent) { return sent.base(); }
         };
 
         template<typename View>
-        using nfd_traits = decomposing_normalization_traits<View, decompose_view_kind::canonical>;
+        using nfd_traits = decomposing_normalization_traits<View, decomposition_kind::canonical>;
 
         template<typename View>
-        using nfkd_traits = decomposing_normalization_traits<View, decompose_view_kind::compatibility>;
+        using nfkd_traits = decomposing_normalization_traits<View, decomposition_kind::compatibility>;
 
         template<typename View>
-        using nfc_traits = composing_normalization_traits<View, decompose_view_kind::canonical>;
+        using nfc_traits = composing_normalization_traits<View, decomposition_kind::canonical>;
 
         template<typename View>
-        using nfkc_traits = composing_normalization_traits<View, decompose_view_kind::compatibility>;
+        using nfkc_traits = composing_normalization_traits<View, decomposition_kind::compatibility>;
 
         template<typename View, normalization_form Form>
         using normalize_view_traits =
@@ -1298,16 +1476,16 @@ namespace upp::ranges
                                                   std::conditional_t<Form == normalization_form::nfkd, nfkd_traits<View>, nfkc_traits<View>>>>;
 
         template<typename View>
-        using nfd_base = canonically_order_view<decompose_view<View, decompose_view_kind::canonical>>;
+        using nfd_base = canonically_order_view<decompose_view<View, decomposition_kind::canonical>>;
 
         template<typename View>
-        using nfkd_base = canonically_order_view<decompose_view<View, decompose_view_kind::compatibility>>;
+        using nfkd_base = canonically_order_view<decompose_view<View, decomposition_kind::compatibility>>;
 
         template<typename View>
-        using nfc_base = canonically_compose_view<canonically_order_view<decompose_view<View, decompose_view_kind::canonical>>>;
+        using nfc_base = to_nfc_view<View, decomposition_kind::canonical>;
 
         template<typename View>
-        using nfkc_base = canonically_compose_view<canonically_order_view<decompose_view<View, decompose_view_kind::compatibility>>>;
+        using nfkc_base = to_nfc_view<View, decomposition_kind::compatibility>;
 
         template<typename View, normalization_form Form>
         using normalize_view_base =
@@ -1325,18 +1503,21 @@ namespace upp::ranges
         using view_t = impl::norm::normalize_view_base<View, Form>;
         using base_t = impl::simple_view_adaptor<impl::norm::normalize_view_traits<View, Form>, view_t>;
 
-        static constexpr auto s_decompose_view_kind =
-            compatibility_normalization_form<Form> ? impl::norm::decompose_view_kind::compatibility : impl::norm::decompose_view_kind::canonical;
-
-        using view_1 = impl::norm::decompose_view<View, s_decompose_view_kind>;
-        using view_2 = impl::norm::canonically_order_view<view_1>;
+        static constexpr auto s_decomposition_kind =
+            compatibility_normalization_form<Form> ? impl::norm::decomposition_kind::compatibility : impl::norm::decomposition_kind::canonical;
 
         struct dummy_t
         {
         };
 
         template<typename = dummy_t>
-        using view_3 = impl::norm::canonically_compose_view<view_2>;
+        using nfd_view_1 = impl::norm::decompose_view<View, s_decomposition_kind>;
+
+        template<typename Dummy = dummy_t>
+        using nfd_view_2 = impl::norm::canonically_order_view<nfd_view_1<Dummy>>;
+
+        template<typename = dummy_t>
+        using nfc_view = impl::norm::to_nfc_view<View, s_decomposition_kind>;
 
     public:
         /// @brief Default constructor.
@@ -1364,13 +1545,13 @@ namespace upp::ranges
     private:
         constexpr normalize_view(dummy_t, View base)
             requires(Form == normalization_form::nfd || Form == normalization_form::nfkd)
-            : base_t(view_2(view_1(std::move(base))))
+            : base_t(nfd_view_2<dummy_t>(nfd_view_1<dummy_t>(std::move(base))))
         {
         }
 
         constexpr normalize_view(dummy_t, View base)
             requires(Form == normalization_form::nfc || Form == normalization_form::nfkc)
-            : base_t(view_3<dummy_t>(view_2(view_1(std::move(base)))))
+            : base_t(nfc_view<dummy_t>(std::move(base)))
         {
         }
     };

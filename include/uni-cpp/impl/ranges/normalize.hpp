@@ -1411,24 +1411,21 @@ namespace upp::ranges
         private:
             using view_t = canonically_order_view<decompose_view<View, Kind>>;
 
-            using iter_t       = std::ranges::iterator_t<view_t&>;
-            using const_iter_t = std::ranges::iterator_t<const view_t&>;
-
-            using sent_t       = std::ranges::sentinel_t<view_t&>;
-            using const_sent_t = std::ranges::sentinel_t<const view_t&>;
-
         public:
             [[nodiscard]] static constexpr auto base_projection(const view_t& view) { return view.base().base(); }
             [[nodiscard]] static constexpr auto base_projection(view_t&& view) { return std::move(view).base().base(); }
 
-            [[nodiscard]] static constexpr const auto& iterator_base_projection(const iter_t& it) { return it.base().base(); }
-            [[nodiscard]] static constexpr auto        iterator_base_projection(iter_t&& it) { return std::move(it).base().base(); }
+            template<typename It>
+            [[nodiscard]] static constexpr decltype(auto) iterator_base_projection(It&& it)
+            {
+                return std::forward<It>(it).base().base();
+            }
 
-            [[nodiscard]] static constexpr const auto& iterator_base_projection(const const_iter_t& it) { return it.base().base(); }
-            [[nodiscard]] static constexpr auto        iterator_base_projection(const_iter_t&& it) { return std::move(it).base().base(); }
-
-            [[nodiscard]] static constexpr auto sentinel_base_projection(const sent_t& sent) { return sent.base().base(); }
-            [[nodiscard]] static constexpr auto sentinel_base_projection(const const_sent_t& sent) { return sent.base().base(); }
+            template<typename Sent>
+            [[nodiscard]] static constexpr auto sentinel_base_projection(const Sent& sent)
+            {
+                return sent.base().base();
+            }
         };
 
         template<typename View, decomposition_kind Kind>
@@ -1437,24 +1434,21 @@ namespace upp::ranges
         private:
             using view_t = to_nfc_view<View, Kind>;
 
-            using iter_t       = std::ranges::iterator_t<view_t&>;
-            using const_iter_t = std::ranges::iterator_t<const view_t&>;
-
-            using sent_t       = std::ranges::sentinel_t<view_t&>;
-            using const_sent_t = std::ranges::sentinel_t<const view_t&>;
-
         public:
             [[nodiscard]] static constexpr auto base_projection(const view_t& view) { return view.base(); }
             [[nodiscard]] static constexpr auto base_projection(view_t&& view) { return std::move(view).base(); }
 
-            [[nodiscard]] static constexpr const auto& iterator_base_projection(const iter_t& it) { return it.base(); }
-            [[nodiscard]] static constexpr auto        iterator_base_projection(iter_t&& it) { return std::move(it).base(); }
+            template<typename It>
+            [[nodiscard]] static constexpr decltype(auto) iterator_base_projection(It&& it)
+            {
+                return std::forward<It>(it).base();
+            }
 
-            [[nodiscard]] static constexpr const auto& iterator_base_projection(const const_iter_t& it) { return it.base(); }
-            [[nodiscard]] static constexpr auto        iterator_base_projection(const_iter_t&& it) { return std::move(it).base(); }
-
-            [[nodiscard]] static constexpr auto sentinel_base_projection(const sent_t& sent) { return sent.base(); }
-            [[nodiscard]] static constexpr auto sentinel_base_projection(const const_sent_t& sent) { return sent.base(); }
+            template<typename Sent>
+            [[nodiscard]] static constexpr auto sentinel_base_projection(const Sent& sent)
+            {
+                return sent.base();
+            }
         };
 
         template<typename View>

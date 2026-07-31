@@ -90,8 +90,15 @@ namespace upp::ranges::impl
             { Traits::transform_element(std::forward<Arg>(arg)) } -> simple_view_adaptor_impl::can_reference;
         };
 
-        static_assert(!std::ranges::input_range<const View> || is_transform_element_invocable_with<std::ranges::range_reference_t<View>> ==
-                                                                   is_transform_element_invocable_with<std::ranges::range_reference_t<const View>>);
+        static_assert([] {
+            if constexpr (std::ranges::input_range<const View>)
+            {
+                return is_transform_element_invocable_with<std::ranges::range_reference_t<View>> ==
+                       is_transform_element_invocable_with<std::ranges::range_reference_t<const View>>;
+            }
+            else
+                return true;
+        }());
 
         static constexpr bool has_transform_element = is_transform_element_invocable_with<std::ranges::range_reference_t<View>>;
 

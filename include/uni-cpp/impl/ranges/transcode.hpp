@@ -1214,12 +1214,6 @@ namespace upp::ranges
 
             using transcode_view_t = ranges::transcode_view<View, SourceEncoding, encoding::utf32, Kind, std::uint32_t>;
 
-            using iter_t       = std::ranges::iterator_t<transcode_view_t&>;
-            using const_iter_t = std::ranges::iterator_t<const transcode_view_t&>;
-
-            using sent_t       = std::ranges::sentinel_t<transcode_view_t&>;
-            using const_sent_t = std::ranges::sentinel_t<const transcode_view_t&>;
-
         public:
             [[nodiscard]] static constexpr expected_t transform_element(std::expected<std::uint32_t, error_type> expected)
                 requires(Kind == decode_view_kind::expected)
@@ -1236,14 +1230,17 @@ namespace upp::ranges
             [[nodiscard]] static constexpr auto base_projection(const transcode_view_t& view) { return view.base(); }
             [[nodiscard]] static constexpr auto base_projection(transcode_view_t&& view) { return std::move(view).base(); }
 
-            [[nodiscard]] static constexpr const auto& iterator_base_projection(const iter_t& it) { return it.base(); }
-            [[nodiscard]] static constexpr auto        iterator_base_projection(iter_t&& it) { return std::move(it).base(); }
+            template<typename It>
+            [[nodiscard]] static constexpr decltype(auto) iterator_base_projection(It&& it)
+            {
+                return std::forward<It>(it).base();
+            }
 
-            [[nodiscard]] static constexpr const auto& iterator_base_projection(const const_iter_t& it) { return it.base(); }
-            [[nodiscard]] static constexpr auto        iterator_base_projection(const_iter_t&& it) { return std::move(it).base(); }
-
-            [[nodiscard]] static constexpr auto sentinel_base_projection(const sent_t& sent) { return sent.base(); }
-            [[nodiscard]] static constexpr auto sentinel_base_projection(const const_sent_t& sent) { return sent.base(); }
+            template<typename Sent>
+            [[nodiscard]] static constexpr auto sentinel_base_projection(const Sent& sent)
+            {
+                return sent.base();
+            }
         };
 
         template<typename View, encoding SourceEncoding, decode_view_kind Kind, typename ToType>
@@ -1489,24 +1486,21 @@ namespace upp::ranges
         private:
             using transcode_view_t = variable_width_encoding_transcode_view<View, TargetEncoding, CodeUnitType>;
 
-            using iter_t       = std::ranges::iterator_t<transcode_view_t&>;
-            using const_iter_t = std::ranges::iterator_t<const transcode_view_t&>;
-
-            using sent_t       = std::ranges::sentinel_t<transcode_view_t&>;
-            using const_sent_t = std::ranges::sentinel_t<const transcode_view_t&>;
-
         public:
             [[nodiscard]] static constexpr auto base_projection(const transcode_view_t& view) { return view.base().base(); }
             [[nodiscard]] static constexpr auto base_projection(transcode_view_t&& view) { return std::move(view).base().base(); }
 
-            [[nodiscard]] static constexpr const auto& iterator_base_projection(const iter_t& it) { return it.base().base(); }
-            [[nodiscard]] static constexpr auto        iterator_base_projection(iter_t&& it) { return std::move(it).base().base(); }
+            template<typename It>
+            [[nodiscard]] static constexpr decltype(auto) iterator_base_projection(It&& it)
+            {
+                return std::forward<It>(it).base().base();
+            }
 
-            [[nodiscard]] static constexpr const auto& iterator_base_projection(const const_iter_t& it) { return it.base().base(); }
-            [[nodiscard]] static constexpr auto        iterator_base_projection(const_iter_t&& it) { return std::move(it).base().base(); }
-
-            [[nodiscard]] static constexpr auto sentinel_base_projection(const sent_t& sent) { return sent.base().base(); }
-            [[nodiscard]] static constexpr auto sentinel_base_projection(const const_sent_t& sent) { return sent.base().base(); }
+            template<typename Sent>
+            [[nodiscard]] static constexpr auto sentinel_base_projection(const Sent& sent)
+            {
+                return sent.base().base();
+            }
         };
 
         template<typename View, encoding TargetEncoding, typename CodeUnitType>

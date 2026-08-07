@@ -133,6 +133,62 @@ namespace upp
                 12, 36, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, // EXPECT_F4    + CHARACTER CLASS
                 // clang-format on
             };
+
+            /// @brief A DFA transition table for decoding UTF-8 backwards.
+            ///
+            /// DFA states:
+            ///
+            /// @code
+            /// 0  --- ACCEPT
+            /// 12 --- REJECT
+            /// 24 --- CONTINUE_AT_MOST_3
+            /// 36 --- CONTINUE_AT_MOST_2_POTENTIALLY_OVERLONG
+            /// 48 --- CONTINUE_AT_MOST_2_POTENTIALLY_SURROGATE
+            /// 60 --- EXPECT_LEAD_4_NON_F0
+            /// 72 --- EXPECT_LEAD_4_NON_F4
+            /// @endcode
+            ///
+            /// ## License
+            ///
+            /// Copyright 2020 Eugene Gershnik
+            ///
+            /// Use of this source code is governed by a BSD-style
+            /// license that can be found in the LICENSE file or at
+            /// https://github.com/gershnik/gershnik.github.io/blob/master/LICENSE
+            ///
+            /// Based on Flexible and Economical UTF-8 Decoder
+            /// Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
+            ///
+            /// Permission is hereby granted, free of charge, to any person
+            /// obtaining a copy of this software  and associated documentation
+            /// files (the "Software"), to deal in the Software without restriction,
+            /// including without limitation the rights to use, copy, modify, merge,
+            /// publish, distribute, sublicense, and/or sell copies of the Software,
+            /// and to permit persons to whom the Software is furnished to do so,
+            /// subject to the following conditions:
+            ///
+            /// The above copyright notice and this permission notice shall be included
+            /// in all copies or substantial portions of the Software.
+            ///
+            /// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+            /// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+            /// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+            /// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+            /// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+            /// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+            /// USE OR OTHER DEALINGS IN THE SOFTWARE.
+            ///
+            inline constexpr std::array<std::uint8_t, 84> reverse_state_transition_table{
+                // clang-format off
+                0,  24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12, // ACCEPT                                      + CHARACTER CLASS
+                12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, // REJECT                                      + CHARACTER CLASS
+                12, 36, 0,  12, 12, 12, 12, 48, 12, 36, 12, 12, // CONTINUE_AT_MOST_3                          + CHARACTER CLASS
+                12, 60, 12, 0,  0,  12, 12, 72, 12, 72, 12, 12, // CONTINUE_AT_MOST_2_POTENTIALLY_OVERLONG     + CHARACTER CLASS
+                12, 60, 12, 0,  12, 12, 12, 72, 12, 72, 0,  12, // CONTINUE_AT_MOST_2_POTENTIALLY_SURROGATE    + CHARACTER CLASS
+                12, 12, 12, 12, 12, 0,  0,  12, 12, 12, 12, 12, // EXPECT_LEAD_4_NON_F0                        + CHARACTER CLASS
+                12, 12, 12, 12, 12, 12, 0,  12, 12, 12, 12, 0,  // EXPECT_LEAD_4_NON_F4                        + CHARACTER CLASS
+                // clang-format on
+            };
         } // namespace dfa
 
         inline constexpr std::array<std::uint8_t, 256> char_width_from_leading_byte_table{

@@ -500,7 +500,7 @@ namespace upp::ranges
                     {
                         if constexpr (!std::ranges::forward_range<base_t>)
                         {
-                            m_buffer_index = s_buffer_index_at_sentinel;
+                            m_buffer_index = impl::buffer_index_at_sentinel<signed_size_t>;
                         }
                     }
                 }
@@ -527,7 +527,7 @@ namespace upp::ranges
                         if constexpr (std::ranges::forward_range<base_t>)
                             m_buffer_index = 0z;
                         else
-                            m_buffer_index = s_buffer_index_at_sentinel;
+                            m_buffer_index = impl::buffer_index_at_sentinel<signed_size_t>;
                     }
                 }
 
@@ -684,9 +684,6 @@ namespace upp::ranges
                 std::optional<std::ranges::iterator_t<base_t>> m_advance_to;
 
             private:
-                // NOLINTNEXTLINE(bugprone-signed-char-misuse)
-                static constexpr signed_size_t s_buffer_index_at_sentinel = static_cast<signed_size_t>(impl::buffer_index_at_sentinel);
-
                 template<std::ranges::view View2>
                     requires code_point_range<View2>
                 friend class canonically_order_view;
@@ -698,9 +695,6 @@ namespace upp::ranges
             private:
                 using parent_t = impl::maybe_const<Const, canonically_order_view>;
                 using base_t   = impl::maybe_const<Const, View>;
-
-                // NOLINTNEXTLINE(bugprone-signed-char-misuse)
-                static constexpr signed_size_t s_buffer_index_at_sentinel = static_cast<signed_size_t>(impl::buffer_index_at_sentinel);
 
                 std::ranges::sentinel_t<base_t> m_end = std::ranges::sentinel_t<base_t>();
 
@@ -729,7 +723,7 @@ namespace upp::ranges
                     }
                     else
                     {
-                        return x.m_current == y.m_end && x.m_buffer_index == s_buffer_index_at_sentinel;
+                        return x.m_current == y.m_end && x.m_buffer_index == impl::buffer_index_at_sentinel<signed_size_t>;
                     }
                 }
 
@@ -930,7 +924,7 @@ namespace upp::ranges
                     {
                         if constexpr (!std::ranges::forward_range<base_t>)
                         {
-                            m_buffer_index = s_buffer_index_at_sentinel;
+                            m_buffer_index = impl::buffer_index_at_sentinel<signed_size_t>;
                         }
                     }
                 }
@@ -957,7 +951,7 @@ namespace upp::ranges
                         if constexpr (std::ranges::forward_range<base_t>)
                             m_buffer_index = 0z;
                         else
-                            m_buffer_index = s_buffer_index_at_sentinel;
+                            m_buffer_index = impl::buffer_index_at_sentinel<signed_size_t>;
                     }
                 }
 
@@ -1338,9 +1332,6 @@ namespace upp::ranges
                 std::optional<std::ranges::iterator_t<base_t>> m_advance_to;
 
             private:
-                // NOLINTNEXTLINE(bugprone-signed-char-misuse)
-                static constexpr signed_size_t s_buffer_index_at_sentinel = static_cast<signed_size_t>(impl::buffer_index_at_sentinel);
-
                 template<std::ranges::view View2, decomposition_kind Kind2>
                     requires code_point_range<View2>
                 friend class to_nfc_view;
@@ -1352,9 +1343,6 @@ namespace upp::ranges
             private:
                 using parent_t = impl::maybe_const<Const, to_nfc_view>;
                 using base_t   = impl::maybe_const<Const, View>;
-
-                // NOLINTNEXTLINE(bugprone-signed-char-misuse)
-                static constexpr signed_size_t s_buffer_index_at_sentinel = static_cast<signed_size_t>(impl::buffer_index_at_sentinel);
 
                 std::ranges::sentinel_t<base_t> m_end = std::ranges::sentinel_t<base_t>();
 
@@ -1383,7 +1371,7 @@ namespace upp::ranges
                     }
                     else
                     {
-                        return x.m_current == y.m_end && x.m_buffer_index == s_buffer_index_at_sentinel;
+                        return x.m_current == y.m_end && x.m_buffer_index == impl::buffer_index_at_sentinel<signed_size_t>;
                     }
                 }
 

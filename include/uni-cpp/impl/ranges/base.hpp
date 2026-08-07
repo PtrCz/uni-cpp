@@ -107,7 +107,8 @@ namespace upp::ranges
         ///
         /// This value is used to distinguish between those two cases. It signals that the transformation iterator is actually at the sentinel.
         ///
-        inline constexpr std::int8_t buffer_index_at_sentinel = -1;
+        template<std::signed_integral T>
+        inline constexpr T buffer_index_at_sentinel = static_cast<T>(-1);
 
         template<typename>
         struct input_iterator_category_impl

@@ -15,12 +15,14 @@
 #include "../../uchar.hpp"
 #include "../../encoding.hpp"
 
+#include "../no_unique_address.hpp"
 #include "../inplace_vector.hpp"
 #include "as_expected_range.hpp"
 
 #include <memory>
 #include <bit>
 #include <type_traits>
+#include <optional>
 #include <expected>
 
 /// @defgroup transcode_view Transcoding code unit ranges
@@ -274,14 +276,23 @@ namespace upp::ranges
 
         /// @brief Returns an iterator to the beginning of the range.
         ///
-        constexpr iterator<false> begin() { return iterator<false>(*this, std::ranges::begin(m_base)); }
+        constexpr iterator<false> begin()
+        {
+            if constexpr (std::ranges::bidirectional_range<View>)
+                return iterator<false>(std::ranges::begin(m_base), std::ranges::begin(m_base), std::ranges::end(m_base));
+            else
+                return iterator<false>(std::ranges::begin(m_base), std::ranges::end(m_base));
+        }
 
         /// @brief Returns an iterator to the beginning of the range.
         ///
         constexpr iterator<true> begin() const
             requires std::ranges::range<const View> && code_unit_range_for<const View, SourceEncoding>
         {
-            return iterator<true>(*this, std::ranges::begin(m_base));
+            if constexpr (std::ranges::bidirectional_range<const View>)
+                return iterator<true>(std::ranges::begin(m_base), std::ranges::begin(m_base), std::ranges::end(m_base));
+            else
+                return iterator<true>(std::ranges::begin(m_base), std::ranges::end(m_base));
         }
 
         /// @brief Returns a sentinel marking the end of the range.
@@ -293,7 +304,10 @@ namespace upp::ranges
         constexpr iterator<false> end()
             requires std::ranges::common_range<View>
         {
-            return iterator<false>(*this, std::ranges::end(m_base));
+            if constexpr (std::ranges::bidirectional_range<View>)
+                return iterator<false>(std::ranges::end(m_base), std::ranges::begin(m_base), std::ranges::end(m_base));
+            else
+                return iterator<false>(std::ranges::end(m_base), std::ranges::end(m_base));
         }
 
         /// @brief Returns a sentinel marking the end of the range.
@@ -309,7 +323,10 @@ namespace upp::ranges
         constexpr iterator<true> end() const
             requires std::ranges::common_range<const View> && code_unit_range_for<const View, SourceEncoding>
         {
-            return iterator<true>(*this, std::ranges::end(m_base));
+            if constexpr (std::ranges::bidirectional_range<const View>)
+                return iterator<true>(std::ranges::end(m_base), std::ranges::begin(m_base), std::ranges::end(m_base));
+            else
+                return iterator<true>(std::ranges::end(m_base), std::ranges::end(m_base));
         }
 
         /// @brief Checks if the range is empty.
@@ -395,19 +412,31 @@ namespace upp::ranges
                 requires std::default_initializable<std::ranges::iterator_t<View>>
             = default;
 
-            /// @brief Returns a `const` reference to the underlying iterator.
-            ///
-            /// The underlying iterator is at the beginning of the current code point for forward ranges,
-            /// and it is at the beginning of the next code point for non-forward ranges.
-            ///
-            constexpr const std::ranges::iterator_t<base_t>& base() const& noexcept { return m_current; }
+            constexpr iterator(const iterator&)
+                requires std::copyable<std::ranges::iterator_t<base_t>>
+            = default;
+            constexpr iterator(iterator&&) = default;
 
-            /// @brief Returns the underlying iterator by moving it.
+            constexpr iterator& operator=(const iterator&)
+                requires std::copyable<std::ranges::iterator_t<base_t>>
+            = default;
+            constexpr iterator& operator=(iterator&&) = default;
+
+            /// @brief Returns the underlying iterator pointing to the beginning of the current code point.
             ///
-            /// The underlying iterator is at the beginning of the current code point for forward ranges,
-            /// and it is at the beginning of the next code point for non-forward ranges.
+            constexpr const std::ranges::iterator_t<base_t>& base() const& noexcept
+                requires std::ranges::forward_range<base_t>
+            {
+                return m_current;
+            }
+
+            /// @brief Returns the underlying iterator pointing to the beginning of the current code point.
             ///
-            constexpr std::ranges::iterator_t<base_t> base() && { return std::move(m_current); }
+            constexpr std::ranges::iterator_t<base_t> base() &&
+                requires std::ranges::forward_range<base_t>
+            {
+                return std::move(m_current);
+            }
 
             /// @brief Dereferences the iterator.
             ///
@@ -415,11 +444,11 @@ namespace upp::ranges
             {
                 if constexpr (Kind == transcode_view_kind::expected)
                 {
-                    if (m_success.has_value())
+                    if (m_success.has_value()) [[likely]]
                     {
                         return value_type{std::in_place, m_buffer[m_buffer_index]};
                     }
-                    else
+                    else [[unlikely]]
                         return value_type{std::unexpect, m_success.error()};
                 }
                 else
@@ -432,11 +461,11 @@ namespace upp::ranges
             {
                 if constexpr (Kind == transcode_view_kind::expected)
                 {
-                    if (!m_success)
+                    if (!m_success) [[unlikely]]
                     {
                         advance_code_point();
                     }
-                    else
+                    else [[likely]]
                         advance_one();
                 }
                 else
@@ -506,37 +535,34 @@ namespace upp::ranges
             }
 
         private:
-            constexpr iterator(parent_t& parent, std::ranges::iterator_t<base_t> begin)
-                : m_current(std::move(begin))
-                , m_parent(std::addressof(parent))
+            constexpr iterator(std::ranges::iterator_t<base_t> current, std::ranges::iterator_t<base_t> begin, std::ranges::sentinel_t<base_t> end)
+                requires std::ranges::bidirectional_range<base_t>
+                : m_current(std::move(current))
+                , m_begin(std::move(begin))
+                , m_end(std::move(end))
             {
-                if (base() != end())
+                if (m_current != m_end)
+                    read();
+            }
+
+            constexpr iterator(std::ranges::iterator_t<base_t> current, std::ranges::sentinel_t<base_t> end)
+                requires(!std::ranges::bidirectional_range<base_t>)
+                : m_current(std::move(current))
+                , m_end(std::move(end))
+            {
+                if (m_current != m_end)
                 {
                     read();
                 }
                 else
                 {
                     if constexpr (!std::ranges::forward_range<base_t>)
-                    {
-                        m_buffer_index = impl::buffer_index_at_sentinel;
-                    }
+                        m_buffer_index = impl::buffer_index_at_sentinel<std::int8_t>;
                 }
             }
 
-            constexpr std::ranges::iterator_t<base_t> begin() const
-                requires std::ranges::bidirectional_range<base_t>
+            constexpr void encode_code_point_to_buffer(uchar code_point)
             {
-                return std::ranges::begin(m_parent->m_base);
-            }
-
-            constexpr std::ranges::sentinel_t<base_t> end() const { return std::ranges::end(m_parent->m_base); }
-
-            /// @brief Updates the buffer with `code_point` encoded in `TargetEncoding`.
-            ///
-            constexpr void update(uchar code_point)
-            {
-                m_buffer.clear();
-
                 if constexpr (TargetEncoding == encoding::utf8)
                 {
                     for (const char8_t code_unit : code_point.encode_utf8())
@@ -566,9 +592,9 @@ namespace upp::ranges
             constexpr void advance_code_point()
             {
                 if constexpr (std::ranges::forward_range<base_t>)
-                    std::ranges::advance(m_current, m_to_increment);
+                    m_current = *std::move(m_advance_to); // NOLINT(bugprone-unchecked-optional-access)
 
-                if (m_current != end())
+                if (m_current != m_end)
                 {
                     read();
                 }
@@ -577,7 +603,7 @@ namespace upp::ranges
                     if constexpr (std::ranges::forward_range<base_t>)
                         m_buffer_index = 0;
                     else
-                        m_buffer_index = impl::buffer_index_at_sentinel;
+                        m_buffer_index = impl::buffer_index_at_sentinel<std::int8_t>;
                 }
             }
 
@@ -593,13 +619,7 @@ namespace upp::ranges
                 }
             }
 
-            struct read_result
-            {
-                std::expected<uchar, error_type> decoded;
-                std::uint8_t                     to_increment;
-            };
-
-            static constexpr read_result read_ascii(std::ranges::iterator_t<base_t>& it)
+            static constexpr std::expected<uchar, error_type> read_ascii(std::ranges::iterator_t<base_t>& it)
                 requires(SourceEncoding == encoding::ascii)
             {
                 using expected_type = std::expected<uchar, error_type>;
@@ -611,22 +631,23 @@ namespace upp::ranges
                 {
                     const auto code_point = static_cast<std::uint32_t>(code_unit);
 
-                    return {.decoded = expected_type{std::in_place, uchar::from_unchecked(code_point)}, .to_increment = 1};
+                    return expected_type{std::in_place, uchar::from_unchecked(code_point)};
                 }
                 else
                 {
-                    if (is_valid_ascii(code_unit))
+                    if (is_valid_ascii(code_unit)) [[likely]]
                     {
                         const auto code_point = static_cast<std::uint32_t>(code_unit);
 
-                        return {.decoded = expected_type{std::in_place, uchar::from_unchecked(code_point)}, .to_increment = 1};
+                        return expected_type{std::in_place, uchar::from_unchecked(code_point)};
                     }
-                    else
-                        return {.decoded = expected_type{std::unexpect, ascii_error{}}, .to_increment = 1};
+                    else [[unlikely]]
+                        return expected_type{std::unexpect, ascii_error{}};
                 }
             }
 
-            static constexpr read_result read_utf8(std::ranges::iterator_t<base_t>& it, const std::ranges::sentinel_t<base_t>& last)
+            static constexpr std::expected<uchar, error_type> read_utf8(std::ranges::iterator_t<base_t>&       it,
+                                                                        const std::ranges::sentinel_t<base_t>& last)
                 requires(SourceEncoding == encoding::utf8)
             {
                 using expected_type = std::expected<uchar, error_type>;
@@ -636,7 +657,7 @@ namespace upp::ranges
 
                 std::size_t index = 0;
 
-                for (; it != last; ++index, ++it)
+                for (; it != last; ++index, ++it) [[likely]]
                 {
                     const char8_t code_unit = std::bit_cast<char8_t>(*it);
 
@@ -650,7 +671,7 @@ namespace upp::ranges
 
                     if constexpr (!valid_code_unit_range<View, encoding::utf8>)
                     {
-                        if (state == upp::impl::utf8::dfa::state::reject)
+                        if (state == upp::impl::utf8::dfa::state::reject) [[unlikely]]
                         {
                             if (index == 0uz)
                                 ++it;
@@ -662,13 +683,8 @@ namespace upp::ranges
 
                             const utf8_error_code error_code = upp::impl::utf8::get_error_code(previous_state, type);
 
-                            return {
-                                .decoded =
-                                    expected_type{
-                                        std::unexpect,
-                                        utf8_error{.length = std::optional<std::uint8_t>{std::in_place, error_length}, .code = error_code}
-                                    },
-                                .to_increment = error_length
+                            return expected_type{
+                                std::unexpect, utf8_error{.length = std::optional<std::uint8_t>{std::in_place, error_length}, .code = error_code}
                             };
                         }
                     }
@@ -676,24 +692,22 @@ namespace upp::ranges
                     if (state == upp::impl::utf8::dfa::state::accept)
                     {
                         ++it;
-                        return {
-                            .decoded      = expected_type{std::in_place, uchar::from_unchecked(code_point)},
-                            .to_increment = static_cast<std::uint8_t>(index + 1uz)
-                        };
+                        return expected_type{std::in_place, uchar::from_unchecked(code_point)};
                     }
                 }
 
-                return {
-                    .decoded =
-                        expected_type{
-                            std::unexpect,
-                            utf8_error{.length = std::optional<std::uint8_t>{std::nullopt}, .code = utf8_error_code::truncated_sequence}
-                        },
-                    .to_increment = static_cast<std::uint8_t>(index)
-                };
+                if constexpr (!valid_code_unit_range<View, encoding::utf8>)
+                {
+                    return expected_type{
+                        std::unexpect, utf8_error{.length = std::optional<std::uint8_t>{std::nullopt}, .code = utf8_error_code::truncated_sequence}
+                    };
+                }
+                else
+                    std::unreachable();
             }
 
-            static constexpr read_result read_utf16(std::ranges::iterator_t<base_t>& it, const std::ranges::sentinel_t<base_t>& last)
+            static constexpr std::expected<uchar, error_type> read_utf16(std::ranges::iterator_t<base_t>&       it,
+                                                                         const std::ranges::sentinel_t<base_t>& last)
                 requires(SourceEncoding == encoding::utf16)
             {
                 using expected_type = std::expected<uchar, error_type>;
@@ -710,48 +724,34 @@ namespace upp::ranges
 
                         std::uint32_t code_point = upp::impl::utf16::decode_valid_surrogate_pair(first_code_unit, second_code_unit);
 
-                        return {.decoded = expected_type{std::in_place, uchar::from_unchecked(code_point)}, .to_increment = 2};
+                        return expected_type{std::in_place, uchar::from_unchecked(code_point)};
                     }
                     else
                     {
-                        if (first_code_unit >= 0xDC00U)
+                        if (first_code_unit >= 0xDC00U) [[unlikely]]
                         {
-                            return {
-                                .decoded =
-                                    expected_type{
-                                        std::unexpect,
-                                        utf16_error{
-                                            .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate
-                                        }
-                                    },
-                                .to_increment = 1
+                            return expected_type{
+                                std::unexpect,
+                                utf16_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate}
                             };
                         }
 
-                        if (it == last)
+                        if (it == last) [[unlikely]]
                         {
-                            return {
-                                .decoded =
-                                    expected_type{
-                                        std::unexpect, utf16_error{.length = {std::nullopt}, .code = utf16_error_code::unpaired_high_surrogate}
-                                    },
-                                .to_increment = 1
+                            return expected_type{
+                                std::unexpect, utf16_error{.length = {std::nullopt}, .code = utf16_error_code::unpaired_high_surrogate}
                             };
                         }
 
                         const std::uint16_t second_code_unit = std::bit_cast<std::uint16_t>(*it);
 
-                        if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU)
+                        if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU) [[unlikely]]
                         {
-                            return {
-                                .decoded =
-                                    expected_type{
-                                        std::unexpect,
-                                        utf16_error{
-                                            .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_high_surrogate
-                                        }
-                                    },
-                                .to_increment = 1
+                            return expected_type{
+                                std::unexpect,
+                                utf16_error{
+                                    .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_high_surrogate
+                                }
                             };
                         }
 
@@ -759,16 +759,16 @@ namespace upp::ranges
 
                         std::uint32_t code_point = upp::impl::utf16::decode_valid_surrogate_pair(first_code_unit, second_code_unit);
 
-                        return {.decoded = expected_type{std::in_place, uchar::from_unchecked(code_point)}, .to_increment = 2};
+                        return expected_type{std::in_place, uchar::from_unchecked(code_point)};
                     }
                 }
                 else
                 {
-                    return {.decoded = expected_type{std::in_place, uchar::from_unchecked(first_code_unit)}, .to_increment = 1};
+                    return expected_type{std::in_place, uchar::from_unchecked(first_code_unit)};
                 }
             }
 
-            static constexpr read_result read_utf32(std::ranges::iterator_t<base_t>& it)
+            static constexpr std::expected<uchar, error_type> read_utf32(std::ranges::iterator_t<base_t>& it)
                 requires(SourceEncoding == encoding::utf32)
             {
                 using expected_type = std::expected<uchar, error_type>;
@@ -778,101 +778,107 @@ namespace upp::ranges
 
                 if constexpr (valid_code_unit_range<View, encoding::utf32>)
                 {
-                    return {.decoded = expected_type{std::in_place, uchar::from_unchecked(code_unit)}, .to_increment = 1};
+                    return expected_type{std::in_place, uchar::from_unchecked(code_unit)};
                 }
                 else
-                {
-                    return {.decoded = uchar::from(code_unit), .to_increment = 1};
-                }
+                    return uchar::from(code_unit);
             }
 
-            /// @brief Updates `m_buffer`, `m_buffer_index` and `m_success` with the decoding result.
-            ///
-            template<bool Reverse>
-            constexpr void process_decoding_result(const std::expected<uchar, error_type>& decoded)
+            static constexpr std::expected<uchar, error_type> read_impl(std::ranges::iterator_t<base_t>&       it,
+                                                                        const std::ranges::sentinel_t<base_t>& last)
             {
-                const auto new_buffer_index = [&] -> std::int8_t {
-                    if constexpr (Reverse)
-                        return m_buffer.size() - 1;
-                    else
-                        return 0;
-                };
-
-                if constexpr (valid_code_unit_range<View, SourceEncoding>)
+                if constexpr (SourceEncoding == encoding::ascii)
                 {
-                    update(*decoded);
-                    m_buffer_index = new_buffer_index();
+                    return read_ascii(it);
+                }
+                else if constexpr (SourceEncoding == encoding::utf8)
+                {
+                    return read_utf8(it, last);
+                }
+                else if constexpr (SourceEncoding == encoding::utf16)
+                {
+                    return read_utf16(it, last);
+                }
+                else if constexpr (SourceEncoding == encoding::utf32)
+                {
+                    return read_utf32(it);
                 }
                 else
-                {
-                    if (decoded.has_value())
-                    {
-                        update(*decoded);
-                        m_buffer_index = new_buffer_index();
-                    }
-                    else
-                    {
-                        if constexpr (Kind == transcode_view_kind::expected)
-                        {
-                            m_buffer_index = 0;
-                        }
-                        else
-                        {
-                            update(uchar::replacement_character());
-                            m_buffer_index = new_buffer_index();
-                        }
-
-                        m_success = std::unexpected<error_type>{std::in_place, decoded.error()};
-                    }
-                }
+                    static_assert(false);
             }
 
             /// @brief Decodes one code point from the underlying sequence.
             ///
             constexpr void read()
             {
-                m_success.emplace();
+                impl::iterator_guard<std::ranges::iterator_t<base_t>> guard{m_current, m_current};
 
-                read_result result{[&] {
-                    impl::iterator_guard<std::ranges::iterator_t<base_t>> guard{m_current, m_current};
+                if constexpr (Kind == transcode_view_kind::expected)
+                    m_success.emplace();
 
-                    if constexpr (SourceEncoding == encoding::ascii)
-                    {
-                        return read_ascii(m_current);
-                    }
-                    else if constexpr (SourceEncoding == encoding::utf8)
-                    {
-                        return read_utf8(m_current, end());
-                    }
-                    else if constexpr (SourceEncoding == encoding::utf16)
-                    {
-                        return read_utf16(m_current, end());
-                    }
-                    else if constexpr (SourceEncoding == encoding::utf32)
-                    {
-                        return read_utf32(m_current);
-                    }
-                    else
-                        static_assert(false);
-                }()};
+                std::expected<uchar, error_type> decoded = read_impl(m_current, m_end);
 
-                m_to_increment = result.to_increment;
+                if constexpr (valid_code_unit_range<View, SourceEncoding>)
+                {
+                    m_buffer.clear();
+                    encode_code_point_to_buffer(*decoded);
+                    m_buffer_index = 0;
+                }
+                else
+                {
+                    if (decoded.has_value()) [[likely]]
+                    {
+                        m_buffer.clear();
+                        encode_code_point_to_buffer(*decoded);
+                        m_buffer_index = 0;
+                    }
+                    else [[unlikely]]
+                    {
+                        if constexpr (Kind == transcode_view_kind::expected)
+                        {
+                            m_buffer_index = 0;
+                            m_success      = std::unexpected<error_type>{std::in_place, decoded.error()};
+                        }
+                        else
+                        {
+                            m_buffer.clear();
+                            encode_code_point_to_buffer(uchar::replacement_character());
+                            m_buffer_index = 0;
+                        }
+                    }
+                }
 
-                process_decoding_result<false>(result.decoded);
+                if constexpr (std::ranges::forward_range<base_t>)
+                    m_advance_to = std::move(m_current);
             }
 
-            constexpr read_result read_reverse_ascii()
+            constexpr std::expected<uchar, error_type> read_reverse_ascii()
                 requires std::ranges::bidirectional_range<base_t> && (SourceEncoding == encoding::ascii)
             {
+                using expected_type = std::expected<uchar, error_type>;
+
                 --m_current;
 
-                auto it{m_current};
+                const std::uint8_t code_unit = std::bit_cast<std::uint8_t>(*m_current);
 
-                return read_ascii(it);
+                const auto code_point = static_cast<std::uint32_t>(code_unit);
+
+                if constexpr (valid_code_unit_range<View, encoding::ascii>)
+                {
+                    return expected_type{std::in_place, uchar::from_unchecked(code_point)};
+                }
+                else
+                {
+                    if (is_valid_ascii(code_unit)) [[likely]]
+                        return expected_type{std::in_place, uchar::from_unchecked(code_point)};
+                    else [[unlikely]]
+                        return expected_type{std::unexpect, ascii_error{}};
+                }
             }
 
-            constexpr read_result read_reverse_utf8()
-                requires std::ranges::bidirectional_range<base_t> && (SourceEncoding == encoding::utf8)
+            constexpr std::expected<uchar, error_type> read_reverse_invalid_utf8()
+                requires std::ranges::bidirectional_range<base_t> && (SourceEncoding == encoding::utf8) &&
+                         (!valid_code_unit_range<View, encoding::utf8>)
             {
                 using expected_type = std::expected<uchar, error_type>;
 
@@ -881,99 +887,133 @@ namespace upp::ranges
 
                 std::uint8_t count = 1;
 
-                if constexpr (valid_code_unit_range<View, encoding::utf8>)
+                for (; it != m_begin && upp::impl::utf8::is_continuation_byte(std::bit_cast<std::uint8_t>(*it)) && count < 4; ++count)
+                    --it;
+
+                if (upp::impl::utf8::is_continuation_byte(std::bit_cast<std::uint8_t>(*it)))
                 {
-                    for (; upp::impl::utf8::is_continuation_byte(std::bit_cast<std::uint8_t>(*it)); ++count)
-                        --it;
+                    --m_current;
+                    return expected_type{
+                        std::unexpect,
+                        utf8_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf8_error_code::unexpected_continuation_byte}
+                    };
                 }
-                else
+
+                std::uint8_t expected_count = upp::impl::utf8::char_width_from_leading_byte(std::bit_cast<std::uint8_t>(*it));
+
+                const bool is_first_byte_valid = (expected_count != 0);
+
+                if (!is_first_byte_valid)
                 {
-                    for (; it != begin() && upp::impl::utf8::is_continuation_byte(std::bit_cast<std::uint8_t>(*it)) && count < 4; ++count)
-                        --it;
+                    const auto error_code = count == 1 ? utf8_error_code::invalid_leading_byte : utf8_error_code::unexpected_continuation_byte;
 
-                    if (upp::impl::utf8::is_continuation_byte(std::bit_cast<std::uint8_t>(*it)))
-                    {
-                        --m_current;
-                        return {
-                            .decoded =
-                                expected_type{
-                                    std::unexpect,
-                                    utf8_error{
-                                        .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf8_error_code::unexpected_continuation_byte
-                                    }
-                                },
-                            .to_increment = 1
-                        };
-                    }
+                    --m_current;
+                    return expected_type{std::unexpect, utf8_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = error_code}};
+                }
 
-                    std::uint8_t expected_count = upp::impl::utf8::char_width_from_leading_byte(std::bit_cast<std::uint8_t>(*it));
-
-                    const bool is_first_byte_valid = (expected_count != 0);
-
-                    if (!is_first_byte_valid)
-                    {
-                        const auto error_code = count == 1 ? utf8_error_code::invalid_leading_byte : utf8_error_code::unexpected_continuation_byte;
-
-                        --m_current;
-                        return {
-                            .decoded =
-                                expected_type{std::unexpect, utf8_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = error_code}},
-                            .to_increment = 1
-                        };
-                    }
-
-                    if (count > expected_count)
-                    {
-                        --m_current;
-                        return {
-                            .decoded =
-                                expected_type{
-                                    std::unexpect,
-                                    utf8_error{
-                                        .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf8_error_code::unexpected_continuation_byte
-                                    }
-                                },
-                            .to_increment = 1
-                        };
-                    }
+                if (count > expected_count)
+                {
+                    --m_current;
+                    return expected_type{
+                        std::unexpect,
+                        utf8_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf8_error_code::unexpected_continuation_byte}
+                    };
                 }
 
                 auto       leading{it};
-                const auto result = read_utf8(it, end());
+                const auto result = read_utf8(it, m_end);
 
-                if constexpr (valid_code_unit_range<View, encoding::utf8>)
+                if (result.error().code == utf8_error_code::truncated_sequence)
                 {
-                    m_current = leading;
+                    m_current = std::move(leading);
                     return result;
                 }
                 else
                 {
-                    if (result.decoded.has_value() || result.decoded.error().code == utf8_error_code::truncated_sequence)
-                    {
-                        m_current = leading;
-                        return result;
-                    }
-                    else
-                    {
-                        --m_current;
+                    --m_current;
 
-                        const auto err = count == 1 ? result.decoded.error()
-                                                    : utf8_error{
-                                                          .length = std::optional<std::uint8_t>{std::in_place, 1},
-                                                          .code   = utf8_error_code::unexpected_continuation_byte
-                                                      };
+                    const auto err = count == 1 ? result.error()
+                                                : utf8_error{
+                                                      .length = std::optional<std::uint8_t>{std::in_place, 1},
+                                                      .code   = utf8_error_code::unexpected_continuation_byte
+                                                  };
 
-                        return {.decoded = expected_type{std::unexpect, err}, .to_increment = 1};
-                    }
+                    return expected_type{std::unexpect, err};
                 }
             }
 
-            constexpr read_result read_reverse_utf16()
+            constexpr std::expected<uchar, error_type> read_reverse_utf8()
+                requires std::ranges::bidirectional_range<base_t> && (SourceEncoding == encoding::utf8)
+            {
+                using expected_type = std::expected<uchar, error_type>;
+
+                std::uint32_t state = upp::impl::utf8::dfa::state::accept;
+
+                std::uint32_t code_point = 0;
+                std::uint32_t shift      = 0;
+
+                do
+                {
+                    --m_current;
+
+                    const char8_t code_unit = std::bit_cast<char8_t>(*m_current);
+
+                    const std::uint32_t type = upp::impl::utf8::dfa::character_class_from_byte[code_unit];
+
+                    state = upp::impl::utf8::dfa::reverse_state_transition_table[state + type];
+
+                    if constexpr (!valid_code_unit_range<View, encoding::utf8>)
+                    {
+                        if (state == upp::impl::utf8::dfa::state::reject) [[unlikely]]
+                        {
+                            // Producing exactly the same errors backwards, as going forwards, is non-trivial.
+                            // Restore m_current to where it was before the loop and call a slower implementation to get the accurate error.
+                            // This isn't really that much of a problem, because this is only done if the current UTF-8 subsequence is invalid.
+
+                            m_current = *m_advance_to; // NOLINT(bugprone-unchecked-optional-access)
+
+                            return read_reverse_invalid_utf8();
+                        }
+                    }
+
+                    if (state == upp::impl::utf8::dfa::state::accept)
+                    {
+                        code_point |= (((0xFFU >> type) & code_unit) << shift);
+
+                        return expected_type{std::in_place, uchar::from_unchecked(code_point)};
+                    }
+                    else
+                    {
+                        code_point |= ((code_unit & 0x3FU) << shift);
+                        shift += 6;
+                    }
+                } while (m_current != m_begin);
+
+                if constexpr (!valid_code_unit_range<View, encoding::utf8>)
+                {
+                    m_current = *m_advance_to; // NOLINT(bugprone-unchecked-optional-access)
+                    --m_current;
+
+                    return expected_type{
+                        std::unexpect,
+                        utf8_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf8_error_code::unexpected_continuation_byte}
+                    };
+                }
+                else
+                    std::unreachable();
+            }
+
+            constexpr std::expected<uchar, error_type> read_reverse_utf16()
                 requires std::ranges::bidirectional_range<base_t> && (SourceEncoding == encoding::utf16)
             {
                 using expected_type = std::expected<uchar, error_type>;
 
-                const bool is_at_sentinel = (m_current == end());
+                const auto is_at_sentinel = [&] {
+                    if constexpr (valid_code_unit_range<View, encoding::utf16>)
+                        return upp::impl::empty_t{};
+                    else
+                        return m_current == m_end;
+                }();
 
                 --m_current;
                 const std::uint16_t code_unit = std::bit_cast<std::uint16_t>(*m_current);
@@ -987,76 +1027,67 @@ namespace upp::ranges
 
                         const auto code_point = uchar::from_unchecked(upp::impl::utf16::decode_valid_surrogate_pair(first_code_unit, code_unit));
 
-                        return {.decoded = expected_type{std::in_place, code_point}, .to_increment = 2};
+                        return expected_type{std::in_place, code_point};
                     }
                     else
                     {
-                        if (code_unit < 0xDC00U)
+                        if (code_unit < 0xDC00U) [[unlikely]]
                         {
                             const auto error_length =
                                 is_at_sentinel ? std::optional<std::uint8_t>{std::nullopt} : std::optional<std::uint8_t>{std::in_place, 1};
 
-                            return {
-                                .decoded =
-                                    expected_type{
-                                        std::unexpect, utf16_error{.length = error_length, .code = utf16_error_code::unpaired_high_surrogate}
-                                    },
-                                .to_increment = 1
+                            return expected_type{
+                                std::unexpect, utf16_error{.length = error_length, .code = utf16_error_code::unpaired_high_surrogate}
                             };
                         }
 
-                        if (m_current == begin())
+                        if (m_current == m_begin) [[unlikely]]
                         {
-                            return {
-                                .decoded =
-                                    expected_type{
-                                        std::unexpect,
-                                        utf16_error{
-                                            .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate
-                                        }
-                                    },
-                                .to_increment = 1
+                            return expected_type{
+                                std::unexpect,
+                                utf16_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate}
                             };
                         }
 
                         --m_current;
                         const std::uint16_t first_code_unit = std::bit_cast<std::uint16_t>(*m_current);
 
-                        if (!upp::impl::utf16::is_high_surrogate(first_code_unit))
+                        if (!upp::impl::utf16::is_high_surrogate(first_code_unit)) [[unlikely]]
                         {
                             ++m_current;
 
-                            return {
-                                .decoded =
-                                    expected_type{
-                                        std::unexpect,
-                                        utf16_error{
-                                            .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate
-                                        }
-                                    },
-                                .to_increment = 1
+                            return expected_type{
+                                std::unexpect,
+                                utf16_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate}
                             };
                         }
 
                         const auto code_point = uchar::from_unchecked(upp::impl::utf16::decode_valid_surrogate_pair(first_code_unit, code_unit));
 
-                        return {.decoded = expected_type{std::in_place, code_point}, .to_increment = 2};
+                        return expected_type{std::in_place, code_point};
                     }
                 }
                 else
                 {
-                    return {.decoded = expected_type{std::in_place, uchar::from_unchecked(code_unit)}, .to_increment = 1};
+                    return expected_type{std::in_place, uchar::from_unchecked(code_unit)};
                 }
             }
 
-            constexpr read_result read_reverse_utf32()
+            constexpr std::expected<uchar, error_type> read_reverse_utf32()
                 requires std::ranges::bidirectional_range<base_t> && (SourceEncoding == encoding::utf32)
             {
+                using expected_type = std::expected<uchar, error_type>;
+
                 --m_current;
 
-                auto it{m_current};
+                const std::uint32_t code_unit = std::bit_cast<std::uint32_t>(*m_current);
 
-                return read_utf32(it);
+                if constexpr (valid_code_unit_range<View, encoding::utf32>)
+                {
+                    return expected_type{std::in_place, uchar::from_unchecked(code_unit)};
+                }
+                else
+                    return uchar::from(code_unit);
             }
 
             /// @brief Decodes one code point from the underlying sequence backwards.
@@ -1064,9 +1095,12 @@ namespace upp::ranges
             constexpr void read_reverse()
                 requires std::ranges::bidirectional_range<base_t>
             {
-                m_success.emplace();
+                if constexpr (Kind == transcode_view_kind::expected)
+                    m_success.emplace();
 
-                read_result result{[&] {
+                m_advance_to = m_current;
+
+                std::expected<uchar, error_type> decoded{[&] {
                     if constexpr (SourceEncoding == encoding::ascii)
                     {
                         return read_reverse_ascii();
@@ -1087,21 +1121,56 @@ namespace upp::ranges
                         static_assert(false);
                 }()};
 
-                m_to_increment = result.to_increment;
-
-                process_decoding_result<true>(result.decoded);
+                if constexpr (valid_code_unit_range<View, SourceEncoding>)
+                {
+                    m_buffer.clear();
+                    encode_code_point_to_buffer(*decoded);
+                    m_buffer_index = m_buffer.size() - 1;
+                }
+                else
+                {
+                    if (decoded.has_value()) [[likely]]
+                    {
+                        m_buffer.clear();
+                        encode_code_point_to_buffer(*decoded);
+                        m_buffer_index = m_buffer.size() - 1;
+                    }
+                    else [[unlikely]]
+                    {
+                        if constexpr (Kind == transcode_view_kind::expected)
+                        {
+                            m_buffer_index = 0;
+                            m_success      = std::unexpected<error_type>{std::in_place, decoded.error()};
+                        }
+                        else
+                        {
+                            m_buffer.clear();
+                            encode_code_point_to_buffer(uchar::replacement_character());
+                            m_buffer_index = m_buffer.size() - 1;
+                        }
+                    }
+                }
             }
 
         private:
             std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
-            parent_t*                       m_parent  = nullptr;
+
+            UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
+            std::conditional_t<std::ranges::bidirectional_range<base_t>, std::ranges::iterator_t<base_t>, upp::impl::empty_t> m_begin =
+                decltype(m_begin)();
+
+            UNI_CPP_IMPL_NO_UNIQUE_ADDRESS std::ranges::sentinel_t<base_t> m_end = std::ranges::sentinel_t<base_t>();
+
+            UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
+            std::conditional_t<std::ranges::forward_range<base_t>, std::optional<std::ranges::iterator_t<base_t>>, upp::impl::empty_t> m_advance_to;
 
             upp::impl::inplace_vector<ToType, 4 / sizeof(ToType)> m_buffer{};
 
-            std::int8_t  m_buffer_index = 0;
-            std::uint8_t m_to_increment = 0; ///< Number of code units to advance the underlying iterator by.
+            UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
+            std::conditional_t<Kind == transcode_view_kind::expected, std::expected<void, error_type>, upp::impl::empty_t>
+                m_success{}; ///< Holds error information about the last read operation.
 
-            std::expected<void, error_type> m_success{}; ///< Holds error information about the last read operation.
+            std::int8_t m_buffer_index = 0;
 
             template<typename>
             friend struct impl::transcode_view_impl::get_transcode_view_subrange_info;
@@ -1156,7 +1225,7 @@ namespace upp::ranges
                 }
                 else
                 {
-                    return x.m_current == y.m_end && x.m_buffer_index == impl::buffer_index_at_sentinel;
+                    return x.m_current == y.m_end && x.m_buffer_index == impl::buffer_index_at_sentinel<std::int8_t>;
                 }
             }
 
@@ -1290,11 +1359,11 @@ namespace upp::ranges
                     }
                     else
                     {
-                        if (is_valid_ascii(ascii_code_unit))
+                        if (is_valid_ascii(ascii_code_unit)) [[likely]]
                         {
                             return uchar::from_unchecked(static_cast<std::uint32_t>(ascii_code_unit));
                         }
-                        else
+                        else [[unlikely]]
                             return uchar::replacement_character();
                     }
                 }
@@ -2758,5 +2827,21 @@ namespace upp::ranges
         /// @}
     } // namespace views
 } // namespace upp::ranges
+
+/// @cond
+
+template<typename View, upp::encoding SourceEncoding, upp::encoding TargetEncoding, upp::ranges::transcode_view_kind Kind, typename ToType>
+inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::transcode_view<View, SourceEncoding, TargetEncoding, Kind, ToType>> =
+    std::ranges::enable_borrowed_range<View>;
+
+template<typename View, upp::encoding SourceEncoding, upp::ranges::decode_view_kind Kind, typename ToType>
+inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::decode_view<View, SourceEncoding, Kind, ToType>> =
+    std::ranges::enable_borrowed_range<View>;
+
+template<typename View, upp::encoding TargetEncoding, typename CodeUnitType>
+inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::encode_view<View, TargetEncoding, CodeUnitType>> =
+    std::ranges::enable_borrowed_range<View>;
+
+/// @endcond
 
 #endif // UNI_CPP_IMPL_RANGES_TRANSCODE_HPP

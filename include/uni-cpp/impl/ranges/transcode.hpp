@@ -592,7 +592,12 @@ namespace upp::ranges
             constexpr void advance_code_point()
             {
                 if constexpr (std::ranges::forward_range<base_t>)
-                    m_current = *std::move(m_advance_to); // NOLINT(bugprone-unchecked-optional-access)
+                {
+                    if constexpr (s_use_advance_to)
+                        m_current = *std::move(m_advance_to); // NOLINT(bugprone-unchecked-optional-access)
+                    else
+                        ++m_current;
+                }
 
                 if (m_current != m_end)
                 {
@@ -625,7 +630,9 @@ namespace upp::ranges
                 using expected_type = std::expected<uchar, error_type>;
 
                 const std::uint8_t code_unit = std::bit_cast<std::uint8_t>(*it);
-                ++it;
+
+                if constexpr (!std::ranges::forward_range<base_t>)
+                    ++it;
 
                 if constexpr (valid_code_unit_range<View, encoding::ascii>)
                 {
@@ -774,7 +781,9 @@ namespace upp::ranges
                 using expected_type = std::expected<uchar, error_type>;
 
                 const std::uint32_t code_unit = std::bit_cast<std::uint32_t>(*it);
-                ++it;
+
+                if constexpr (!std::ranges::forward_range<base_t>)
+                    ++it;
 
                 if constexpr (valid_code_unit_range<View, encoding::utf32>)
                 {
@@ -811,7 +820,7 @@ namespace upp::ranges
             ///
             constexpr void read()
             {
-                impl::iterator_guard<std::ranges::iterator_t<base_t>> guard{m_current, m_current};
+                iterator_guard<std::ranges::iterator_t<base_t>> guard{m_current, m_current};
 
                 if constexpr (Kind == transcode_view_kind::expected)
                     m_success.emplace();
@@ -848,7 +857,7 @@ namespace upp::ranges
                     }
                 }
 
-                if constexpr (std::ranges::forward_range<base_t>)
+                if constexpr (s_use_advance_to)
                     m_advance_to = std::move(m_current);
             }
 
@@ -1098,7 +1107,8 @@ namespace upp::ranges
                 if constexpr (Kind == transcode_view_kind::expected)
                     m_success.emplace();
 
-                m_advance_to = m_current;
+                if constexpr (s_use_advance_to)
+                    m_advance_to = m_current;
 
                 std::expected<uchar, error_type> decoded{[&] {
                     if constexpr (SourceEncoding == encoding::ascii)
@@ -1153,6 +1163,26 @@ namespace upp::ranges
             }
 
         private:
+            static constexpr bool s_source_encoding_is_fixed_width = SourceEncoding == encoding::ascii || SourceEncoding == encoding::utf32;
+            static constexpr bool s_use_advance_to                 = std::ranges::forward_range<base_t> && !s_source_encoding_is_fixed_width;
+
+            template<typename It>
+            struct iterator_guard
+            {
+                constexpr iterator_guard(It&, It&) noexcept {}
+            };
+
+            template<typename It>
+                requires s_use_advance_to
+            struct iterator_guard<It>
+            {
+                constexpr ~iterator_guard() { current = std::move(original); }
+
+                It& current;
+                It  original;
+            };
+
+        private:
             std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
 
             UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
@@ -1162,7 +1192,7 @@ namespace upp::ranges
             UNI_CPP_IMPL_NO_UNIQUE_ADDRESS std::ranges::sentinel_t<base_t> m_end = std::ranges::sentinel_t<base_t>();
 
             UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
-            std::conditional_t<std::ranges::forward_range<base_t>, std::optional<std::ranges::iterator_t<base_t>>, upp::impl::empty_t> m_advance_to;
+            std::conditional_t<s_use_advance_to, std::optional<std::ranges::iterator_t<base_t>>, upp::impl::empty_t> m_advance_to;
 
             upp::impl::inplace_vector<ToType, 4 / sizeof(ToType)> m_buffer{};
 

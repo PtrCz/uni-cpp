@@ -136,7 +136,8 @@ namespace upp::ranges
 /// @cond
 
 template<typename View, typename ToType>
-inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::cast_code_units_to_view<View, ToType>> = std::ranges::borrowed_range<View>;
+inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::cast_code_units_to_view<View, ToType>> =
+    std::ranges::enable_borrowed_range<View>;
 
 /// @endcond
 

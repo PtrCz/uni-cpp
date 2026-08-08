@@ -402,7 +402,8 @@ namespace upp::ranges
 /// @cond
 
 template<typename View, upp::encoding Encoding>
-inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::valid_code_unit_view<View, Encoding>> = std::ranges::borrowed_range<View>;
+inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::valid_code_unit_view<View, Encoding>> =
+    std::ranges::enable_borrowed_range<View>;
 
 /// @endcond
 

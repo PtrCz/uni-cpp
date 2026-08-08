@@ -87,7 +87,8 @@ namespace upp::ranges::impl
 /// @cond
 
 template<typename View, typename ErrorType>
-inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::impl::as_expected_view<View, ErrorType>> = std::ranges::borrowed_range<View>;
+inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::impl::as_expected_view<View, ErrorType>> =
+    std::ranges::enable_borrowed_range<View>;
 
 /// @endcond
 

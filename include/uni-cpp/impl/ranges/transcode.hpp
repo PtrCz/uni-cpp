@@ -1314,6 +1314,10 @@ namespace upp::ranges
             using transcode_view_t = ranges::transcode_view<View, SourceEncoding, encoding::utf32, Kind, std::uint32_t>;
 
         public:
+            template<typename BaseT>
+            static constexpr bool provide_base_method_for_iterators = std::ranges::forward_range<BaseT>;
+
+        public:
             [[nodiscard]] static constexpr expected_t transform_element(std::expected<std::uint32_t, error_type> expected)
                 requires(Kind == decode_view_kind::expected)
             {
@@ -1423,6 +1427,10 @@ namespace upp::ranges
                 else
                     static_assert(false);
             }
+
+        public:
+            template<typename BaseT>
+            static constexpr bool provide_base_method_for_iterators = std::ranges::forward_range<BaseT>;
 
         public:
             [[nodiscard]] static constexpr expected_t transform_element(code_unit_t code_unit)
@@ -1586,6 +1594,10 @@ namespace upp::ranges
             using transcode_view_t = variable_width_encoding_transcode_view<View, TargetEncoding, CodeUnitType>;
 
         public:
+            template<typename BaseT>
+            static constexpr bool provide_base_method_for_iterators = std::ranges::forward_range<BaseT>;
+
+        public:
             [[nodiscard]] static constexpr auto base_projection(const transcode_view_t& view) { return view.base().base(); }
             [[nodiscard]] static constexpr auto base_projection(transcode_view_t&& view) { return std::move(view).base().base(); }
 
@@ -1612,6 +1624,10 @@ namespace upp::ranges
         {
         private:
             using char_type_t = std::remove_cvref_t<std::ranges::range_reference_t<View>>;
+
+        public:
+            template<typename BaseT>
+            static constexpr bool provide_base_method_for_iterators = std::ranges::forward_range<BaseT>;
 
         public:
             [[nodiscard]] static constexpr CodeUnitType transform_element(char_type_t code_point)

@@ -31,7 +31,7 @@ namespace upp::ranges::impl
     /// This type provides a reusable implementation for simple view adaptors, for example,
     /// view adaptors which transform values on a 1-to-1 basis. It is customizable via the @p Traits
     /// template parameter, which is a type, acting as a namespace, that contains all of the
-    /// functions corresponding to the actions which the user wants to customize.
+    /// members corresponding to the actions which the user wants to customize.
     ///
     /// ### `Traits` template parameter
     ///
@@ -49,6 +49,11 @@ namespace upp::ranges::impl
     ///   That is, the return value of `.base()` will be `base_projection(m_base)` where `m_base` can be `const&` or `&&`.
     ///   The `const&` overload should make a copy of the base view, and the rvalue overload should construct the base view by moving it.
     ///
+    /// - (template static constexpr bool variable) `provide_base_method_for_iterators`. If provided, it will be evaluated with `base_t`
+    ///   as a template parameter from this views iterator type. The `.base()` methods of the iterator
+    ///   type of this view will only be available if it evaluates to `true`. If it evaluates to `false`, the `.base()` methods won't
+    ///   be provided (via a `requires` clause). If `provide_base_method_for_iterators` isn't provided, it defaults to `true`.
+    ///
     /// - `iterator_base_projection`. If provided, the result of the `.base()` members of the iterator type of this view will be
     ///   projected through it. That is, the return value of `.begin().base()` will be `iterator_base_projection(m_current)`
     ///   where `m_current` can be `const&` or `&&`. Importantly, the `const&` overload should return a `const&` of the base iterator.
@@ -56,9 +61,9 @@ namespace upp::ranges::impl
     ///
     /// - `sentinel_base_projection`. If provided, the result of the `.base()` member of the sentinel type of this view will be
     ///   projected through it. That is, the return value of `.end().base()` (for non-`common_range`s) will be `sentinel_base_projection(m_end)`.
-    ///   Unlike the other projection functions, this one has only a single overload --- a copying one.
+    ///   Unlike the other projection functions, this one has only a single overload - a copying one.
     ///
-    /// All of these are optional and not every one of them must be provided. These functions should be defined as `static`.
+    /// All of these are optional and not every one of them must be provided. The functions should be defined as `static`.
     /// They can be template functions (where the template parameters are deduced from the functions arguments) and can have multiple overloads defined.
     ///
     /// The `base_projection` functions are useful for defining a single simple view composed of multiple `simple_view_adaptor`s, where
@@ -310,8 +315,23 @@ namespace upp::ranges::impl
             using parent_t = impl::maybe_const<Const, simple_view_adaptor>;
             using base_t   = impl::maybe_const<Const, View>;
 
-            static constexpr bool has_iterator_base_projection =
-                requires { Traits::iterator_base_projection(std::declval<const std::ranges::iterator_t<base_t>&>()); };
+            static constexpr bool provide_base_method = [] {
+                if constexpr (requires { Traits::template provide_base_method_for_iterators<base_t>; })
+                {
+                    return Traits::template provide_base_method_for_iterators<base_t>;
+                }
+                else
+                    return true;
+            }();
+
+            static constexpr bool has_iterator_base_projection = [] {
+                if constexpr (provide_base_method)
+                {
+                    return requires { Traits::iterator_base_projection(std::declval<const std::ranges::iterator_t<base_t>&>()); };
+                }
+                else
+                    return false;
+            }();
 
             [[nodiscard]] static consteval auto iterator_concept_impl() noexcept
             {
@@ -354,6 +374,7 @@ namespace upp::ranges::impl
             /// @brief Returns a `const` reference to the underlying iterator.
             ///
             constexpr const auto& base() const&
+                requires(provide_base_method)
             {
                 if constexpr (has_iterator_base_projection)
                 {
@@ -371,6 +392,7 @@ namespace upp::ranges::impl
             /// @brief Returns the underlying iterator by moving it.
             ///
             constexpr auto base() &&
+                requires(provide_base_method)
             {
                 if constexpr (has_iterator_base_projection)
                 {

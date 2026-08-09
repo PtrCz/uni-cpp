@@ -1,6 +1,8 @@
 #ifndef UNI_CPP_IMPL_NO_UNIQUE_ADDRESS_HPP
 #define UNI_CPP_IMPL_NO_UNIQUE_ADDRESS_HPP
 
+#include <type_traits>
+
 #if defined(_MSC_VER) && !defined(__clang__)
 #define UNI_CPP_IMPL_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #else

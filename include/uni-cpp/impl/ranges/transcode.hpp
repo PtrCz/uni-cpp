@@ -153,16 +153,6 @@ namespace upp::ranges
         lossy,
     };
 
-    namespace impl::transcode_view_impl
-    {
-        struct iterator_type_tag
-        {
-        };
-
-        template<typename>
-        struct get_transcode_view_subrange_info;
-    } // namespace impl::transcode_view_impl
-
     /// @brief A lazy view that transcodes text to different UTF encodings.
     ///
     /// @tparam View Underlying view type. If the `Kind` template parameter is specified as `valid`, then the `View` type must satisfy
@@ -385,7 +375,7 @@ namespace upp::ranges
 
     private:
         template<bool Const>
-        class iterator : public impl::input_iterator_category_impl<View>, private impl::transcode_view_impl::iterator_type_tag
+        class iterator : public impl::input_iterator_category_impl<View>
         {
         private:
             using parent_t = impl::maybe_const<Const, transcode_view>;
@@ -1182,6 +1172,8 @@ namespace upp::ranges
                 It  original;
             };
 
+            friend transcode_view;
+
         private:
             std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
 
@@ -1200,20 +1192,6 @@ namespace upp::ranges
                 m_success{}; ///< Holds error information about the last read operation.
 
             std::int8_t m_buffer_index = 0;
-
-            template<typename>
-            friend struct impl::transcode_view_impl::get_transcode_view_subrange_info;
-
-            // for the implementation of `get_transcode_view_subrange_info`
-            static constexpr auto kind            = Kind;
-            static constexpr auto source_encoding = SourceEncoding;
-
-            template<std::ranges::view View2, encoding SourceEncoding2, encoding TargetEncoding2, transcode_view_kind Kind2,
-                     code_unit_type_for<TargetEncoding2> ToType2>
-                requires unicode_encoding<TargetEncoding2> && code_unit_range_for<View2, SourceEncoding2> &&
-                         (Kind2 != transcode_view_kind::valid || valid_code_unit_range<View2, SourceEncoding2>) &&
-                         std::same_as<ToType2, std::remove_cv_t<ToType2>>
-            friend class transcode_view;
         };
 
         template<bool Const>
@@ -1264,12 +1242,7 @@ namespace upp::ranges
             {
             }
 
-            template<std::ranges::view View2, encoding SourceEncoding2, encoding TargetEncoding2, transcode_view_kind Kind2,
-                     code_unit_type_for<TargetEncoding2> ToType2>
-                requires unicode_encoding<TargetEncoding2> && code_unit_range_for<View2, SourceEncoding2> &&
-                         (Kind2 != transcode_view_kind::valid || valid_code_unit_range<View2, SourceEncoding2>) &&
-                         std::same_as<ToType2, std::remove_cv_t<ToType2>>
-            friend class transcode_view;
+            friend transcode_view;
         };
 
     private:
@@ -1774,24 +1747,6 @@ namespace upp::ranges
                 static constexpr transcode_view_kind kind            = Kind;
                 static constexpr encoding            source_encoding = SourceEncoding;
             };
-
-            template<typename It>
-            inline constexpr bool is_transcode_view_iterator = std::is_base_of_v<iterator_type_tag, It>;
-
-            template<typename>
-            inline constexpr bool is_transcode_view_subrange = false;
-
-            template<typename It>
-            inline constexpr bool is_transcode_view_subrange<std::ranges::subrange<It, It, std::ranges::subrange_kind::unsized>> =
-                is_transcode_view_iterator<It>;
-
-            template<typename It>
-                requires is_transcode_view_iterator<It>
-            struct get_transcode_view_subrange_info<std::ranges::subrange<It, It, std::ranges::subrange_kind::unsized>>
-            {
-                static constexpr transcode_view_kind kind            = It::kind;
-                static constexpr encoding            source_encoding = It::source_encoding;
-            };
         } // namespace transcode_view_impl
 
         namespace decode_view_impl
@@ -1903,23 +1858,6 @@ namespace upp::ranges
                     {
                         return transcode_view(std::forward<Range>(range).base(), encoding_tag<range_info::source_encoding>,
                                               encoding_tag<TargetEncoding>, nontype<range_info::kind>, type_tag<ToType>);
-                    }
-                }
-                else if constexpr (transcode_view_impl::is_transcode_view_subrange<range_t>)
-                {
-                    using range_info = transcode_view_impl::get_transcode_view_subrange_info<range_t>;
-
-                    if constexpr (Kind == transcode_view_kind::expected)
-                    {
-                        return impl::as_expected_range<error_type>(
-                            transcode_view(std::ranges::subrange(range.begin().base(), range.end().base()), encoding_tag<range_info::source_encoding>,
-                                           encoding_tag<TargetEncoding>, nontype<range_info::kind>, type_tag<ToType>));
-                    }
-                    else
-                    {
-                        return transcode_view(std::ranges::subrange(range.begin().base(), range.end().base()),
-                                              encoding_tag<range_info::source_encoding>, encoding_tag<TargetEncoding>, nontype<range_info::kind>,
-                                              type_tag<ToType>);
                     }
                 }
                 else

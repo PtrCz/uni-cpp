@@ -12,6 +12,9 @@ namespace upp::impl
     struct empty_t
     {
     };
+
+    template<bool Present, typename T>
+    using maybe_present = std::conditional_t<Present, T, empty_t>;
 } // namespace upp::impl
 
 #endif // UNI_CPP_IMPL_NO_UNIQUE_ADDRESS_HPP

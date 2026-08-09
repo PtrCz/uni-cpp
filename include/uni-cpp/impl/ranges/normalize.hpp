@@ -9,10 +9,12 @@
 #include "base.hpp"
 #include "approximately_sized_range.hpp"
 #include "view_interface.hpp"
+#include "iterator_cache.hpp"
 
 #include "../../uchar.hpp"
 #include "../unicode_data/decomposition.hpp"
 #include "../normalization_form.hpp"
+#include "../no_unique_address.hpp"
 
 #include "../small_vector.hpp"
 #include "../inplace_vector.hpp"
@@ -67,12 +69,12 @@ namespace upp::ranges
 
             constexpr View base() && { return std::move(m_base); }
 
-            constexpr iterator<false> begin() { return iterator<false>(*this, std::ranges::begin(m_base)); }
+            constexpr iterator<false> begin() { return iterator<false>(std::ranges::begin(m_base), std::ranges::end(m_base)); }
 
             constexpr iterator<true> begin() const
                 requires std::ranges::range<const View> && code_point_range<const View>
             {
-                return iterator<true>(*this, std::ranges::begin(m_base));
+                return iterator<true>(std::ranges::begin(m_base), std::ranges::end(m_base));
             }
 
             constexpr sentinel<false> end() { return sentinel<false>(std::ranges::end(m_base)); }
@@ -80,7 +82,7 @@ namespace upp::ranges
             constexpr iterator<false> end()
                 requires std::ranges::common_range<View>
             {
-                return iterator<false>(*this, std::ranges::end(m_base));
+                return iterator<false>(std::ranges::end(m_base), std::ranges::end(m_base));
             }
 
             constexpr sentinel<true> end() const
@@ -92,7 +94,7 @@ namespace upp::ranges
             constexpr iterator<true> end() const
                 requires std::ranges::common_range<const View> && code_point_range<const View>
             {
-                return iterator<true>(*this, std::ranges::end(m_base));
+                return iterator<true>(std::ranges::end(m_base), std::ranges::end(m_base));
             }
 
             constexpr bool empty()
@@ -139,8 +141,18 @@ namespace upp::ranges
 
             public:
                 constexpr iterator()
-                    requires std::default_initializable<std::ranges::iterator_t<View>>
+                    requires std::default_initializable<std::ranges::iterator_t<base_t>>
                 = default;
+
+                constexpr iterator(const iterator&)
+                    requires std::copyable<std::ranges::iterator_t<base_t>>
+                = default;
+                constexpr iterator(iterator&&) = default;
+
+                constexpr iterator& operator=(const iterator&)
+                    requires std::copyable<std::ranges::iterator_t<base_t>>
+                = default;
+                constexpr iterator& operator=(iterator&&) = default;
 
                 constexpr const std::ranges::iterator_t<base_t>& base() const& noexcept { return m_current; }
 
@@ -202,17 +214,15 @@ namespace upp::ranges
                 }
 
             private:
-                constexpr iterator(parent_t& parent, std::ranges::iterator_t<base_t> begin)
-                    : m_current(std::move(begin))
-                    , m_parent(std::addressof(parent))
+                constexpr iterator(std::ranges::iterator_t<base_t> current, std::ranges::sentinel_t<base_t> end)
+                    : m_current(std::move(current))
+                    , m_end(std::move(end))
                 {
-                    if (base() != end())
+                    if (m_current != m_end)
                     {
                         m_buffer = decomposition_of(*m_current);
                     }
                 }
-
-                constexpr std::ranges::sentinel_t<base_t> end() const { return std::ranges::end(m_parent->m_base); }
 
                 [[nodiscard]] static constexpr auto decomposition_of(uchar code_point) noexcept
                 {
@@ -235,7 +245,7 @@ namespace upp::ranges
                     ++m_current;
                     m_buffer_index = 0;
 
-                    if (m_current != end())
+                    if (m_current != m_end)
                     {
                         m_buffer = decomposition_of(*m_current);
                     }
@@ -252,7 +262,8 @@ namespace upp::ranges
 
             private:
                 std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
-                parent_t*                       m_parent  = nullptr;
+
+                UNI_CPP_IMPL_NO_UNIQUE_ADDRESS std::ranges::sentinel_t<base_t> m_end = std::ranges::sentinel_t<base_t>();
 
                 upp::impl::inplace_vector<uchar, 18> m_buffer{};
                 std::uint8_t                         m_buffer_index = 0;
@@ -266,8 +277,7 @@ namespace upp::ranges
             class sentinel
             {
             private:
-                using parent_t = impl::maybe_const<Const, decompose_view>;
-                using base_t   = impl::maybe_const<Const, View>;
+                using base_t = impl::maybe_const<Const, View>;
 
                 std::ranges::sentinel_t<base_t> m_end = std::ranges::sentinel_t<base_t>();
 
@@ -318,10 +328,7 @@ namespace upp::ranges
         class canonically_order_view : public UNI_CPP_IMPL_VIEW_INTERFACE(canonically_order_view<View>)
         {
         private:
-            template<bool>
             class iterator;
-
-            template<bool>
             class sentinel;
 
         public:
@@ -342,32 +349,41 @@ namespace upp::ranges
 
             constexpr View base() && { return std::move(m_base); }
 
-            constexpr iterator<false> begin() { return iterator<false>(*this, std::ranges::begin(m_base)); }
-
-            constexpr iterator<true> begin() const
-                requires code_point_range<const View>
+            constexpr iterator begin()
             {
-                return iterator<true>(*this, std::ranges::begin(m_base));
+                if constexpr (std::ranges::forward_range<View>)
+                {
+                    if (m_cached_begin.has_value())
+                        return *m_cached_begin;
+                }
+
+                auto get_it = [&] {
+                    if constexpr (std::ranges::bidirectional_range<View>)
+                        return iterator(std::ranges::begin(m_base), std::ranges::begin(m_base), std::ranges::end(m_base));
+                    else
+                        return iterator(std::ranges::begin(m_base), std::ranges::end(m_base));
+                };
+
+                if constexpr (std::ranges::forward_range<View>)
+                {
+                    auto it = get_it();
+
+                    m_cached_begin.emplace(it);
+                    return it;
+                }
+                else
+                    return get_it();
             }
 
-            constexpr sentinel<false> end() { return sentinel<false>(std::ranges::end(m_base)); }
+            constexpr sentinel end() { return sentinel(std::ranges::end(m_base)); }
 
-            constexpr iterator<false> end()
+            constexpr iterator end()
                 requires std::ranges::common_range<View>
             {
-                return iterator<false>(*this, std::ranges::end(m_base));
-            }
-
-            constexpr sentinel<true> end() const
-                requires code_point_range<const View>
-            {
-                return sentinel<true>(std::ranges::end(m_base));
-            }
-
-            constexpr iterator<true> end() const
-                requires std::ranges::common_range<const View> && code_point_range<const View>
-            {
-                return iterator<true>(*this, std::ranges::end(m_base));
+                if constexpr (std::ranges::bidirectional_range<View>)
+                    return iterator(std::ranges::end(m_base), std::ranges::begin(m_base), std::ranges::end(m_base));
+                else
+                    return iterator(std::ranges::end(m_base), std::ranges::end(m_base));
             }
 
             constexpr bool empty()
@@ -411,27 +427,39 @@ namespace upp::ranges
             }
 
         private:
-            template<bool Const>
             class iterator : public impl::input_iterator_category_impl<View>
             {
-            private:
-                using parent_t = impl::maybe_const<Const, canonically_order_view>;
-                using base_t   = impl::maybe_const<Const, View>;
-
             public:
-                using iterator_concept = decltype(impl::bidirectional_range_iterator_concept_impl<base_t>());
-
-                using value_type      = uchar;
-                using difference_type = std::ptrdiff_t;
+                using iterator_concept = decltype(impl::bidirectional_range_iterator_concept_impl<View>());
+                using value_type       = uchar;
+                using difference_type  = std::ptrdiff_t;
 
             public:
                 constexpr iterator()
                     requires std::default_initializable<std::ranges::iterator_t<View>>
                 = default;
 
-                constexpr const std::ranges::iterator_t<base_t>& base() const& noexcept { return m_current; }
+                constexpr iterator(const iterator&)
+                    requires std::copyable<std::ranges::iterator_t<View>>
+                = default;
+                constexpr iterator(iterator&&) = default;
 
-                constexpr std::ranges::iterator_t<base_t> base() && { return std::move(m_current); }
+                constexpr iterator& operator=(const iterator&)
+                    requires std::copyable<std::ranges::iterator_t<View>>
+                = default;
+                constexpr iterator& operator=(iterator&&) = default;
+
+                constexpr const std::ranges::iterator_t<View>& base() const& noexcept
+                    requires std::ranges::forward_range<View>
+                {
+                    return m_current;
+                }
+
+                constexpr std::ranges::iterator_t<View> base() &&
+                    requires std::ranges::forward_range<View>
+                {
+                    return std::move(m_current);
+                }
 
                 constexpr value_type operator*() const { return m_buffer[std::bit_cast<std::size_t>(m_buffer_index)]; }
 
@@ -463,7 +491,7 @@ namespace upp::ranges
                 }
 
                 constexpr iterator& operator--()
-                    requires std::ranges::bidirectional_range<base_t>
+                    requires std::ranges::bidirectional_range<View>
                 {
                     if (m_buffer_index == 0z)
                         read_backwards();
@@ -474,7 +502,7 @@ namespace upp::ranges
                 }
 
                 constexpr iterator operator--(int)
-                    requires std::ranges::bidirectional_range<base_t>
+                    requires std::ranges::bidirectional_range<View>
                 {
                     auto temp = *this;
                     --*this;
@@ -482,49 +510,50 @@ namespace upp::ranges
                 }
 
                 friend constexpr bool operator==(const iterator& lhs, const iterator& rhs)
-                    requires std::equality_comparable<std::ranges::iterator_t<base_t>>
+                    requires std::equality_comparable<std::ranges::iterator_t<View>>
                 {
                     return lhs.m_current == rhs.m_current && lhs.m_buffer_index == rhs.m_buffer_index;
                 }
 
             private:
-                constexpr iterator(parent_t& parent, std::ranges::iterator_t<base_t> begin)
-                    : m_current(std::move(begin))
-                    , m_parent(std::addressof(parent))
+                constexpr iterator(std::ranges::iterator_t<View> current, std::ranges::iterator_t<View> begin, std::ranges::sentinel_t<View> end)
+                    requires std::ranges::bidirectional_range<View>
+                    : m_current(std::move(current))
+                    , m_begin(std::move(begin))
+                    , m_end(std::move(end))
                 {
-                    if (base() != end())
+                    if (m_current != m_end)
+                        read();
+                }
+
+                constexpr iterator(std::ranges::iterator_t<View> current, std::ranges::sentinel_t<View> end)
+                    requires(!std::ranges::bidirectional_range<View>)
+                    : m_current(std::move(current))
+                    , m_end(std::move(end))
+                {
+                    if (m_current != m_end)
                     {
                         read();
                     }
                     else
                     {
-                        if constexpr (!std::ranges::forward_range<base_t>)
-                        {
+                        if constexpr (!std::ranges::forward_range<View>)
                             m_buffer_index = impl::buffer_index_at_sentinel<signed_size_t>;
-                        }
                     }
                 }
-
-                constexpr std::ranges::iterator_t<base_t> begin() const
-                    requires std::ranges::bidirectional_range<base_t>
-                {
-                    return std::ranges::begin(m_parent->m_base);
-                }
-
-                constexpr std::ranges::sentinel_t<base_t> end() const { return std::ranges::end(m_parent->m_base); }
 
                 constexpr void advance_underlying()
                 {
-                    if constexpr (std::ranges::forward_range<base_t>)
+                    if constexpr (std::ranges::forward_range<View>)
                         m_current = *m_advance_to;
 
-                    if (m_current != end())
+                    if (m_current != m_end)
                     {
                         read();
                     }
                     else
                     {
-                        if constexpr (std::ranges::forward_range<base_t>)
+                        if constexpr (std::ranges::forward_range<View>)
                             m_buffer_index = 0z;
                         else
                             m_buffer_index = impl::buffer_index_at_sentinel<signed_size_t>;
@@ -579,7 +608,7 @@ namespace upp::ranges
                     }
                 }
 
-                constexpr void read_impl(std::ranges::iterator_t<base_t>& it, const std::ranges::sentinel_t<base_t>& last)
+                constexpr void read_impl(std::ranges::iterator_t<View>& it, const std::ranges::sentinel_t<View>& last)
                 {
                     m_buffer.clear();
                     m_buffer_index = 0z;
@@ -592,7 +621,7 @@ namespace upp::ranges
 
                     if (first.canonical_combining_class() == 0)
                     {
-                        if constexpr (std::ranges::forward_range<base_t>)
+                        if constexpr (std::ranges::forward_range<View>)
                             m_advance_to = std::move(it);
 
                         return;
@@ -613,7 +642,7 @@ namespace upp::ranges
                         canonically_order_the_buffer();
                     }
 
-                    if constexpr (std::ranges::forward_range<base_t>)
+                    if constexpr (std::ranges::forward_range<View>)
                         m_advance_to = std::move(it);
                 }
 
@@ -621,8 +650,8 @@ namespace upp::ranges
                 ///
                 constexpr void read()
                 {
-                    impl::iterator_guard<std::ranges::iterator_t<base_t>> guard{m_current, m_current};
-                    read_impl(m_current, end());
+                    impl::iterator_guard<std::ranges::iterator_t<View>> guard{m_current, m_current};
+                    read_impl(m_current, m_end);
                 }
 
                 constexpr void reverse_buffer() { std::ranges::reverse(m_buffer); }
@@ -630,7 +659,7 @@ namespace upp::ranges
                 /// @brief Moves the underlying iterator backwards the necessary amount and updates the buffer.
                 ///
                 constexpr void read_backwards()
-                    requires std::ranges::bidirectional_range<base_t>
+                    requires std::ranges::bidirectional_range<View>
                 {
                     m_buffer.clear();
                     m_advance_to = m_current;
@@ -647,9 +676,7 @@ namespace upp::ranges
                         return;
                     }
 
-                    const auto beg = begin();
-
-                    for (; m_current != beg;)
+                    for (; m_current != m_begin;)
                     {
                         --m_current;
 
@@ -675,13 +702,18 @@ namespace upp::ranges
                 }
 
             private:
-                std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
-                parent_t*                       m_parent  = nullptr;
+                std::ranges::iterator_t<View> m_current = std::ranges::iterator_t<View>();
+
+                UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
+                upp::impl::maybe_present<std::ranges::bidirectional_range<View>, std::ranges::iterator_t<View>> m_begin = decltype(m_begin)();
+
+                UNI_CPP_IMPL_NO_UNIQUE_ADDRESS std::ranges::sentinel_t<View> m_end = std::ranges::sentinel_t<View>();
+
+                UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
+                upp::impl::maybe_present<std::ranges::forward_range<View>, std::optional<std::ranges::iterator_t<View>>> m_advance_to;
 
                 upp::impl::small_vector<uchar, 32u> m_buffer{};
                 signed_size_t                       m_buffer_index = 0z;
-
-                std::optional<std::ranges::iterator_t<base_t>> m_advance_to;
 
             private:
                 template<std::ranges::view View2>
@@ -689,35 +721,21 @@ namespace upp::ranges
                 friend class canonically_order_view;
             };
 
-            template<bool Const>
             class sentinel
             {
             private:
-                using parent_t = impl::maybe_const<Const, canonically_order_view>;
-                using base_t   = impl::maybe_const<Const, View>;
-
-                std::ranges::sentinel_t<base_t> m_end = std::ranges::sentinel_t<base_t>();
+                std::ranges::sentinel_t<View> m_end = std::ranges::sentinel_t<View>();
 
             public:
                 sentinel() = default;
 
-                /// @brief Constructs a `const` sentinel from a non-`const` sentinel.
-                ///
-                constexpr explicit sentinel(sentinel<!Const> i)
-                    requires Const && std::convertible_to<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<base_t>>
-                    : m_end{i.m_end}
-                {
-                }
-
-                constexpr std::ranges::sentinel_t<base_t> base() const { return m_end; }
+                constexpr std::ranges::sentinel_t<View> base() const { return m_end; }
 
                 /// @brief Compares an iterator with a sentinel.
                 ///
-                template<bool OtherConst>
-                    requires std::sentinel_for<std::ranges::sentinel_t<base_t>, std::ranges::iterator_t<impl::maybe_const<OtherConst, View>>>
-                friend constexpr bool operator==(const iterator<OtherConst>& x, const sentinel& y)
+                friend constexpr bool operator==(const iterator& x, const sentinel& y)
                 {
-                    if constexpr (std::ranges::forward_range<base_t>)
+                    if constexpr (std::ranges::forward_range<View>)
                     {
                         return x.m_current == y.m_end;
                     }
@@ -728,7 +746,7 @@ namespace upp::ranges
                 }
 
             private:
-                constexpr explicit sentinel(std::ranges::sentinel_t<base_t> end)
+                constexpr explicit sentinel(std::ranges::sentinel_t<View> end)
                     : m_end{end}
                 {
                 }
@@ -740,6 +758,8 @@ namespace upp::ranges
 
         private:
             View m_base = View();
+
+            UNI_CPP_IMPL_NO_UNIQUE_ADDRESS upp::impl::maybe_present<std::ranges::forward_range<View>, non_propagating_cache<iterator>> m_cached_begin;
         };
 
         template<std::ranges::view View, decomposition_kind Kind>
@@ -747,10 +767,7 @@ namespace upp::ranges
         class to_nfc_view : public UNI_CPP_IMPL_VIEW_INTERFACE(to_nfc_view<View, Kind>)
         {
         private:
-            template<bool>
             class iterator;
-
-            template<bool>
             class sentinel;
 
         public:
@@ -778,32 +795,41 @@ namespace upp::ranges
 
             constexpr View base() && { return std::move(m_base); }
 
-            constexpr iterator<false> begin() { return iterator<false>(*this, std::ranges::begin(m_base)); }
-
-            constexpr iterator<true> begin() const
-                requires code_point_range<const View>
+            constexpr iterator begin()
             {
-                return iterator<true>(*this, std::ranges::begin(m_base));
+                if constexpr (std::ranges::forward_range<View>)
+                {
+                    if (m_cached_begin.has_value())
+                        return *m_cached_begin;
+                }
+
+                auto get_it = [&] {
+                    if constexpr (std::ranges::bidirectional_range<View>)
+                        return iterator(std::ranges::begin(m_base), std::ranges::begin(m_base), std::ranges::end(m_base));
+                    else
+                        return iterator(std::ranges::begin(m_base), std::ranges::end(m_base));
+                };
+
+                if constexpr (std::ranges::forward_range<View>)
+                {
+                    auto it = get_it();
+
+                    m_cached_begin.emplace(it);
+                    return it;
+                }
+                else
+                    return get_it();
             }
 
-            constexpr sentinel<false> end() { return sentinel<false>(std::ranges::end(m_base)); }
+            constexpr sentinel end() { return sentinel(std::ranges::end(m_base)); }
 
-            constexpr iterator<false> end()
+            constexpr iterator end()
                 requires std::ranges::common_range<View>
             {
-                return iterator<false>(*this, std::ranges::end(m_base));
-            }
-
-            constexpr sentinel<true> end() const
-                requires code_point_range<const View>
-            {
-                return sentinel<true>(std::ranges::end(m_base));
-            }
-
-            constexpr iterator<true> end() const
-                requires std::ranges::common_range<const View> && code_point_range<const View>
-            {
-                return iterator<true>(*this, std::ranges::end(m_base));
+                if constexpr (std::ranges::bidirectional_range<View>)
+                    return iterator(std::ranges::end(m_base), std::ranges::begin(m_base), std::ranges::end(m_base));
+                else
+                    return iterator(std::ranges::end(m_base), std::ranges::end(m_base));
             }
 
             constexpr bool empty()
@@ -835,27 +861,39 @@ namespace upp::ranges
             }
 
         private:
-            template<bool Const>
             class iterator : public impl::input_iterator_category_impl<View>
             {
-            private:
-                using parent_t = impl::maybe_const<Const, to_nfc_view>;
-                using base_t   = impl::maybe_const<Const, View>;
-
             public:
-                using iterator_concept = decltype(impl::bidirectional_range_iterator_concept_impl<base_t>());
-
-                using value_type      = uchar;
-                using difference_type = std::ptrdiff_t;
+                using iterator_concept = decltype(impl::bidirectional_range_iterator_concept_impl<View>());
+                using value_type       = uchar;
+                using difference_type  = std::ptrdiff_t;
 
             public:
                 constexpr iterator()
                     requires std::default_initializable<std::ranges::iterator_t<View>>
                 = default;
 
-                constexpr const std::ranges::iterator_t<base_t>& base() const& noexcept { return m_current; }
+                constexpr iterator(const iterator&)
+                    requires std::copyable<std::ranges::iterator_t<View>>
+                = default;
+                constexpr iterator(iterator&&) = default;
 
-                constexpr std::ranges::iterator_t<base_t> base() && { return std::move(m_current); }
+                constexpr iterator& operator=(const iterator&)
+                    requires std::copyable<std::ranges::iterator_t<View>>
+                = default;
+                constexpr iterator& operator=(iterator&&) = default;
+
+                constexpr const std::ranges::iterator_t<View>& base() const& noexcept
+                    requires std::ranges::forward_range<View>
+                {
+                    return m_current;
+                }
+
+                constexpr std::ranges::iterator_t<View> base() &&
+                    requires std::ranges::forward_range<View>
+                {
+                    return std::move(m_current);
+                }
 
                 constexpr value_type operator*() const { return m_buffer[std::bit_cast<std::size_t>(m_buffer_index)]; }
 
@@ -887,7 +925,7 @@ namespace upp::ranges
                 }
 
                 constexpr iterator& operator--()
-                    requires std::ranges::bidirectional_range<base_t>
+                    requires std::ranges::bidirectional_range<View>
                 {
                     if (m_buffer_index == 0z)
                         read_backwards();
@@ -898,7 +936,7 @@ namespace upp::ranges
                 }
 
                 constexpr iterator operator--(int)
-                    requires std::ranges::bidirectional_range<base_t>
+                    requires std::ranges::bidirectional_range<View>
                 {
                     auto temp = *this;
                     --*this;
@@ -906,49 +944,50 @@ namespace upp::ranges
                 }
 
                 friend constexpr bool operator==(const iterator& lhs, const iterator& rhs)
-                    requires std::equality_comparable<std::ranges::iterator_t<base_t>>
+                    requires std::equality_comparable<std::ranges::iterator_t<View>>
                 {
                     return lhs.m_current == rhs.m_current && lhs.m_buffer_index == rhs.m_buffer_index;
                 }
 
             private:
-                constexpr iterator(parent_t& parent, std::ranges::iterator_t<base_t> begin)
-                    : m_current(std::move(begin))
-                    , m_parent(std::addressof(parent))
+                constexpr iterator(std::ranges::iterator_t<View> current, std::ranges::iterator_t<View> begin, std::ranges::sentinel_t<View> end)
+                    requires std::ranges::bidirectional_range<View>
+                    : m_current(std::move(current))
+                    , m_begin(std::move(begin))
+                    , m_end(std::move(end))
                 {
-                    if (base() != end())
+                    if (m_current != m_end)
+                        read();
+                }
+
+                constexpr iterator(std::ranges::iterator_t<View> current, std::ranges::sentinel_t<View> end)
+                    requires(!std::ranges::bidirectional_range<View>)
+                    : m_current(std::move(current))
+                    , m_end(std::move(end))
+                {
+                    if (m_current != m_end)
                     {
                         read();
                     }
                     else
                     {
-                        if constexpr (!std::ranges::forward_range<base_t>)
-                        {
+                        if constexpr (!std::ranges::forward_range<View>)
                             m_buffer_index = impl::buffer_index_at_sentinel<signed_size_t>;
-                        }
                     }
                 }
-
-                constexpr std::ranges::iterator_t<base_t> begin() const
-                    requires std::ranges::bidirectional_range<base_t>
-                {
-                    return std::ranges::begin(m_parent->m_base);
-                }
-
-                constexpr std::ranges::sentinel_t<base_t> end() const { return std::ranges::end(m_parent->m_base); }
 
                 constexpr void advance_underlying()
                 {
-                    if constexpr (std::ranges::forward_range<base_t>)
+                    if constexpr (std::ranges::forward_range<View>)
                         m_current = *m_advance_to;
 
-                    if (m_current != end())
+                    if (m_current != m_end)
                     {
                         read();
                     }
                     else
                     {
-                        if constexpr (std::ranges::forward_range<base_t>)
+                        if constexpr (std::ranges::forward_range<View>)
                             m_buffer_index = 0z;
                         else
                             m_buffer_index = impl::buffer_index_at_sentinel<signed_size_t>;
@@ -1162,7 +1201,7 @@ namespace upp::ranges
                     }
                 }
 
-                constexpr void read_impl(std::ranges::iterator_t<base_t>& it, const std::ranges::sentinel_t<base_t>& last)
+                constexpr void read_impl(std::ranges::iterator_t<View>& it, const std::ranges::sentinel_t<View>& last)
                 {
                     m_buffer.clear();
                     m_buffer_index = 0z;
@@ -1184,7 +1223,7 @@ namespace upp::ranges
                             m_buffer.emplace_back(code_point);
                         }
 
-                        if constexpr (std::ranges::forward_range<base_t>)
+                        if constexpr (std::ranges::forward_range<View>)
                             m_advance_to = std::move(it);
 
                         fully_decompose_the_buffer();
@@ -1205,7 +1244,7 @@ namespace upp::ranges
                         m_buffer.emplace_back(code_point);
                     }
 
-                    if constexpr (std::ranges::forward_range<base_t>)
+                    if constexpr (std::ranges::forward_range<View>)
                         m_advance_to = std::move(it);
 
                     if (m_buffer.size() == 1uz && qc(first) == quick_check::yes)
@@ -1228,8 +1267,8 @@ namespace upp::ranges
                 ///
                 constexpr void read()
                 {
-                    impl::iterator_guard<std::ranges::iterator_t<base_t>> guard{m_current, m_current};
-                    read_impl(m_current, end());
+                    impl::iterator_guard<std::ranges::iterator_t<View>> guard{m_current, m_current};
+                    read_impl(m_current, m_end);
                 }
 
                 constexpr void reverse_buffer() { std::ranges::reverse(m_buffer); }
@@ -1237,15 +1276,13 @@ namespace upp::ranges
                 /// @brief Moves the underlying iterator backwards the necessary amount and updates the buffer.
                 ///
                 constexpr void read_backwards()
-                    requires std::ranges::bidirectional_range<base_t>
+                    requires std::ranges::bidirectional_range<View>
                 {
                     m_buffer.clear();
                     m_advance_to = m_current;
 
-                    std::optional<std::ranges::iterator_t<base_t>> last_starter;
-                    std::size_t                                    code_points_since_last_starter = 0uz;
-
-                    const auto beg = begin();
+                    std::optional<std::ranges::iterator_t<View>> last_starter;
+                    std::size_t                                  code_points_since_last_starter = 0uz;
 
                     // Stop at the first encountered starter with qc == yes.
                     // If there isn't one, stop at the last encountered starter.
@@ -1293,7 +1330,7 @@ namespace upp::ranges
                         else
                             ++code_points_since_last_starter;
 
-                    } while (m_current != beg);
+                    } while (m_current != m_begin);
 
                     // No starter with `qc == yes` found.
                     // Try to stop at the last encountered starter.
@@ -1323,13 +1360,18 @@ namespace upp::ranges
                 }
 
             private:
-                std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
-                parent_t*                       m_parent  = nullptr;
+                std::ranges::iterator_t<View> m_current = std::ranges::iterator_t<View>();
+
+                UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
+                upp::impl::maybe_present<std::ranges::bidirectional_range<View>, std::ranges::iterator_t<View>> m_begin = decltype(m_begin)();
+
+                UNI_CPP_IMPL_NO_UNIQUE_ADDRESS std::ranges::sentinel_t<View> m_end = std::ranges::sentinel_t<View>();
+
+                UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
+                upp::impl::maybe_present<std::ranges::forward_range<View>, std::optional<std::ranges::iterator_t<View>>> m_advance_to;
 
                 upp::impl::small_vector<uchar, 64u> m_buffer{};
                 signed_size_t                       m_buffer_index = 0z;
-
-                std::optional<std::ranges::iterator_t<base_t>> m_advance_to;
 
             private:
                 template<std::ranges::view View2, decomposition_kind Kind2>
@@ -1337,35 +1379,21 @@ namespace upp::ranges
                 friend class to_nfc_view;
             };
 
-            template<bool Const>
             class sentinel
             {
             private:
-                using parent_t = impl::maybe_const<Const, to_nfc_view>;
-                using base_t   = impl::maybe_const<Const, View>;
-
-                std::ranges::sentinel_t<base_t> m_end = std::ranges::sentinel_t<base_t>();
+                std::ranges::sentinel_t<View> m_end = std::ranges::sentinel_t<View>();
 
             public:
                 sentinel() = default;
 
-                /// @brief Constructs a `const` sentinel from a non-`const` sentinel.
-                ///
-                constexpr explicit sentinel(sentinel<!Const> i)
-                    requires Const && std::convertible_to<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<base_t>>
-                    : m_end{i.m_end}
-                {
-                }
-
-                constexpr std::ranges::sentinel_t<base_t> base() const { return m_end; }
+                constexpr std::ranges::sentinel_t<View> base() const { return m_end; }
 
                 /// @brief Compares an iterator with a sentinel.
                 ///
-                template<bool OtherConst>
-                    requires std::sentinel_for<std::ranges::sentinel_t<base_t>, std::ranges::iterator_t<impl::maybe_const<OtherConst, View>>>
-                friend constexpr bool operator==(const iterator<OtherConst>& x, const sentinel& y)
+                friend constexpr bool operator==(const iterator& x, const sentinel& y)
                 {
-                    if constexpr (std::ranges::forward_range<base_t>)
+                    if constexpr (std::ranges::forward_range<View>)
                     {
                         return x.m_current == y.m_end;
                     }
@@ -1376,7 +1404,7 @@ namespace upp::ranges
                 }
 
             private:
-                constexpr explicit sentinel(std::ranges::sentinel_t<base_t> end)
+                constexpr explicit sentinel(std::ranges::sentinel_t<View> end)
                     : m_end{end}
                 {
                 }
@@ -1388,6 +1416,8 @@ namespace upp::ranges
 
         private:
             View m_base = View();
+
+            UNI_CPP_IMPL_NO_UNIQUE_ADDRESS upp::impl::maybe_present<std::ranges::forward_range<View>, non_propagating_cache<iterator>> m_cached_begin;
         };
 
         template<typename Range, decomposition_kind Kind>
@@ -1398,6 +1428,10 @@ namespace upp::ranges
         {
         private:
             using view_t = canonically_order_view<decompose_view<View, Kind>>;
+
+        public:
+            template<typename BaseT>
+            static constexpr bool provide_base_method_for_iterators = std::ranges::forward_range<BaseT>;
 
         public:
             [[nodiscard]] static constexpr auto base_projection(const view_t& view) { return view.base().base(); }
@@ -1421,6 +1455,10 @@ namespace upp::ranges
         {
         private:
             using view_t = to_nfc_view<View, Kind>;
+
+        public:
+            template<typename BaseT>
+            static constexpr bool provide_base_method_for_iterators = std::ranges::forward_range<BaseT>;
 
         public:
             [[nodiscard]] static constexpr auto base_projection(const view_t& view) { return view.base(); }
@@ -1621,5 +1659,12 @@ namespace upp::ranges
         inline constexpr impl::normalize_fn<normalization_form::nfkc> normalize_to_nfkc;
     } // namespace views
 } // namespace upp::ranges
+
+/// @cond
+
+template<typename View, upp::normalization_form Form>
+inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::normalize_view<View, Form>> = std::ranges::enable_borrowed_range<View>;
+
+/// @endcond
 
 #endif // UNI_CPP_IMPL_RANGES_NORMALIZE_HPP

@@ -1186,18 +1186,17 @@ namespace upp::ranges
             std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
 
             UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
-            std::conditional_t<std::ranges::bidirectional_range<base_t>, std::ranges::iterator_t<base_t>, upp::impl::empty_t> m_begin =
-                decltype(m_begin)();
+            upp::impl::maybe_present<std::ranges::bidirectional_range<base_t>, std::ranges::iterator_t<base_t>> m_begin = decltype(m_begin)();
 
             UNI_CPP_IMPL_NO_UNIQUE_ADDRESS std::ranges::sentinel_t<base_t> m_end = std::ranges::sentinel_t<base_t>();
 
             UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
-            std::conditional_t<s_use_advance_to, std::optional<std::ranges::iterator_t<base_t>>, upp::impl::empty_t> m_advance_to;
+            upp::impl::maybe_present<s_use_advance_to, std::optional<std::ranges::iterator_t<base_t>>> m_advance_to;
 
             upp::impl::inplace_vector<ToType, 4 / sizeof(ToType)> m_buffer{};
 
             UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
-            std::conditional_t<Kind == transcode_view_kind::expected, std::expected<void, error_type>, upp::impl::empty_t>
+            upp::impl::maybe_present<Kind == transcode_view_kind::expected, std::expected<void, error_type>>
                 m_success{}; ///< Holds error information about the last read operation.
 
             std::int8_t m_buffer_index = 0;

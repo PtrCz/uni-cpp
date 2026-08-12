@@ -40,11 +40,13 @@ namespace upp::ranges::impl
 
         [[nodiscard]] constexpr bool has_value() const noexcept { return m_data.has_value(); }
 
-        template<typename Self>
-        [[nodiscard]] constexpr decltype(auto) operator*(this Self&& self) noexcept
-        {
-            return *std::forward<Self>(self).m_data;
-        }
+        [[nodiscard]] constexpr T& operator*() & noexcept { return *m_data; }
+
+        [[nodiscard]] constexpr const T& operator*() const& noexcept { return *m_data; }
+
+        [[nodiscard]] constexpr T&& operator*() && noexcept { return std::move(*m_data); }
+
+        [[nodiscard]] constexpr const T&& operator*() const&& noexcept { return std::move(*m_data); }
 
         constexpr void reset() noexcept { return m_data.reset(); }
 
@@ -76,7 +78,7 @@ namespace upp::ranges::impl
 
         [[nodiscard]] constexpr std::ranges::iterator_t<Range> get(const Range&) const { return **this; }
 
-        constexpr void set(const Range&, const std::ranges::iterator_t<Range>& it) { emplace(it); }
+        constexpr void set(const Range&, const std::ranges::iterator_t<Range>& it) { base::emplace(it); }
     };
 
     // If `Range` is a `random_access_range`, don't bother storing the whole iterator.

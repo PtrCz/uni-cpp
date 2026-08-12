@@ -9,6 +9,7 @@
 #include "impl/ranges/base.hpp"
 #include "impl/ranges/approximately_sized_range.hpp"
 #include "impl/ranges/view_interface.hpp"
+#include "impl/ranges/reverse.hpp"
 #include "impl/ranges/valid_code_unit_range.hpp"
 #include "impl/ranges/cast_code_units_to.hpp"
 #include "impl/ranges/transcode.hpp"

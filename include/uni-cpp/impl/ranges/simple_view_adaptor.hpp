@@ -528,9 +528,7 @@ namespace upp::ranges::impl
             {
             }
 
-            template<typename Traits2, std::ranges::view View2>
-                requires std::is_class_v<Traits2> && std::same_as<Traits2, std::remove_cv_t<Traits2>> && std::ranges::input_range<View2>
-            friend class simple_view_adaptor;
+            friend simple_view_adaptor;
 
         private:
             std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
@@ -608,9 +606,7 @@ namespace upp::ranges::impl
 
             friend sentinel<!Const>;
 
-            template<typename Traits2, std::ranges::view View2>
-                requires std::is_class_v<Traits2> && std::same_as<Traits2, std::remove_cv_t<Traits2>> && std::ranges::input_range<View2>
-            friend class simple_view_adaptor;
+            friend simple_view_adaptor;
 
         private:
             std::ranges::sentinel_t<base_t> m_end = std::ranges::sentinel_t<base_t>();

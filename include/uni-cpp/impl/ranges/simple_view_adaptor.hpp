@@ -360,7 +360,7 @@ namespace upp::ranges::impl
             /// @brief Default constructor.
             ///
             constexpr iterator()
-                requires std::default_initializable<std::ranges::iterator_t<View>>
+                requires std::default_initializable<std::ranges::iterator_t<base_t>>
             = default;
 
             /// @brief Constructs a `const` iterator from a non-`const` iterator.

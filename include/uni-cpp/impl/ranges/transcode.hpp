@@ -399,7 +399,7 @@ namespace upp::ranges
             /// @brief Default constructor.
             ///
             constexpr iterator()
-                requires std::default_initializable<std::ranges::iterator_t<View>>
+                requires std::default_initializable<std::ranges::iterator_t<base_t>>
             = default;
 
             constexpr iterator(const iterator&)
@@ -411,6 +411,21 @@ namespace upp::ranges
                 requires std::copyable<std::ranges::iterator_t<base_t>>
             = default;
             constexpr iterator& operator=(iterator&&) = default;
+
+            /// @brief Constructs a `const` iterator from a non-`const` iterator.
+            ///
+            constexpr iterator(iterator<!Const> i)
+                requires Const && std::convertible_to<std::ranges::iterator_t<View>, std::ranges::iterator_t<base_t>> &&
+                             std::convertible_to<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<base_t>>
+                : m_current(std::move(i.m_current))
+                , m_begin(std::move(i.m_begin))
+                , m_end(std::move(i.m_end))
+                , m_advance_to(std::move(i.m_advance_to))
+                , m_buffer(i.m_buffer)
+                , m_success(i.m_success)
+                , m_buffer_index(i.m_buffer_index)
+            {
+            }
 
             /// @brief Returns the underlying iterator pointing to the beginning of the current code point.
             ///

@@ -21,8 +21,49 @@
 #include <bit>
 #include <optional>
 
+/// @defgroup normalization_range_adaptors Normalization range adaptors
+///
+/// @brief Provides range adaptors for normalizing code point ranges according to [UAX #15](https://www.unicode.org/reports/tr15).
+///
+/// @par Example:
+///
+/// @code{.cpp}
+///
+/// std::string_view username = /* ... */;
+///
+/// auto normalized_username = username | upp::views::mark_as_valid_utf8
+///                                     | upp::views::decode_valid_utf8
+///                                     | upp::views::normalize_to_nfc
+///                                     | upp::views::encode_as_utf8;
+///
+/// auto user = database_query(normalized_username);
+///
+/// @endcode
+///
+/// @see @ref upp::ranges::views::normalize_to "views::normalize_to"
+/// @see @ref upp::ranges::views::normalize_to_nfd "views::normalize_to_nfd"
+/// @see @ref upp::ranges::views::normalize_to_nfc "views::normalize_to_nfc"
+/// @see @ref upp::ranges::views::normalize_to_nfkd "views::normalize_to_nfkd"
+/// @see @ref upp::ranges::views::normalize_to_nfkc "views::normalize_to_nfkc"
+///
+/// @headerfile "" <uni-cpp/ranges.hpp>
+///
+
 namespace upp::ranges
 {
+    /// @brief A lazy view adaptor that normalizes code points to the specified normalization form.
+    ///
+    /// @note This adaptor performs the normalization lazily, although normalizing an arbitrary code point
+    /// sequence requires using buffers. These buffers are almost always on stack, but on malicious/meaningless
+    /// input, these may run out of their huge SBO and allocate on heap. This will never occur in practice on
+    /// real-world text, but specially-crafted input can make it happen.
+    ///
+    /// @note Users should use @ref upp::ranges::views::normalize_to "views::normalize_to" as opposed to using this type directly.
+    ///
+    /// @ingroup normalization_range_adaptors
+    ///
+    /// @headerfile "" <uni-cpp/ranges.hpp>
+    ///
     template<std::ranges::view View, normalization_form Form>
         requires code_point_range<View>
     class normalize_view : public UNI_CPP_IMPL_VIEW_INTERFACE(normalize_view<View, Form>)
@@ -811,13 +852,93 @@ namespace upp::ranges
 
     namespace views
     {
+        /// @addtogroup normalization_range_adaptors
+        /// @{
+
+        /// @brief Range adaptor that normalizes a sequence of code points to the desired Unicode normalization form.
+        /// @tparam Form The desired normalization form.
+        ///
+        /// @par Example:
+        ///
+        /// @code{.cpp}
+        ///
+        /// std::string_view username = /* ... */;
+        ///
+        /// auto normalized_username = username | upp::views::mark_as_valid_utf8
+        ///                                     | upp::views::decode_valid_utf8
+        ///                                     | upp::views::normalize_to_nfc
+        ///                                     | upp::views::encode_as_utf8;
+        ///
+        /// auto user = database_query(normalized_username);
+        ///
+        /// @endcode
+        ///
+        /// Chained uses of `normalize_to` in a range pipeline collapse into a single @ref upp::ranges::normalize_view "normalize_view"
+        /// according to the rules presented in [UAX #15, Design Goals](https://www.unicode.org/reports/tr15/#Design_Goals).
+        /// For example:
+        ///
+        /// @code{.cpp}
+        /// str | upp::views::normalize_to_nfkc | upp::views::normalize_to_nfd
+        /// @endcode
+        ///
+        /// collapses to a range equivalent to
+        ///
+        /// @code{.cpp}
+        /// str | upp::views::normalize_to_nfkd
+        /// @endcode
+        ///
+        /// @note This adaptor performs the normalization lazily, although normalizing an arbitrary code point
+        /// sequence requires using buffers. These buffers are almost always on stack, but on malicious/meaningless
+        /// input, these may run out of their huge SBO and allocate on heap. This will never occur in practice on
+        /// real-world text, but specially-crafted input can make it happen.
+        ///
+        /// @see @ref upp::ranges::views::normalize_to_nfc "views::normalize_to_nfc", @ref upp::ranges::views::normalize_to_nfd "views::normalize_to_nfd"
+        /// @see @ref upp::ranges::views::normalize_to_nfkc "views::normalize_to_nfkc", @ref upp::ranges::views::normalize_to_nfkd "views::normalize_to_nfkd"
+        ///
         template<normalization_form Form>
         inline constexpr impl::normalize_fn<Form> normalize_to{};
 
-        inline constexpr impl::normalize_fn<normalization_form::nfd>  normalize_to_nfd;
-        inline constexpr impl::normalize_fn<normalization_form::nfc>  normalize_to_nfc;
-        inline constexpr impl::normalize_fn<normalization_form::nfkd> normalize_to_nfkd;
-        inline constexpr impl::normalize_fn<normalization_form::nfkc> normalize_to_nfkc;
+        /// @brief Range adaptor that normalizes a sequence of code points to NFD.
+        ///
+        /// See @ref upp::ranges::views::normalize_to "views::normalize_to" documentation for more details.
+        ///
+        /// @see @ref upp::ranges::views::normalize_to "views::normalize_to"
+        /// @see @ref upp::ranges::views::normalize_to_nfc "views::normalize_to_nfc"
+        /// @see @ref upp::ranges::views::normalize_to_nfkd "views::normalize_to_nfkd"
+        ///
+        inline constexpr impl::normalize_fn<normalization_form::nfd> normalize_to_nfd{};
+
+        /// @brief Range adaptor that normalizes a sequence of code points to NFC.
+        ///
+        /// See @ref upp::ranges::views::normalize_to "views::normalize_to" documentation for more details.
+        ///
+        /// @see @ref upp::ranges::views::normalize_to "views::normalize_to"
+        /// @see @ref upp::ranges::views::normalize_to_nfd "views::normalize_to_nfd"
+        /// @see @ref upp::ranges::views::normalize_to_nfkc "views::normalize_to_nfkc"
+        ///
+        inline constexpr impl::normalize_fn<normalization_form::nfc> normalize_to_nfc{};
+
+        /// @brief Range adaptor that normalizes a sequence of code points to NFKD.
+        ///
+        /// See @ref upp::ranges::views::normalize_to "views::normalize_to" documentation for more details.
+        ///
+        /// @see @ref upp::ranges::views::normalize_to "views::normalize_to"
+        /// @see @ref upp::ranges::views::normalize_to_nfd "views::normalize_to_nfd"
+        /// @see @ref upp::ranges::views::normalize_to_nfkc "views::normalize_to_nfkc"
+        ///
+        inline constexpr impl::normalize_fn<normalization_form::nfkd> normalize_to_nfkd{};
+
+        /// @brief Range adaptor that normalizes a sequence of code points to NFKC.
+        ///
+        /// See @ref upp::ranges::views::normalize_to "views::normalize_to" documentation for more details.
+        ///
+        /// @see @ref upp::ranges::views::normalize_to "views::normalize_to"
+        /// @see @ref upp::ranges::views::normalize_to_nfc "views::normalize_to_nfc"
+        /// @see @ref upp::ranges::views::normalize_to_nfkd "views::normalize_to_nfkd"
+        ///
+        inline constexpr impl::normalize_fn<normalization_form::nfkc> normalize_to_nfkc{};
+
+        /// @}
     } // namespace views
 } // namespace upp::ranges
 

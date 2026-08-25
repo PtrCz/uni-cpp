@@ -13,6 +13,23 @@
 
 #include "../no_unique_address.hpp"
 
+/// @defgroup faster_reverse_view Faster alternative to `std::views::reverse`
+///
+/// @brief Provides a faster alternative to `std::views::reverse`.
+///
+/// `upp::views::reverse` is a faster alternative to `std::views::reverse` for complex range pipelines.
+/// `std::views::reverse` uses `std::ranges::reverse_view` which is specified to use `std::reverse_iterator`.
+/// The way `std::reverse_iterator` is specified makes it slow to use with complex ranges. For example,
+/// a range that resulted from applying the
+/// `upp::views::decode_lossy_utf8 | upp::views::normalize_to_nfc | upp::views::encode_as_utf8 | std::views::reverse`
+/// pipeline is significantly slower than if `upp::views::reverse` was used instead.
+///
+/// @see @ref upp::ranges::views::reverse "views::reverse"
+/// @see @ref upp::ranges::reverse_view "ranges::reverse_view"
+///
+/// @headerfile "" <uni-cpp/ranges.hpp>
+///
+
 namespace upp::ranges
 {
     namespace impl::reverse_view_impl
@@ -22,6 +39,23 @@ namespace upp::ranges
         };
     } // namespace impl::reverse_view_impl
 
+    /// @brief A view adaptor that efficiently reverses the underlying range.
+    ///
+    /// This is a faster alternative to `std::ranges::reverse_view`. The standard `reverse_view` is specified to use
+    /// `std::reverse_iterator`s which unfortunately turn out to be inefficient with complex range pipelines. For example,
+    /// using a range pipeline such as `upp::views::decode_lossy_utf8 | upp::views::normalize_to_nfc | upp::views::encode_as_utf8` is significantly
+    /// slower if `std::views::reverse` is applied at the end, compared to applying `upp::views::reverse` which has similar performance to that of forward iteration.
+    ///
+    /// A @c reverse_view always models @c bidirectional_range and @c common_range, and
+    /// it models @c borrowed_range, @c sized_range, @c approximately_sized_range, or @c random_access_range if
+    /// the underlying view type @p View models the corresponding concept.
+    ///
+    /// @note Users should use @ref upp::ranges::views::reverse "views::reverse" as opposed to using this type directly.
+    ///
+    /// @ingroup faster_reverse_view
+    ///
+    /// @headerfile "" <uni-cpp/ranges.hpp>
+    ///
     template<std::ranges::view View>
         requires std::ranges::bidirectional_range<View>
     class reverse_view : public UNI_CPP_IMPL_VIEW_INTERFACE(reverse_view<View>)
@@ -514,7 +548,16 @@ namespace upp::ranges
 
     namespace views
     {
-        inline constexpr impl::reverse_fn reverse;
+        /// @brief Reverses complex ranges faster than `std::views::reverse`.
+        ///
+        /// It reverses ranges using `upp::ranges::reverse_view` instead of `std::ranges::reverse_view` which has better performance on complex ranges.
+        ///
+        /// Just like `std::views::reverse`, it unwraps reversed views if possible. That is, applying `upp::views::reverse` on a
+        /// `std::ranges::reverse_view` or `upp::ranges::reverse_view` or a subrange of either of these will unwrap these types instead.
+        ///
+        /// @ingroup faster_reverse_view
+        ///
+        inline constexpr impl::reverse_fn reverse{};
     } // namespace views
 } // namespace upp::ranges
 

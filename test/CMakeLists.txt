@@ -6,20 +6,19 @@ set(UNI_CPP_TEST_SOURCES ${TEST_SOURCES} PARENT_SCOPE)
 
 add_executable(${PROJECT_NAME} ${TEST_SOURCES})
 
-set(BUGSPRAY_DONT_USE_STD_VECTOR ON)
-set(BUGSPRAY_DONT_USE_STD_STRING ON)
-
 include(FetchContent)
 FetchContent_Declare(
-    bugspray
-    GIT_REPOSITORY https://github.com/jan-moeller/bugspray.git
-    GIT_TAG v0.4.1
+    catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.16.0
 )
-FetchContent_MakeAvailable(bugspray)
+FetchContent_MakeAvailable(catch2)
 
-set_target_properties(bugspray PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:bugspray,INTERFACE_INCLUDE_DIRECTORIES>)
+target_link_libraries(${PROJECT_NAME} PRIVATE "uni-cpp" Catch2::Catch2WithMain)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE "uni-cpp" bugspray-with-main)
+list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+include(Catch)
+catch_discover_tests(${PROJECT_NAME} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/test_data")
 
 # Enable extra warnings
 
@@ -47,15 +46,10 @@ list(FILTER CPP_TEST_SOURCES INCLUDE REGEX "\\.cpp$")
 add_custom_target(clang-tidy
     COMMAND ${CMAKE_COMMAND} -E echo "Running clang-tidy on ${PROJECT_NAME}..."
     COMMAND clang-tidy --quiet --config-file=.clang-tidy ${CPP_TEST_SOURCES}
-        -- -Iinclude/ "$<$<BOOL:$<TARGET_PROPERTY:bugspray,INCLUDE_DIRECTORIES>>:-I$<JOIN:$<TARGET_PROPERTY:bugspray,INCLUDE_DIRECTORIES>,;-I>>" # include directories
+        -- -Iinclude/ "$<$<BOOL:$<TARGET_PROPERTY:Catch2::Catch2WithMain,INCLUDE_DIRECTORIES>>:-I$<JOIN:$<TARGET_PROPERTY:Catch2::Catch2WithMain,INCLUDE_DIRECTORIES>,;-I>>" # include directories
         -std=c++23 -fconstexpr-steps=1000000000 -fconstexpr-depth=2048
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../
     COMMENT "Static analysis with clang-tidy"
     COMMAND_EXPAND_LISTS
     VERBATIM
 )
-
-# Add tests
-
-add_test(NAME ${PROJECT_NAME} COMMAND ${PROJECT_NAME})
-set_tests_properties(${PROJECT_NAME} PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/test_data")

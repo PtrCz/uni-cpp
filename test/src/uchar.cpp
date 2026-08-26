@@ -1,4 +1,4 @@
-#include "bugspray.hpp"
+#include "catch2.hpp"
 
 #include <uni-cpp/uchar.hpp>
 
@@ -8,12 +8,11 @@
 
 TEST_CASE("upp::ascii_char type traits", "[upp::ascii_char]")
 {
-    CHECK_FALSE(std::is_trivially_default_constructible_v<upp::ascii_char>);
-    CHECK(std::is_trivially_copy_constructible_v<upp::ascii_char>);
-    CHECK(std::is_trivially_copy_assignable_v<upp::ascii_char>);
-    CHECK(std::is_trivially_destructible_v<upp::ascii_char>);
+    STATIC_CHECK(!std::is_trivially_default_constructible_v<upp::ascii_char>);
+    STATIC_CHECK(std::is_trivially_copy_constructible_v<upp::ascii_char>);
+    STATIC_CHECK(std::is_trivially_copy_assignable_v<upp::ascii_char>);
+    STATIC_CHECK(std::is_trivially_destructible_v<upp::ascii_char>);
 }
-EVAL_TEST_CASE("upp::ascii_char type traits");
 
 TEST_CASE("upp::ascii_char user-defined literals", "[upp::ascii_char]")
 {
@@ -28,14 +27,12 @@ TEST_CASE("upp::ascii_char user-defined literals", "[upp::ascii_char]")
     CHECK((0x00_ac).value() == 0x00);
     CHECK((0x7F_ac).value() == 0x7F);
 }
-EVAL_TEST_CASE("upp::ascii_char user-defined literals");
 
 TEST_CASE("upp::ascii_char default constructor", "[upp::ascii_char]")
 {
     upp::ascii_char ch;
     CHECK(ch.value() == 0);
 }
-EVAL_TEST_CASE("upp::ascii_char default constructor");
 
 TEST_CASE("upp::ascii_char from(), from_lossy() & from_unchecked()", "[upp::ascii_char]")
 {
@@ -72,7 +69,6 @@ TEST_CASE("upp::ascii_char from(), from_lossy() & from_unchecked()", "[upp::asci
             CHECK(from_result->value() == value);
     }
 }
-EVAL_TEST_CASE("upp::ascii_char from(), from_lossy() & from_unchecked()");
 
 TEST_CASE("upp::ascii_char comparison operators", "[upp::ascii_char]")
 {
@@ -96,16 +92,14 @@ TEST_CASE("upp::ascii_char comparison operators", "[upp::ascii_char]")
     CHECK_FALSE(u8'Z'_ac < u8'A'_ac);
     CHECK_FALSE(u8'a'_ac <= u8'A'_ac);
 }
-EVAL_TEST_CASE("upp::ascii_char comparison operators");
 
 TEST_CASE("upp::uchar type traits", "[upp::uchar]")
 {
-    CHECK_FALSE(std::is_trivially_default_constructible_v<upp::uchar>);
-    CHECK(std::is_trivially_copy_constructible_v<upp::uchar>);
-    CHECK(std::is_trivially_copy_assignable_v<upp::uchar>);
-    CHECK(std::is_trivially_destructible_v<upp::uchar>);
+    STATIC_CHECK(!std::is_trivially_default_constructible_v<upp::uchar>);
+    STATIC_CHECK(std::is_trivially_copy_constructible_v<upp::uchar>);
+    STATIC_CHECK(std::is_trivially_copy_assignable_v<upp::uchar>);
+    STATIC_CHECK(std::is_trivially_destructible_v<upp::uchar>);
 }
-EVAL_TEST_CASE("upp::uchar type traits");
 
 TEST_CASE("upp::uchar user-defined literals", "[upp::uchar]")
 {
@@ -124,14 +118,12 @@ TEST_CASE("upp::uchar user-defined literals", "[upp::uchar]")
     CHECK((0xE000_uc).value() == 0xE000U);
     CHECK((0x10FFFF_uc).value() == 0x0010FFFFU);
 }
-EVAL_TEST_CASE("upp::uchar user-defined literals");
 
 TEST_CASE("upp::uchar default constructor", "[upp::uchar]")
 {
     upp::uchar ch;
     CHECK(ch.value() == 0U);
 }
-EVAL_TEST_CASE("upp::uchar default constructor");
 
 TEST_CASE("upp::uchar from(), from_lossy() & from_unchecked()", "[upp::uchar]")
 {
@@ -183,7 +175,6 @@ TEST_CASE("upp::uchar from(), from_lossy() & from_unchecked()", "[upp::uchar]")
         }
     }
 }
-EVAL_TEST_CASE("upp::uchar from(), from_lossy() & from_unchecked()");
 
 TEST_CASE("upp::uchar comparison operators", "[upp::uchar]")
 {
@@ -207,7 +198,6 @@ TEST_CASE("upp::uchar comparison operators", "[upp::uchar]")
     CHECK_FALSE(U'Z'_uc < U'A'_uc);
     CHECK_FALSE(U'a'_uc <= U'A'_uc);
 }
-EVAL_TEST_CASE("upp::uchar comparison operators");
 
 TEST_CASE("upp::uchar is_ascii() & as_ascii()", "[upp::uchar]")
 {
@@ -229,7 +219,6 @@ TEST_CASE("upp::uchar is_ascii() & as_ascii()", "[upp::uchar]")
     REQUIRE(ascii_7f.has_value());
     CHECK((0x7F_uc).value() == static_cast<std::uint32_t>(ascii_7f->value())); // NOLINT(bugprone-unchecked-optional-access)
 }
-EVAL_TEST_CASE("upp::uchar is_ascii() & as_ascii()");
 
 TEST_CASE("upp::uchar length_utf8() & length_utf16()", "[upp::uchar]")
 {
@@ -249,4 +238,3 @@ TEST_CASE("upp::uchar length_utf8() & length_utf16()", "[upp::uchar]")
     CHECK(U'\U00010000'_uc.length_utf16() == 2U);
     CHECK(U'\U0010FFFF'_uc.length_utf16() == 2U);
 }
-EVAL_TEST_CASE("upp::uchar length_utf8() & length_utf16()");

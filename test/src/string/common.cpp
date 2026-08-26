@@ -1,4 +1,4 @@
-#include "../bugspray.hpp"
+#include "../catch2.hpp"
 
 #include <uni-cpp/string.hpp>
 #include <uni-cpp/encoding.hpp>
@@ -15,15 +15,14 @@
 TEST_CASE("string type traits", "[string types]")
 {
     upp_test::run_for_each_string_type([&]<typename StringType>() {
-        CHECK(std::default_initializable<StringType>);
-        CHECK(std::is_nothrow_default_constructible_v<StringType>);
-        CHECK(std::destructible<StringType>);
-        CHECK(std::copy_constructible<StringType>);
-        CHECK(std::is_nothrow_move_constructible_v<StringType>);
-        // CHECK(std::is_nothrow_move_assignable_v<StringType>);
+        STATIC_CHECK(std::default_initializable<StringType>);
+        STATIC_CHECK(std::is_nothrow_default_constructible_v<StringType>);
+        STATIC_CHECK(std::destructible<StringType>);
+        STATIC_CHECK(std::copy_constructible<StringType>);
+        STATIC_CHECK(std::is_nothrow_move_constructible_v<StringType>);
+        // STATIC_CHECK(std::is_nothrow_move_assignable_v<StringType>);
     });
 }
-EVAL_TEST_CASE("string type traits");
 
 TEST_CASE("string constructors", "[string types]")
 {
@@ -40,4 +39,3 @@ TEST_CASE("string constructors", "[string types]")
         StringType move_with_allocator{std::move(empty), std::allocator<typename StringType::code_unit_type>()};
     });
 }
-EVAL_TEST_CASE("string constructors");

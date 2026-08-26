@@ -1,4 +1,4 @@
-#include "../bugspray.hpp"
+#include "../catch2.hpp"
 
 #include <uni-cpp/string.hpp>
 
@@ -45,7 +45,6 @@ TEST_CASE("User-defined ASCII string literals", "[string types]")
     TEST_ASCII_LITERAL("Hello");
     TEST_ASCII_LITERAL("ASCII ascii 123 !@#");
 }
-EVAL_TEST_CASE("User-defined ASCII string literals");
 
 TEST_CASE("User-defined Unicode string literals", "[string types][Unicode string types]")
 {
@@ -60,4 +59,3 @@ TEST_CASE("User-defined Unicode string literals", "[string types][Unicode string
     TEST_UNICODE_LITERAL("\u5b98\u8bdd");
     TEST_UNICODE_LITERAL("\u0076\u0079\u0073\u0076\u0065\u0064\u010d\u0065\u006e\u0069\u0065");
 }
-EVAL_TEST_CASE("User-defined Unicode string literals");

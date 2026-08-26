@@ -1,11 +1,11 @@
-#include "bugspray.hpp"
+#include "catch2.hpp"
 
 #include <uni-cpp/uchar.hpp>
 
 #include "test_data.hpp"
 #include "ranges/base.hpp"
 
-TEST_CASE("Lowercase conversion & lowercase mappings", "[case conversion][upp::uchar]", runtime)
+TEST_CASE("Lowercase conversion & lowercase mappings", "[case conversion][upp::uchar]")
 {
     const auto test_data = upp_test::load_test_data<std::uint32_t>("lowercase_mappings.txt");
 
@@ -21,7 +21,7 @@ TEST_CASE("Lowercase conversion & lowercase mappings", "[case conversion][upp::u
     }
 }
 
-TEST_CASE("Uppercase conversion & uppercase mappings", "[case conversion][upp::uchar]", runtime)
+TEST_CASE("Uppercase conversion & uppercase mappings", "[case conversion][upp::uchar]")
 {
     const auto test_data = upp_test::load_test_data<std::uint32_t>("uppercase_mappings.txt");
 
@@ -37,7 +37,7 @@ TEST_CASE("Uppercase conversion & uppercase mappings", "[case conversion][upp::u
     }
 }
 
-TEST_CASE("Titlecase conversion & titlecase mappings", "[case conversion][upp::uchar]", runtime)
+TEST_CASE("Titlecase conversion & titlecase mappings", "[case conversion][upp::uchar]")
 {
     const auto test_data = upp_test::load_test_data<std::uint32_t>("titlecase_mappings.txt");
 

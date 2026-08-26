@@ -1,4 +1,4 @@
-#include "../bugspray.hpp"
+#include "../catch2.hpp"
 
 #include <uni-cpp/ranges.hpp>
 
@@ -7,11 +7,7 @@
 #include "base.hpp"
 #include "to_input.hpp"
 
-// Note: Clang has some difficulties to run the following test at compile-time.
-//       Regardless, it would be very slow to compile (it already is).
-//       The implementation of `upp::views::transcode` does not differ for constant evaluation.
-
-TEST_CASE("transcode_view", "[ranges][UTF encoding]", runtime)
+TEST_CASE("transcode_view", "[ranges][UTF encoding]")
 {
     SECTION("Transcoding well-formed sequences")
     {

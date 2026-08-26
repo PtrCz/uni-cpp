@@ -3,6 +3,8 @@
 
 #include <uni-cpp/uchar.hpp>
 
+#include "catch2.hpp"
+
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -17,7 +19,6 @@
 #include <utility>
 #include <type_traits>
 #include <functional>
-#include <cassert>
 
 namespace upp_test
 {
@@ -30,7 +31,7 @@ namespace upp_test
 
             auto result = std::from_chars(str.data(), str.data() + str.size(), num, 16);
 
-            assert(result.ec == std::errc{});
+            REQUIRE(result.ec == std::errc{});
 
             return num;
         }
@@ -50,7 +51,7 @@ namespace upp_test
         std::println("Loading test data from file: {}", filepath.generic_string());
 
         std::ifstream file{filepath};
-        assert(file.is_open());
+        REQUIRE(file.is_open());
 
         std::unordered_map<std::uint32_t, std::vector<ValueType>> result;
 
@@ -66,7 +67,7 @@ namespace upp_test
                 continue;
 
             std::size_t colon_pos = line.find(':');
-            assert(colon_pos != std::string::npos);
+            REQUIRE(colon_pos != std::string::npos);
 
             using diff_t = std::string::difference_type;
 

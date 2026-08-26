@@ -1,4 +1,4 @@
-#include "bugspray.hpp"
+#include "catch2.hpp"
 
 #include "test_data.hpp"
 #include "ranges/base.hpp"
@@ -12,22 +12,27 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
 {
     SECTION("compiletime-friendly encoding test")
     {
-        using namespace upp::char_literals;
+        STATIC_CHECK([] {
+            using namespace upp::char_literals;
 
-        const std::initializer_list<std::pair<upp::uchar, std::u8string>> test_cases = {
-            {U'a'_uc, {0x61}},
-            {U'\u00D1'_uc, {0xC3, 0x91}},
-            {U'\u08A8'_uc, {0xE0, 0xA2, 0xA8}},
-            {U'\U000E0186'_uc, {0xF3, 0xA0, 0x86, 0x86}},
-        };
+            const std::initializer_list<std::pair<upp::uchar, std::u8string>> test_cases = {
+                {U'a'_uc, {0x61}},
+                {U'\u00D1'_uc, {0xC3, 0x91}},
+                {U'\u08A8'_uc, {0xE0, 0xA2, 0xA8}},
+                {U'\U000E0186'_uc, {0xF3, 0xA0, 0x86, 0x86}},
+            };
 
-        for (const auto& [ch, encoded] : test_cases)
-        {
-            CHECK(upp_test::ranges::equal(ch.encode_utf8(), encoded | upp::views::cast_code_units_to<char8_t>));
-        }
+            for (const auto& [ch, encoded] : test_cases)
+            {
+                if (!upp_test::ranges::equal(ch.encode_utf8(), encoded | upp::views::cast_code_units_to<char8_t>))
+                    return false;
+            }
+
+            return true;
+        }());
     }
 
-    SECTION("large dataset test", runtime)
+    SECTION("large dataset test")
     {
         const auto test_data = upp_test::load_test_data<std::uint8_t>("utf8_encoding.txt");
 
@@ -41,28 +46,32 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
         }
     }
 }
-EVAL_TEST_CASE("UTF-8 encoding");
 
 TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
 {
     SECTION("compiletime-friendly encoding test")
     {
-        using namespace upp::char_literals;
+        STATIC_CHECK([] {
+            using namespace upp::char_literals;
 
-        const std::initializer_list<std::pair<upp::uchar, std::u16string>> test_cases = {
-            {U'a'_uc, {0x61}},
-            {U'\u00D1'_uc, {0xD1}},
-            {U'\u08A8'_uc, {0x8A8}},
-            {U'\U000E0186'_uc, {0xDB40, 0xDD86}},
-        };
+            const std::initializer_list<std::pair<upp::uchar, std::u16string>> test_cases = {
+                {U'a'_uc, {0x61}},
+                {U'\u00D1'_uc, {0xD1}},
+                {U'\u08A8'_uc, {0x8A8}},
+                {U'\U000E0186'_uc, {0xDB40, 0xDD86}},
+            };
 
-        for (const auto& [ch, encoded] : test_cases)
-        {
-            CHECK(upp_test::ranges::equal(ch.encode_utf16(), encoded | upp::views::cast_code_units_to<char16_t>));
-        }
+            for (const auto& [ch, encoded] : test_cases)
+            {
+                if (!upp_test::ranges::equal(ch.encode_utf16(), encoded | upp::views::cast_code_units_to<char16_t>))
+                    return false;
+            }
+
+            return true;
+        }());
     }
 
-    SECTION("large dataset test", runtime)
+    SECTION("large dataset test")
     {
         const auto test_data = upp_test::load_test_data<std::uint16_t>("utf16_encoding.txt");
 
@@ -76,4 +85,3 @@ TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
         }
     }
 }
-EVAL_TEST_CASE("UTF-16 encoding");

@@ -1,4 +1,4 @@
-#include "../bugspray.hpp"
+#include "../catch2.hpp"
 
 #include <uni-cpp/string.hpp>
 
@@ -84,7 +84,6 @@ TEST_CASE("upp::basic_ustring from_utf()", "[UTF encoding][string types][Unicode
             });
     }
 }
-EVAL_TEST_CASE("upp::basic_ustring from_utf()");
 
 TEST_CASE("upp::basic_ustring from_utf_lossy()", "[UTF encoding][string types][Unicode string types]")
 {
@@ -127,7 +126,6 @@ TEST_CASE("upp::basic_ustring from_utf_lossy()", "[UTF encoding][string types][U
             });
         });
 }
-EVAL_TEST_CASE("upp::basic_ustring from_utf_lossy()");
 
 TEST_CASE("upp::basic_ustring from_utf_unchecked()", "[UTF encoding][string types][Unicode string types]")
 {
@@ -162,4 +160,3 @@ TEST_CASE("upp::basic_ustring from_utf_unchecked()", "[UTF encoding][string type
             });
         });
 }
-EVAL_TEST_CASE("upp::basic_ustring from_utf_unchecked()");

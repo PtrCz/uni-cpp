@@ -1,4 +1,4 @@
-#include "../bugspray.hpp"
+#include "../catch2.hpp"
 
 #include <uni-cpp/string.hpp>
 
@@ -46,7 +46,6 @@ TEST_CASE("upp::basic_ascii_string from_ascii()", "[string types]")
         }
     }
 }
-EVAL_TEST_CASE("upp::basic_ascii_string from_ascii()");
 
 TEST_CASE("upp::basic_ascii_string from_ascii_lossy()", "[string types]")
 {
@@ -61,7 +60,6 @@ TEST_CASE("upp::basic_ascii_string from_ascii_lossy()", "[string types]")
         CHECK(input_range_result.underlying() == test_case.as_ascii_lossy);
     }
 }
-EVAL_TEST_CASE("upp::basic_ascii_string from_ascii_lossy()");
 
 TEST_CASE("upp::basic_ascii_string from_ascii_unchecked()", "[string types]")
 {
@@ -72,4 +70,3 @@ TEST_CASE("upp::basic_ascii_string from_ascii_unchecked()", "[string types]")
         CHECK(result.underlying() == valid_sequence.sequence);
     }
 }
-EVAL_TEST_CASE("upp::basic_ascii_string from_ascii_unchecked()");

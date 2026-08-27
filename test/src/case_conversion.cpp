@@ -7,7 +7,7 @@
 
 TEST_CASE("Lowercase conversion & lowercase mappings", "[case conversion][upp::uchar]")
 {
-    const auto test_data = upp_test::load_test_data<std::uint32_t>("lowercase_mappings.txt");
+    const auto test_data = upp_test::load_test_data<std::uint32_t>("test_data/lowercase_mappings.txt");
 
     for (const auto& [code_point, data] : test_data)
     {
@@ -23,7 +23,7 @@ TEST_CASE("Lowercase conversion & lowercase mappings", "[case conversion][upp::u
 
 TEST_CASE("Uppercase conversion & uppercase mappings", "[case conversion][upp::uchar]")
 {
-    const auto test_data = upp_test::load_test_data<std::uint32_t>("uppercase_mappings.txt");
+    const auto test_data = upp_test::load_test_data<std::uint32_t>("test_data/uppercase_mappings.txt");
 
     for (const auto& [code_point, data] : test_data)
     {
@@ -39,7 +39,7 @@ TEST_CASE("Uppercase conversion & uppercase mappings", "[case conversion][upp::u
 
 TEST_CASE("Titlecase conversion & titlecase mappings", "[case conversion][upp::uchar]")
 {
-    const auto test_data = upp_test::load_test_data<std::uint32_t>("titlecase_mappings.txt");
+    const auto test_data = upp_test::load_test_data<std::uint32_t>("test_data/titlecase_mappings.txt");
 
     for (const auto& [code_point, data] : test_data)
     {

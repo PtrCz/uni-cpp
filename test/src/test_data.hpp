@@ -2,13 +2,16 @@
 #define TEST_TEST_DATA_HPP
 
 #include <uni-cpp/uchar.hpp>
+#include <uni-cpp/encoding.hpp>
 
 #include "catch2.hpp"
 
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
 #include <filesystem>
+#include <bit>
 
 #include <concepts>
 #include <charconv>
@@ -35,6 +38,14 @@ namespace upp_test
 
             return num;
         }
+
+        constexpr void remove_comment(std::string& line)
+        {
+            if (const std::size_t hash_pos = line.find('#'); hash_pos != std::string::npos)
+            {
+                line = line.substr(0, hash_pos);
+            }
+        }
     } // namespace impl
 
     template<std::unsigned_integral ValueType>
@@ -58,10 +69,7 @@ namespace upp_test
         std::string line;
         while (std::getline(file, line))
         {
-            if (const std::size_t hash_pos = line.find('#'); hash_pos != std::string::npos)
-            {
-                line = line.substr(0, hash_pos);
-            }
+            impl::remove_comment(line);
 
             if (line.empty())
                 continue;
@@ -89,6 +97,67 @@ namespace upp_test
 
             result[code_point] = std::move(values);
         }
+
+        return result;
+    }
+
+    struct NormalizationTestCase
+    {
+        std::u32string source;
+        std::u32string nfc;
+        std::u32string nfd;
+        std::u32string nfkc;
+        std::u32string nfkd;
+    };
+
+    [[nodiscard]] inline const std::vector<NormalizationTestCase>& load_normalization_test_data()
+    {
+        static const auto result = [] {
+            const std::filesystem::path filepath{"test_data/ucd/NormalizationTest.txt"};
+
+            std::println("Loading normalization test data from file: {}", filepath.generic_string());
+
+            std::ifstream file{filepath};
+            REQUIRE(file.is_open());
+
+            std::vector<NormalizationTestCase> result;
+
+            std::string line;
+            while (std::getline(file, line))
+            {
+                impl::remove_comment(line);
+
+                if (line.empty() || line.starts_with('@'))
+                    continue;
+
+                NormalizationTestCase test_case{};
+
+                auto fields = line | std::views::split(';');
+
+                auto output_strings = std::array{&test_case.source, &test_case.nfc, &test_case.nfd, &test_case.nfkc, &test_case.nfkd};
+
+                auto count = 0uz;
+
+                auto parse_code_point = [](auto&& code_point) {
+                    return std::bit_cast<char32_t>(impl::parse_hex<std::uint32_t>(std::string{std::from_range, code_point}));
+                };
+
+                for (auto&& [field, output_str] : std::views::zip(fields, output_strings))
+                {
+                    output_str->assign_range(field | std::views::split(' ') | std::views::transform(parse_code_point));
+
+                    REQUIRE(upp::encoding_traits<upp::encoding::utf32>::validate_range(*output_str).has_value());
+
+                    ++count;
+                }
+
+                REQUIRE(count == 5uz);
+
+                result.push_back(std::move(test_case));
+            }
+
+            return result;
+        }();
 
         return result;
     }

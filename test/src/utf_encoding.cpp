@@ -12,7 +12,7 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
 {
     SECTION("compiletime-friendly encoding test")
     {
-        STATIC_CHECK([] {
+        COMPILE_TIME_TEST({
             using namespace upp::char_literals;
 
             const std::initializer_list<std::pair<upp::uchar, std::u8string>> test_cases = {
@@ -24,17 +24,14 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
 
             for (const auto& [ch, encoded] : test_cases)
             {
-                if (!upp_test::ranges::equal(ch.encode_utf8(), encoded | upp::views::cast_code_units_to<char8_t>))
-                    return false;
+                CTT_CHECK(upp_test::ranges::equal(ch.encode_utf8(), encoded | upp::views::cast_code_units_to<char8_t>));
             }
-
-            return true;
-        }());
+        });
     }
 
     SECTION("large dataset test")
     {
-        const auto test_data = upp_test::load_test_data<std::uint8_t>("utf8_encoding.txt");
+        const auto test_data = upp_test::load_test_data<std::uint8_t>("test_data/utf8_encoding.txt");
 
         for (const auto& [code_point, data] : test_data)
         {
@@ -51,7 +48,7 @@ TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
 {
     SECTION("compiletime-friendly encoding test")
     {
-        STATIC_CHECK([] {
+        COMPILE_TIME_TEST({
             using namespace upp::char_literals;
 
             const std::initializer_list<std::pair<upp::uchar, std::u16string>> test_cases = {
@@ -63,17 +60,14 @@ TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
 
             for (const auto& [ch, encoded] : test_cases)
             {
-                if (!upp_test::ranges::equal(ch.encode_utf16(), encoded | upp::views::cast_code_units_to<char16_t>))
-                    return false;
+                CTT_CHECK(upp_test::ranges::equal(ch.encode_utf16(), encoded | upp::views::cast_code_units_to<char16_t>));
             }
-
-            return true;
-        }());
+        });
     }
 
     SECTION("large dataset test")
     {
-        const auto test_data = upp_test::load_test_data<std::uint16_t>("utf16_encoding.txt");
+        const auto test_data = upp_test::load_test_data<std::uint16_t>("test_data/utf16_encoding.txt");
 
         for (const auto& [code_point, data] : test_data)
         {

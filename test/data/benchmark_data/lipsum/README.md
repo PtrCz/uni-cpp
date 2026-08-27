@@ -1,0 +1,1 @@
+Benchmark data from the [unicode_lipsum](https://github.com/lemire/unicode_lipsum) repository. The data comes from the [simdutf8](https://github.com/rusticstuff/simdutf8) package by Hans Kratz (licensed under both MIT and Apache).

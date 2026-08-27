@@ -30,7 +30,7 @@ namespace upp_test
         template<std::unsigned_integral T>
         T parse_hex(std::string_view str)
         {
-            T num;
+            T num{};
 
             auto result = std::from_chars(str.data(), str.data() + str.size(), num, 16);
 

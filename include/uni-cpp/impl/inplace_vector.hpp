@@ -205,9 +205,18 @@ namespace upp::impl
             template<class... Args>
             UNI_CPP_IMPL_LYNIPV_CXX20_CONSTEXPR reference construct_back(Args&&... args)
             {
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+
                 auto& rv = m_data[m_size] = value_type{std::forward<Args>(args)...};
                 ++m_size;
                 return rv;
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
             }
             UNI_CPP_IMPL_LYNIPV_CXX14_CONSTEXPR void destroy(size_type) noexcept {}
 

@@ -81,24 +81,6 @@ namespace upp::ranges
         template<typename Range>
         concept range_supports_empty = std::ranges::range<Range> && requires(Range& rg) { std::ranges::empty(rg); };
 
-        template<typename It>
-        struct iterator_guard
-        {
-            constexpr iterator_guard(It&, It&) noexcept {}
-        };
-
-        /// @brief RAII guard for iterator rollback of forward iterators.
-        ///
-        template<typename It>
-            requires std::forward_iterator<It>
-        struct iterator_guard<It>
-        {
-            constexpr ~iterator_guard() { current = std::move(original); }
-
-            It& current;
-            It  original;
-        };
-
         /// @brief Buffer index value used in non-forward range adaptors to indicate that the transformation iterator is at the sentinel.
         ///
         /// For non-forward ranges, the underlying iterator being at the sentinel doesn't necessarily mean that the transformation iterator is.

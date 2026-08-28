@@ -301,7 +301,10 @@ namespace upp::ranges
                 , m_end(std::move(end))
             {
                 if (m_current != m_end)
+                {
+                    m_advance_to = m_current;
                     read();
+                }
             }
 
             constexpr iterator(std::ranges::iterator_t<View> current, std::ranges::sentinel_t<View> end)
@@ -311,6 +314,9 @@ namespace upp::ranges
             {
                 if (m_current != m_end)
                 {
+                    if constexpr (std::ranges::forward_range<View>)
+                        m_advance_to = m_current;
+
                     read();
                 }
                 else
@@ -574,9 +580,6 @@ namespace upp::ranges
                         m_buffer.emplace_back(code_point);
                     }
 
-                    if constexpr (std::ranges::forward_range<View>)
-                        m_advance_to = std::move(it);
-
                     fully_decompose_the_buffer();
                     canonically_order_the_buffer();
 
@@ -594,9 +597,6 @@ namespace upp::ranges
 
                     m_buffer.emplace_back(code_point);
                 }
-
-                if constexpr (std::ranges::forward_range<View>)
-                    m_advance_to = std::move(it);
 
                 if (m_buffer.size() == 1uz && qc(first) == quick_check::yes)
                 {
@@ -618,10 +618,16 @@ namespace upp::ranges
 
             /// @brief Advances the underlying iterator the necessary amount and updates the buffer.
             ///
+            /// @pre `m_advance_to.has_value() && *m_advance_to == m_current`
+            ///
             constexpr void read()
             {
-                impl::iterator_guard<std::ranges::iterator_t<View>> guard{m_current, m_current};
-                read_impl(m_current, m_end);
+                if constexpr (std::ranges::forward_range<View>)
+                {
+                    read_impl(*m_advance_to, m_end);
+                }
+                else
+                    read_impl(m_current, m_end);
             }
 
             constexpr void reverse_buffer() { std::ranges::reverse(m_buffer); }

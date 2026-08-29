@@ -12,7 +12,8 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
 {
     SECTION("compiletime-friendly encoding test")
     {
-        COMPILE_TIME_TEST({
+        CONSTEXPR_AND_RUNTIME_TEST()
+        {
             using namespace upp::char_literals;
 
             const std::initializer_list<std::pair<upp::uchar, std::u8string>> test_cases = {
@@ -24,9 +25,9 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
 
             for (const auto& [ch, encoded] : test_cases)
             {
-                CTT_CHECK(upp_test::ranges::equal(ch.encode_utf8(), encoded | upp::views::cast_code_units_to<char8_t>));
+                CRTT_CHECK(upp_test::ranges::equal(ch.encode_utf8(), encoded | upp::views::cast_code_units_to<char8_t>));
             }
-        });
+        };
     }
 
     SECTION("large dataset test")
@@ -48,7 +49,8 @@ TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
 {
     SECTION("compiletime-friendly encoding test")
     {
-        COMPILE_TIME_TEST({
+        CONSTEXPR_AND_RUNTIME_TEST()
+        {
             using namespace upp::char_literals;
 
             const std::initializer_list<std::pair<upp::uchar, std::u16string>> test_cases = {
@@ -60,9 +62,9 @@ TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
 
             for (const auto& [ch, encoded] : test_cases)
             {
-                CTT_CHECK(upp_test::ranges::equal(ch.encode_utf16(), encoded | upp::views::cast_code_units_to<char16_t>));
+                CRTT_CHECK(upp_test::ranges::equal(ch.encode_utf16(), encoded | upp::views::cast_code_units_to<char16_t>));
             }
-        });
+        };
     }
 
     SECTION("large dataset test")

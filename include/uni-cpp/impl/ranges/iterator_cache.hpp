@@ -40,13 +40,25 @@ namespace upp::ranges::impl
 
         [[nodiscard]] constexpr bool has_value() const noexcept { return m_data.has_value(); }
 
-        [[nodiscard]] constexpr T& operator*() & noexcept { return *m_data; }
+        [[nodiscard]] constexpr T& operator*() & noexcept
+        {
+            return *m_data; // NOLINT(bugprone-unchecked-optional-access)
+        }
 
-        [[nodiscard]] constexpr const T& operator*() const& noexcept { return *m_data; }
+        [[nodiscard]] constexpr const T& operator*() const& noexcept
+        {
+            return *m_data; // NOLINT(bugprone-unchecked-optional-access)
+        }
 
-        [[nodiscard]] constexpr T&& operator*() && noexcept { return std::move(*m_data); }
+        [[nodiscard]] constexpr T&& operator*() && noexcept
+        {
+            return std::move(*m_data); // NOLINT(bugprone-unchecked-optional-access)
+        }
 
-        [[nodiscard]] constexpr const T&& operator*() const&& noexcept { return std::move(*m_data); }
+        [[nodiscard]] constexpr const T&& operator*() const&& noexcept
+        {
+            return std::move(*m_data); // NOLINT(bugprone-unchecked-optional-access)
+        }
 
         constexpr void reset() noexcept { return m_data.reset(); }
 

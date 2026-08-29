@@ -101,7 +101,7 @@ namespace upp_test
         return result;
     }
 
-    struct NormalizationTestCase
+    struct normalization_test_case
     {
         std::u32string source;
         std::u32string nfc;
@@ -110,7 +110,7 @@ namespace upp_test
         std::u32string nfkd;
     };
 
-    [[nodiscard]] inline const std::vector<NormalizationTestCase>& load_normalization_test_data()
+    [[nodiscard]] inline const std::vector<normalization_test_case>& load_normalization_test_data()
     {
         static const auto result = [] {
             const std::filesystem::path filepath{"test_data/ucd/NormalizationTest.txt"};
@@ -120,7 +120,7 @@ namespace upp_test
             std::ifstream file{filepath};
             REQUIRE(file.is_open());
 
-            std::vector<NormalizationTestCase> result;
+            std::vector<normalization_test_case> result;
 
             std::string line;
             while (std::getline(file, line))
@@ -130,7 +130,7 @@ namespace upp_test
                 if (line.empty() || line.starts_with('@'))
                     continue;
 
-                NormalizationTestCase test_case{};
+                normalization_test_case test_case{};
 
                 auto fields = line | std::views::split(';');
 

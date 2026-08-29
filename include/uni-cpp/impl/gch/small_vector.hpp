@@ -15,7 +15,7 @@
 // - change macro prefix to UNI_CPP_IMPL_GCH_
 // - other small miscellaneous changes to make clang-tidy happy
 
-// NOLINTBEGIN(readability-identifier-naming)
+// NOLINTBEGIN
 
 #ifndef UNI_CPP_IMPL_GCH_SMALL_VECTOR_HPP
 #define UNI_CPP_IMPL_GCH_SMALL_VECTOR_HPP
@@ -5327,6 +5327,6 @@ namespace upp::impl::gch
 
 } // namespace upp::impl::gch
 
-// NOLINTEND(readability-identifier-naming)
+// NOLINTEND
 
 #endif // UNI_CPP_IMPL_GCH_SMALL_VECTOR_HPP

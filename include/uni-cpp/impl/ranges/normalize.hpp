@@ -329,7 +329,7 @@ namespace upp::ranges
             constexpr void advance_underlying()
             {
                 if constexpr (std::ranges::forward_range<View>)
-                    m_current = *m_advance_to;
+                    m_current = *m_advance_to; // NOLINT(bugprone-unchecked-optional-access)
 
                 if (m_current != m_end)
                 {
@@ -624,7 +624,7 @@ namespace upp::ranges
             {
                 if constexpr (std::ranges::forward_range<View>)
                 {
-                    read_impl(*m_advance_to, m_end);
+                    read_impl(*m_advance_to, m_end); // NOLINT(bugprone-unchecked-optional-access)
                 }
                 else
                     read_impl(m_current, m_end);

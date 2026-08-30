@@ -35,7 +35,7 @@ namespace upp_test::impl::crtt
         })>                                                                                                        \
             crtt_impl_var{};                                                                                       \
         true)                                                                                                      \
-    crtt_impl_var = [](bool& crtt_impl_success) static constexpr->void
+    crtt_impl_var = []([[maybe_unused]] bool& crtt_impl_success) static constexpr->void
 
 #define CRTT_CHECK(...)                    \
     do                                     \
@@ -51,6 +51,16 @@ namespace upp_test::impl::crtt
         {                                  \
             CHECK(__VA_ARGS__);            \
         }                                  \
+    } while (false)
+
+#define CRTT_STATIC_CHECK(...)                \
+    static_assert(__VA_ARGS__, #__VA_ARGS__); \
+    do                                        \
+    {                                         \
+        if !consteval                         \
+        {                                     \
+            SUCCEED(#__VA_ARGS__);            \
+        }                                     \
     } while (false)
 
 #define CRTT_ASSUME(...)                                                                                                                          \

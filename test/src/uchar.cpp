@@ -2,6 +2,9 @@
 
 #include <uni-cpp/uchar.hpp>
 
+#include "test_data.hpp"
+#include "ranges/base.hpp"
+
 #include <type_traits>
 #include <array>
 #include <utility>
@@ -176,6 +179,29 @@ TEST_CASE("upp::uchar from(), from_lossy() & from_unchecked()", "[upp::uchar]")
     }
 }
 
+TEST_CASE("upp::uchar composition()", "[upp::uchar]")
+{
+    const auto test_data = upp_test::load_test_data<std::uint32_t, std::uint64_t>("test_data/composition_mappings.txt");
+
+    for (const auto& [key, composition_vec] : test_data)
+    {
+        const std::uint32_t code_point1_int = static_cast<std::uint32_t>(key & ((1ull << 21u) - 1u));
+        const std::uint32_t code_point2_int = static_cast<std::uint32_t>(key >> 21u);
+
+        REQUIRE(upp::is_valid_usv(code_point1_int));
+        REQUIRE(upp::is_valid_usv(code_point2_int));
+
+        const auto code_point1 = upp::uchar::from_unchecked(code_point1_int);
+        const auto code_point2 = upp::uchar::from_unchecked(code_point2_int);
+
+        REQUIRE((composition_vec.size() == 1uz && upp::is_valid_usv(composition_vec.front())));
+
+        const auto expected_composition = upp::uchar::from_unchecked(composition_vec.front());
+
+        CHECK(upp::uchar::composition(code_point1, code_point2) == expected_composition);
+    }
+}
+
 TEST_CASE("upp::uchar comparison operators", "[upp::uchar]")
 {
     using namespace upp::char_literals;
@@ -237,4 +263,104 @@ TEST_CASE("upp::uchar length_utf8() & length_utf16()", "[upp::uchar]")
     CHECK(U'\U0000FFFF'_uc.length_utf16() == 1U);
     CHECK(U'\U00010000'_uc.length_utf16() == 2U);
     CHECK(U'\U0010FFFF'_uc.length_utf16() == 2U);
+}
+
+TEST_CASE("upp::uchar full_decomposition() & full_compatibility_decomposition()", "[upp::uchar]")
+{
+    const auto canonical_data = upp_test::load_test_data<std::uint32_t>("test_data/full_canonical_decomposition.txt");
+
+    for (const auto& [code_point, expected] : canonical_data)
+    {
+        REQUIRE(upp::is_valid_usv(code_point));
+
+        const upp::uchar ch = upp::uchar::from_unchecked(code_point);
+
+        CHECK(upp_test::ranges::equal(ch.full_decomposition() | std::views::transform([](upp::uchar c) { return c.value(); }), expected));
+    }
+
+    const auto compatibility_data = upp_test::load_test_data<std::uint32_t>("test_data/full_compatibility_decomposition.txt");
+
+    for (const auto& [code_point, expected] : compatibility_data)
+    {
+        REQUIRE(upp::is_valid_usv(code_point));
+
+        const upp::uchar ch = upp::uchar::from_unchecked(code_point);
+
+        CHECK(
+            upp_test::ranges::equal(ch.full_compatibility_decomposition() | std::views::transform([](upp::uchar c) { return c.value(); }), expected));
+    }
+}
+
+TEST_CASE("upp::uchar decomposition_type()", "[upp::uchar]")
+{
+    const auto data = upp_test::load_test_data<std::uint8_t>("test_data/decomposition_type.txt");
+
+    for (const auto& [code_point, expected] : data)
+    {
+        REQUIRE(upp::is_valid_usv(code_point));
+
+        const upp::uchar ch = upp::uchar::from_unchecked(code_point);
+
+        REQUIRE(expected.size() == 1uz);
+
+        const auto result = ch.decomposition_type();
+
+        if (expected.front() == 0)
+        {
+            CHECK(!result.has_value());
+        }
+        else
+        {
+            REQUIRE(result.has_value());
+            CHECK(std::to_underlying(*result) == expected.front()); // NOLINT(bugprone-unchecked-optional-access)
+        }
+    }
+}
+
+TEST_CASE("upp::uchar canonical_combining_class()", "[upp::uchar]")
+{
+    CONSTEXPR_AND_RUNTIME_TEST()
+    {
+        using namespace upp::char_literals;
+
+        struct test_case
+        {
+            upp::uchar   code_point;
+            std::uint8_t ccc;
+        };
+
+        const auto test_cases = std::to_array<test_case>(
+            {{.code_point = 0x0061_uc, .ccc = 0},
+             {.code_point = 0x0300_uc, .ccc = 230},
+             {.code_point = 0x0301_uc, .ccc = 230},
+             {.code_point = 0x0302_uc, .ccc = 230},
+             {.code_point = 0x0323_uc, .ccc = 220},
+             {.code_point = 0x0315_uc, .ccc = 232},
+             {.code_point = 0x0345_uc, .ccc = 240},
+             {.code_point = 0x05B0_uc, .ccc = 10},
+             {.code_point = 0x05B1_uc, .ccc = 11},
+             {.code_point = 0x05B2_uc, .ccc = 12},
+             {.code_point = 0x093C_uc, .ccc = 7}});
+
+        for (auto [code_point, ccc] : test_cases)
+        {
+            CRTT_CHECK(code_point.canonical_combining_class() == ccc);
+        }
+    };
+}
+
+TEST_CASE("upp::uchar general_category()", "[upp::uchar]")
+{
+    const auto data = upp_test::load_test_data<std::uint8_t>("test_data/general_category.txt");
+
+    for (const auto& [code_point, expected] : data)
+    {
+        REQUIRE(upp::is_valid_usv(code_point));
+
+        const upp::uchar ch = upp::uchar::from_unchecked(code_point);
+
+        REQUIRE(expected.size() == 1uz);
+
+        CHECK(std::to_underlying(ch.general_category()) == expected.front());
+    }
 }

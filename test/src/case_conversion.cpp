@@ -52,3 +52,19 @@ TEST_CASE("Titlecase conversion & titlecase mappings", "[case conversion][upp::u
         CHECK(upp_test::ranges::equal(expected, data));
     }
 }
+
+TEST_CASE("Casefold conversion & casefold mappings", "[case conversion][upp::uchar]")
+{
+    const auto test_data = upp_test::load_test_data<std::uint32_t>("test_data/casefold_mappings.txt");
+
+    for (const auto& [code_point, data] : test_data)
+    {
+        const auto ch = upp::uchar::from(code_point);
+        REQUIRE(ch.has_value());
+
+        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+        const auto expected = ch->to_casefold() | std::views::transform([](upp::uchar c) { return c.value(); });
+
+        CHECK(upp_test::ranges::equal(expected, data));
+    }
+}

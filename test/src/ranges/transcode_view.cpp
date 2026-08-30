@@ -7,6 +7,9 @@
 #include "base.hpp"
 #include "to_input.hpp"
 
+#include <string_view>
+#include <vector>
+
 TEST_CASE("transcode_view", "[ranges][UTF encoding]")
 {
     SECTION("Transcoding well-formed sequences")
@@ -90,4 +93,44 @@ TEST_CASE("transcode_view", "[ranges][UTF encoding]")
             });
         });
     }
+}
+
+TEST_CASE("views::transcode", "[ranges]")
+{
+    STATIC_CHECK(
+        IS_EXPR_OF_TYPE(std::string_view{} | upp::views::mark_as_valid_ascii | upp::views::transcode_lossy_ascii_to_utf8,
+                        upp::ranges::cast_code_units_to_view<upp::ranges::valid_code_unit_view<std::string_view, upp::encoding::ascii>, char8_t>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::ranges::empty_view<char>{} | upp::views::transcode_expected_ascii_to_utf16,
+                                 std::ranges::empty_view<std::expected<char16_t, upp::ascii_error>>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::ranges::empty_view<char>{} | upp::views::transcode_lossy_ascii_to_utf16, std::ranges::empty_view<char16_t>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::vector<upp::uchar>{} | upp::views::encode_as_utf8 | upp::views::transcode_lossy_utf8_to_utf16,
+                                 upp::ranges::encode_view<std::ranges::owning_view<std::vector<upp::uchar>>, upp::encoding::utf16, char16_t>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(
+        std::vector<upp::uchar>{} | upp::views::encode_as_utf8 | upp::views::transcode_lossy_ascii_to_utf16,
+        upp::ranges::transcode_view<upp::ranges::encode_view<std::ranges::owning_view<std::vector<upp::uchar>>, upp::encoding::utf8, char8_t>,
+                                    upp::encoding::ascii, upp::encoding::utf16, upp::ranges::transcode_view_kind::lossy, char16_t>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(
+        std::string_view{} | upp::views::transcode_lossy_utf8_to_utf16 | upp::views::transcode_valid_utf16_to_utf32,
+        upp::ranges::transcode_view<std::string_view, upp::encoding::utf8, upp::encoding::utf32, upp::ranges::transcode_view_kind::lossy, char32_t>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(
+        std::string_view{} | upp::views::transcode_lossy_utf8_to_utf16 | upp::views::reverse | upp::views::transcode_lossy_utf16_to_utf32,
+        upp::ranges::transcode_view<upp::ranges::reverse_view<upp::ranges::transcode_view<std::string_view, upp::encoding::utf8, upp::encoding::utf16,
+                                                                                          upp::ranges::transcode_view_kind::lossy, char16_t>>,
+                                    upp::encoding::utf16, upp::encoding::utf32, upp::ranges::transcode_view_kind::lossy, char32_t>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::vector<upp::uchar>{} | upp_test::views::to_input | upp::views::encode_as_utf8 |
+                                     upp::views::transcode_lossy_utf8_to_utf16,
+                                 upp::ranges::encode_view<upp_test::ranges::to_input_view<std::ranges::owning_view<std::vector<upp::uchar>>>,
+                                                          upp::encoding::utf16, char16_t>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::string_view{} | upp_test::views::to_input | upp::views::transcode_lossy_utf8_to_utf16 |
+                                     upp::views::transcode_valid_utf16_to_utf32,
+                                 upp::ranges::transcode_view<upp_test::ranges::to_input_view<std::string_view>, upp::encoding::utf8,
+                                                             upp::encoding::utf32, upp::ranges::transcode_view_kind::lossy, char32_t>));
 }

@@ -8,6 +8,7 @@
 #include "../test_data.hpp"
 
 #include <filesystem>
+#include <span>
 #include <fstream>
 
 TEST_CASE("normalize_view", "[ranges][normalization]")
@@ -51,6 +52,27 @@ TEST_CASE("normalize_view", "[ranges][normalization]")
         test_for_range(test_case.source | decode);
         test_for_range(test_case.source | upp_test::views::to_input | decode);
     }
+}
+
+TEST_CASE("views::normalize_to", "[ranges]")
+{
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::span<upp::uchar>{} | upp::views::normalize_to_nfc,
+                                 upp::ranges::normalize_view<std::span<upp::uchar>, upp::normalization_form::nfc>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::span<upp::uchar>{} | upp::views::normalize_to_nfc | upp::views::normalize_to_nfd,
+                                 upp::ranges::normalize_view<std::span<upp::uchar>, upp::normalization_form::nfd>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::span<upp::uchar>{} | upp::views::normalize_to_nfd | upp::views::normalize_to_nfc,
+                                 upp::ranges::normalize_view<std::span<upp::uchar>, upp::normalization_form::nfc>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::span<upp::uchar>{} | upp::views::normalize_to_nfkc | upp::views::normalize_to_nfd,
+                                 upp::ranges::normalize_view<std::span<upp::uchar>, upp::normalization_form::nfkd>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::span<upp::uchar>{} | upp::views::normalize_to_nfc | upp::views::normalize_to_nfkc,
+                                 upp::ranges::normalize_view<std::span<upp::uchar>, upp::normalization_form::nfkc>));
+
+    STATIC_CHECK(IS_EXPR_OF_TYPE(std::span<upp::uchar>{} | upp::views::normalize_to_nfkd | upp::views::normalize_to_nfc,
+                                 upp::ranges::normalize_view<std::span<upp::uchar>, upp::normalization_form::nfkc>));
 }
 
 #define BENCHMARK_NORMALIZATION(lipsum, bytes, code_points)                                                                                          \

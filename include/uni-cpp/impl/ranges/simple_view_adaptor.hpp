@@ -107,7 +107,7 @@ namespace upp::ranges::impl
 
         static constexpr bool has_transform_element = is_transform_element_invocable_with<std::ranges::range_reference_t<View>>;
 
-        static constexpr bool has_base_projection = requires { Traits::base_projection(std::declval<const View&>()); };
+        static constexpr bool has_base_projection = requires { Traits::base_projection(std::declval<View>()); };
 
         template<bool Const>
         using base_t = maybe_const<Const, View>;
@@ -327,7 +327,7 @@ namespace upp::ranges::impl
             static constexpr bool has_iterator_base_projection = [] {
                 if constexpr (provide_base_method)
                 {
-                    return requires { Traits::iterator_base_projection(std::declval<const std::ranges::iterator_t<base_t>&>()); };
+                    return requires { Traits::iterator_base_projection(std::declval<std::ranges::iterator_t<base_t>>()); };
                 }
                 else
                     return false;

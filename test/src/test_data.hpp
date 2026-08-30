@@ -48,12 +48,12 @@ namespace upp_test
         }
     } // namespace impl
 
-    template<std::unsigned_integral ValueType>
-    [[nodiscard]] std::unordered_map<std::uint32_t, std::vector<ValueType>> load_test_data(const std::filesystem::path& filepath)
+    template<std::unsigned_integral ValueType, std::unsigned_integral KeyType = std::uint32_t>
+    [[nodiscard]] std::unordered_map<KeyType, std::vector<ValueType>> load_test_data(const std::filesystem::path& filepath)
     {
         // Note: test data files have the following format:
         //
-        // <code point>:<value>;[<value>;...]
+        // <key>:<value>;[<value>;...]
         //
         // or in proper regex:
         //
@@ -64,7 +64,7 @@ namespace upp_test
         std::ifstream file{filepath};
         REQUIRE(file.is_open());
 
-        std::unordered_map<std::uint32_t, std::vector<ValueType>> result;
+        std::unordered_map<KeyType, std::vector<ValueType>> result;
 
         std::string line;
         while (std::getline(file, line))
@@ -79,10 +79,10 @@ namespace upp_test
 
             using diff_t = std::string::difference_type;
 
-            std::string_view code_point_str{line.begin(), line.begin() + static_cast<diff_t>(colon_pos)};
+            std::string_view key_str{line.begin(), line.begin() + static_cast<diff_t>(colon_pos)};
             std::string_view values_str{line.begin() + static_cast<diff_t>(colon_pos + 1), line.end()};
 
-            std::uint32_t code_point = impl::parse_hex<std::uint32_t>(code_point_str);
+            KeyType key = impl::parse_hex<KeyType>(key_str);
 
             std::vector<ValueType> values;
             values.reserve(4uz);
@@ -95,7 +95,7 @@ namespace upp_test
                     values.push_back(impl::parse_hex<ValueType>(value_sv));
             }
 
-            result[code_point] = std::move(values);
+            result[key] = std::move(values);
         }
 
         return result;

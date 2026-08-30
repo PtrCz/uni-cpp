@@ -10,10 +10,10 @@
 
 TEST_CASE("valid_code_unit_range concept", "[ranges]")
 {
-    STATIC_CHECK(upp::ranges::valid_code_unit_range<decltype(upp::uchar{}.encode_utf8()), upp::encoding::utf8>);
-    STATIC_CHECK(upp::ranges::valid_code_unit_range<decltype(upp::uchar{}.encode_utf16()), upp::encoding::utf16>);
+    STATIC_CHECK(upp::ranges::valid_code_unit_range<decltype(upp::uchar{}.encode_as_utf8()), upp::encoding::utf8>);
+    STATIC_CHECK(upp::ranges::valid_code_unit_range<decltype(upp::uchar{}.encode_as_utf16()), upp::encoding::utf16>);
 
-    STATIC_CHECK(!upp::ranges::valid_code_unit_range<decltype(upp::uchar{}.encode_utf8()), upp::encoding::ascii>);
+    STATIC_CHECK(!upp::ranges::valid_code_unit_range<decltype(upp::uchar{}.encode_as_utf8()), upp::encoding::ascii>);
 
     STATIC_CHECK(upp::ranges::valid_code_unit_range<decltype(std::string_view{} | upp::views::mark_as_valid_ascii), upp::encoding::ascii>);
     STATIC_CHECK(upp::ranges::valid_code_unit_range<decltype(std::string_view{} | upp::views::mark_as_valid_ascii), upp::encoding::utf8>);
@@ -51,8 +51,9 @@ TEST_CASE("views::mark_as_valid_encoding", "[ranges]")
     STATIC_CHECK(IS_EXPR_OF_TYPE(std::u8string_view{} | upp::views::mark_as_valid_utf8 | upp::views::mark_as_valid_utf8,
                                  upp::ranges::valid_code_unit_view<std::u8string_view, upp::encoding::utf8>));
 
-    STATIC_CHECK(IS_EXPR_OF_TYPE(upp::uchar{}.encode_utf8() | upp::views::mark_as_valid_utf8, std::ranges::owning_view<upp::uchar::encode_utf8_t>));
+    STATIC_CHECK(
+        IS_EXPR_OF_TYPE(upp::uchar{}.encode_as_utf8() | upp::views::mark_as_valid_utf8, std::ranges::owning_view<upp::uchar::encode_as_utf8_t>));
 
-    STATIC_CHECK(IS_EXPR_OF_TYPE(upp::uchar{}.encode_utf16() | upp::views::mark_as_valid_utf16 | upp::views::mark_as_valid_utf16,
-                                 std::ranges::owning_view<upp::uchar::encode_utf16_t>));
+    STATIC_CHECK(IS_EXPR_OF_TYPE(upp::uchar{}.encode_as_utf16() | upp::views::mark_as_valid_utf16 | upp::views::mark_as_valid_utf16,
+                                 std::ranges::owning_view<upp::uchar::encode_as_utf16_t>));
 }

@@ -721,11 +721,11 @@ namespace upp
         {
             if constexpr (Encoding == encoding::utf8)
             {
-                append_code_units_range(code_point.encode_utf8());
+                append_code_units_range(code_point.encode_as_utf8());
             }
             else if constexpr (Encoding == encoding::utf16)
             {
-                append_code_units_range(code_point.encode_utf16());
+                append_code_units_range(code_point.encode_as_utf16());
             }
             else if constexpr (Encoding == encoding::utf32)
             {

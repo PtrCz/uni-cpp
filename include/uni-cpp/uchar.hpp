@@ -80,7 +80,7 @@ namespace upp
         /// Small, contiguous iterable buffer used by functions that return a short range of elements with a dynamic size.
         ///
         /// This serves as the base class for:
-        /// - `encode_utf8_t`, `encode_utf16_t`,
+        /// - `encode_as_utf8_t`, `encode_as_utf16_t`,
         /// - `to_lowercase_t`, `to_uppercase_t`, `to_titlecase_t`, `to_casefold_t`,
         /// - `full_decomposition_t` and `full_compatibility_decomposition_t`.
         ///
@@ -131,7 +131,7 @@ namespace upp
         };
 
         template<typename T, std::size_t MaxSize>
-        class encode_utf : public immutable_inplace_buffer<T, MaxSize>
+        class encode_as_utf : public immutable_inplace_buffer<T, MaxSize>
         {
         private:
             using base = immutable_inplace_buffer<T, MaxSize>;
@@ -419,10 +419,10 @@ namespace upp
     class uchar
     {
     public:
-        /// A sized range of UTF-8 code units returned by the `encode_utf8` method. See its documentation for more.
-        using encode_utf8_t = impl::encode_utf<char8_t, 4>;
-        /// A sized range of UTF-16 code units returned by the `encode_utf16` method. See its documentation for more.
-        using encode_utf16_t = impl::encode_utf<char16_t, 2>;
+        /// A sized range of UTF-8 code units returned by the `encode_as_utf8` method. See its documentation for more.
+        using encode_as_utf8_t = impl::encode_as_utf<char8_t, 4>;
+        /// A sized range of UTF-16 code units returned by the `encode_as_utf16` method. See its documentation for more.
+        using encode_as_utf16_t = impl::encode_as_utf<char16_t, 2>;
 
         /// A sized range of `uchar`s returned by the `to_lowercase` method. See its documentation for more.
         using to_lowercase_t = impl::to_case<impl::to_case_enum::lower>;
@@ -598,7 +598,7 @@ namespace upp
         ///
         /// @return Number between 1 and 4, inclusive.
         ///
-        /// @see length_utf16, encode_utf8
+        /// @see length_utf16, encode_as_utf8
         ///
         [[nodiscard]] constexpr std::size_t length_utf8() const noexcept
         {
@@ -615,7 +615,7 @@ namespace upp
         ///
         /// @return Number that is always either 1 or 2.
         ///
-        /// @see length_utf8, encode_utf16
+        /// @see length_utf8, encode_as_utf16
         ///
         [[nodiscard]] constexpr std::size_t length_utf16() const noexcept { return (m_value < 0x10000) ? 1uz : 2uz; }
 
@@ -623,9 +623,9 @@ namespace upp
         ///
         /// @return A sized range of `char8_t`s that are UTF-8 code units.
         ///
-        /// @see encode_utf16, length_utf8
+        /// @see encode_as_utf16, length_utf8
         ///
-        [[nodiscard]] constexpr encode_utf8_t encode_utf8() const noexcept
+        [[nodiscard]] constexpr encode_as_utf8_t encode_as_utf8() const noexcept
         {
             using buffer_t = impl::inplace_vector<char8_t, 4>;
 
@@ -634,23 +634,23 @@ namespace upp
             switch (length_utf8())
             {
             case 1uz: {
-                return encode_utf8_t{buffer_t{static_cast<char8_t>(m_value)}};
+                return encode_as_utf8_t{buffer_t{static_cast<char8_t>(m_value)}};
             }
             case 2uz: {
-                return encode_utf8_t{buffer_t{
+                return encode_as_utf8_t{buffer_t{
                     static_cast<char8_t>((m_value >> 6U) | 0xC0U),
                     static_cast<char8_t>((m_value & 0x3FU) | 0x80U)
                 }};
             }
             case 3uz: {
-                return encode_utf8_t{buffer_t{
+                return encode_as_utf8_t{buffer_t{
                     static_cast<char8_t>((m_value >> 12U) | 0xE0U),
                     static_cast<char8_t>(((m_value >> 6U) & 0x3FU) | 0x80U),
                     static_cast<char8_t>((m_value & 0x3FU) | 0x80U)
                 }};
             }
             case 4uz: {
-                return encode_utf8_t{buffer_t{
+                return encode_as_utf8_t{buffer_t{
                     static_cast<char8_t>((m_value >> 18U) | 0xF0U),
                     static_cast<char8_t>(((m_value >> 12U) & 0x3FU) | 0x80U),
                     static_cast<char8_t>(((m_value >> 6U) & 0x3FU) | 0x80U),
@@ -667,21 +667,21 @@ namespace upp
         ///
         /// @return A sized range of `char16_t`s that are UTF-16 code units.
         ///
-        /// @see encode_utf8, length_utf16
+        /// @see encode_as_utf8, length_utf16
         ///
-        [[nodiscard]] constexpr encode_utf16_t encode_utf16() const noexcept
+        [[nodiscard]] constexpr encode_as_utf16_t encode_as_utf16() const noexcept
         {
             using buffer_t = impl::inplace_vector<char16_t, 2>;
 
             switch (length_utf16())
             {
             case 1uz: {
-                return encode_utf16_t{buffer_t{static_cast<char16_t>(m_value)}};
+                return encode_as_utf16_t{buffer_t{static_cast<char16_t>(m_value)}};
             }
             case 2uz: {
                 const std::uint32_t code = m_value - 0x10'000;
 
-                return encode_utf16_t{buffer_t{
+                return encode_as_utf16_t{buffer_t{
                     // clang-format off
                     static_cast<char16_t>(0xD800U | (code >> 10U)),
                     static_cast<char16_t>(0xDC00U | (code & 0x3FFU))

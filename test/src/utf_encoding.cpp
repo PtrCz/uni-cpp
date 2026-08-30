@@ -25,7 +25,7 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
 
             for (const auto& [ch, encoded] : test_cases)
             {
-                CRTT_CHECK(upp_test::ranges::equal(ch.encode_utf8(), encoded | upp::views::cast_code_units_to<char8_t>));
+                CRTT_CHECK(upp_test::ranges::equal(ch.encode_as_utf8(), encoded | upp::views::cast_code_units_to<char8_t>));
             }
         };
     }
@@ -40,7 +40,7 @@ TEST_CASE("UTF-8 encoding", "[UTF encoding][upp::uchar]")
             REQUIRE(ch.has_value());
 
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-            CHECK(upp_test::ranges::equal(ch->encode_utf8(), data | upp::views::cast_code_units_to<char8_t>));
+            CHECK(upp_test::ranges::equal(ch->encode_as_utf8(), data | upp::views::cast_code_units_to<char8_t>));
         }
     }
 }
@@ -62,7 +62,7 @@ TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
 
             for (const auto& [ch, encoded] : test_cases)
             {
-                CRTT_CHECK(upp_test::ranges::equal(ch.encode_utf16(), encoded | upp::views::cast_code_units_to<char16_t>));
+                CRTT_CHECK(upp_test::ranges::equal(ch.encode_as_utf16(), encoded | upp::views::cast_code_units_to<char16_t>));
             }
         };
     }
@@ -77,7 +77,7 @@ TEST_CASE("UTF-16 encoding", "[UTF encoding][upp::uchar]")
             REQUIRE(ch.has_value());
 
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-            CHECK(upp_test::ranges::equal(ch->encode_utf16(), data | upp::views::cast_code_units_to<char16_t>));
+            CHECK(upp_test::ranges::equal(ch->encode_as_utf16(), data | upp::views::cast_code_units_to<char16_t>));
         }
     }
 }

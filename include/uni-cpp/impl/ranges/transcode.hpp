@@ -570,14 +570,14 @@ namespace upp::ranges
             {
                 if constexpr (TargetEncoding == encoding::utf8)
                 {
-                    for (const char8_t code_unit : code_point.encode_utf8())
+                    for (const char8_t code_unit : code_point.encode_as_utf8())
                     {
                         m_buffer.unchecked_push_back(std::bit_cast<ToType>(code_unit));
                     }
                 }
                 else if constexpr (TargetEncoding == encoding::utf16)
                 {
-                    for (const char16_t code_unit : code_point.encode_utf16())
+                    for (const char16_t code_unit : code_point.encode_as_utf16())
                     {
                         m_buffer.unchecked_push_back(std::bit_cast<ToType>(code_unit));
                     }

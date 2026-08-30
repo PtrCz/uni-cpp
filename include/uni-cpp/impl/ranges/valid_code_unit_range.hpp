@@ -180,8 +180,8 @@ namespace upp::ranges
     /// `enable_valid_code_unit_range<std::views::all_t<Range>>`.
     ///
     /// Furthermore, the following specializations are provided:
-    /// - `enable_valid_code_unit_range<uchar::encode_utf8_t, encoding::utf8>` is `true`,
-    /// - `enable_valid_code_unit_range<uchar::encode_utf16_t, encoding::utf16>` is `true`,
+    /// - `enable_valid_code_unit_range<uchar::encode_as_utf8_t, encoding::utf8>` is `true`,
+    /// - `enable_valid_code_unit_range<uchar::encode_as_utf16_t, encoding::utf16>` is `true`,
     /// - `enable_valid_code_unit_range<valid_code_unit_view<Encoding, View>, Encoding>` is `true`.
     /// - `enable_valid_code_unit_range<std::ranges::empty_view<CodeUnitType>, Encoding>` is `true` if `CodeUnitType` satisfies `code_unit_type_for<Encoding>`.
     /// - `enable_valid_code_unit_range<cast_code_units_to_view<View, ToType>, Encoding>` equals `enable_valid_code_unit_range<std::remove_cvref_t<View>, Encoding>`.
@@ -227,10 +227,10 @@ namespace upp::ranges
     inline constexpr bool enable_valid_code_unit_range<valid_code_unit_view<View, Encoding>, Encoding> = true;
 
     template<>
-    inline constexpr bool enable_valid_code_unit_range<uchar::encode_utf8_t, encoding::utf8> = true;
+    inline constexpr bool enable_valid_code_unit_range<uchar::encode_as_utf8_t, encoding::utf8> = true;
 
     template<>
-    inline constexpr bool enable_valid_code_unit_range<uchar::encode_utf16_t, encoding::utf16> = true;
+    inline constexpr bool enable_valid_code_unit_range<uchar::encode_as_utf16_t, encoding::utf16> = true;
 
     template<encoding Encoding, code_unit_type_for<Encoding> CodeUnitType>
     inline constexpr bool enable_valid_code_unit_range<std::ranges::empty_view<CodeUnitType>, Encoding> = true;

@@ -13,6 +13,8 @@
 #include "impl/encoding/utf16.hpp"
 #include "impl/encoding/utf32.hpp"
 
+#include "impl/ranges/conditional_range_elem.hpp"
+
 #include <cstdint>
 #include <utility>
 #include <concepts>
@@ -176,8 +178,7 @@ namespace upp
 
         /// `true` iff type `R` is an input range of ASCII code units.
         template<typename R>
-        static constexpr bool is_code_unit_range =
-            std::ranges::input_range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+        static constexpr bool is_code_unit_range = std::ranges::input_range<R> && is_code_unit_type<ranges::impl::conditional_range_elem_t<R>>;
 
         /// @brief Validates a range of ASCII.
         ///
@@ -362,8 +363,7 @@ namespace upp
 
         /// `true` iff type `R` is an input range of UTF-8 code units.
         template<typename R>
-        static constexpr bool is_code_unit_range =
-            std::ranges::input_range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+        static constexpr bool is_code_unit_range = std::ranges::input_range<R> && is_code_unit_type<ranges::impl::conditional_range_elem_t<R>>;
 
         /// @brief Validates a range of UTF-8.
         ///
@@ -679,8 +679,7 @@ namespace upp
 
         /// `true` iff type `R` is an input range of UTF-16 code units.
         template<typename R>
-        static constexpr bool is_code_unit_range =
-            std::ranges::input_range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+        static constexpr bool is_code_unit_range = std::ranges::input_range<R> && is_code_unit_type<ranges::impl::conditional_range_elem_t<R>>;
 
         /// @brief Validates a range of UTF-16.
         ///
@@ -1016,8 +1015,7 @@ namespace upp
 
         /// `true` iff type `R` is an input range of UTF-32 code units.
         template<typename R>
-        static constexpr bool is_code_unit_range =
-            std::ranges::input_range<R> && is_code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<R>>>;
+        static constexpr bool is_code_unit_range = std::ranges::input_range<R> && is_code_unit_type<ranges::impl::conditional_range_elem_t<R>>;
 
         /// @brief Validates a range of UTF-32.
         ///

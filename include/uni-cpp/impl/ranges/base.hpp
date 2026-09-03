@@ -9,6 +9,8 @@
 #include "../../uchar.hpp"
 #include "../../encoding.hpp"
 
+#include "conditional_range_elem.hpp"
+
 #include <cstddef>
 #include <ranges>
 #include <iterator>
@@ -63,15 +65,14 @@ namespace upp::ranges
     /// @headerfile "" <uni-cpp/ranges.hpp>
     ///
     template<typename Range>
-    concept code_unit_range = std::ranges::input_range<Range> && code_unit_type<std::remove_cvref_t<std::ranges::range_reference_t<Range>>>;
+    concept code_unit_range = std::ranges::input_range<Range> && code_unit_type<impl::conditional_range_elem_t<Range>>;
 
     /// @brief Identifies types that are input ranges of code points (or more precisely, @ref upp::uchar "uchars").
     ///
     /// @headerfile "" <uni-cpp/ranges.hpp>
     ///
     template<typename Range>
-    concept code_point_range =
-        std::ranges::input_range<Range> && std::same_as<std::remove_cvref_t<std::ranges::range_reference_t<Range>>, upp::uchar>;
+    concept code_point_range = std::ranges::input_range<Range> && std::same_as<impl::conditional_range_elem_t<Range>, upp::uchar>;
 
     namespace impl
     {

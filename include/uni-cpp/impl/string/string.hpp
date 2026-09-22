@@ -11,6 +11,8 @@
 
 #include "../ranges/base.hpp"
 #include "../ranges/approximately_sized_range.hpp"
+#include "../ranges/valid_code_unit_range.hpp"
+#include "../ranges/cast_code_units_to.hpp"
 
 #include "fwd.hpp"
 #include "code_units_t.hpp"
@@ -693,14 +695,10 @@ namespace upp
         ///
         /// @pre The `range` must not depend on the state of this string. For example, it cannot be a view into this string's underlying container.
         ///
-        template<std::ranges::input_range Range>
-            requires ranges::code_unit_range_for<Range, Encoding>
+        template<ranges::valid_code_unit_range<Encoding> Range>
         constexpr void append_code_units_range(Range&& range)
         {
-            using range_code_unit_t = std::remove_cvref_t<std::ranges::range_reference_t<Range>>;
-
-            auto code_units = std::views::transform(
-                std::forward<Range>(range), [](const range_code_unit_t code_unit) static { return std::bit_cast<code_unit_type>(code_unit); });
+            auto code_units = std::forward<Range>(range) | views::cast_code_units_to<code_unit_type>;
 
             using code_units_range_t = decltype(code_units);
 

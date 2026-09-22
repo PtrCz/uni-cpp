@@ -197,7 +197,27 @@ namespace upp
         /// to access string contents through this class’s API rather than directly through
         /// the underlying container.
         ///
-        [[nodiscard]] constexpr const container_type& underlying() const noexcept { return m_container; }
+        [[nodiscard]] constexpr const container_type& underlying() const& noexcept { return m_container; }
+
+        /// @brief Returns the underlying container by moving it.
+        ///
+        /// It is intended for interoperability with APIs that expect the underlying container as an input.
+        ///
+        /// @note The underlying container is not encoding-aware, so it is generally better
+        /// to access string contents through this class’s API rather than directly through
+        /// the underlying container.
+        ///
+        [[nodiscard]] constexpr container_type underlying() &&
+        {
+            struct clear_on_exit
+            {
+                constexpr ~clear_on_exit() { cont.clear(); }
+
+                container_type& cont;
+            } guard{m_container};
+
+            return container_type{std::move(m_container)};
+        }
 
         /// @brief Returns a view of the underlying code units.
         ///
@@ -536,7 +556,27 @@ namespace upp
         /// to access string contents through this class’s API rather than directly through
         /// the underlying container.
         ///
-        [[nodiscard]] constexpr const container_type& underlying() const noexcept { return m_container; }
+        [[nodiscard]] constexpr const container_type& underlying() const& noexcept { return m_container; }
+
+        /// @brief Returns the underlying container by moving it.
+        ///
+        /// It is intended for interoperability with APIs that expect the underlying container as an input.
+        ///
+        /// @note The underlying container is not encoding-aware, so it is generally better
+        /// to access string contents through this class’s API rather than directly through
+        /// the underlying container.
+        ///
+        [[nodiscard]] constexpr container_type underlying() &&
+        {
+            struct clear_on_exit
+            {
+                constexpr ~clear_on_exit() { cont.clear(); }
+
+                container_type& cont;
+            } guard{m_container};
+
+            return container_type{std::move(m_container)};
+        }
 
         /// @brief Returns a view of the underlying code units.
         ///

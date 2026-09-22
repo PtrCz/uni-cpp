@@ -192,6 +192,8 @@ namespace upp::ranges
     ///   `enable_valid_code_unit_range<transcode_view<View, SourceEncoding, encoding::utf8, Kind, ToType>, encoding::ascii> = Kind != transcode_view_kind::expected`.
     ///   It means that transcoding a valid ASCII range to UTF-8 results in a range that's valid ASCII as well.
     /// - `enable_valid_code_unit_range<encode_view<View, TargetEncoding, CodeUnitType>, TargetEncoding>` is `true`.
+    /// - The return type of the `.code_units()` method of the @ref upp::basic_ustring "ustring" and @ref upp::basic_ascii_string "ascii_string" types
+    ///   specializes `enable_valid_code_unit_range` for the encoding of the string type to `true`.
     ///
     /// @par Specializing `enable_valid_code_unit_range` vs. using `views::mark_as_valid_encoding`
     ///     Specializing `enable_valid_code_unit_range` declares that the **type itself** guarantees a well-formed code unit sequence for the specified `Encoding`.

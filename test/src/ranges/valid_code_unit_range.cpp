@@ -2,6 +2,7 @@
 
 #include <uni-cpp/uchar.hpp>
 #include <uni-cpp/ranges.hpp>
+#include <uni-cpp/string.hpp>
 
 #include "base.hpp"
 
@@ -39,6 +40,14 @@ TEST_CASE("valid_code_unit_range concept", "[ranges]")
         upp::ranges::valid_code_unit_range<upp::ranges::encode_view<std::span<upp::uchar>, upp::encoding::utf8, std::uint8_t>, upp::encoding::utf8>);
     STATIC_CHECK(!upp::ranges::valid_code_unit_range<upp::ranges::encode_view<std::span<upp::uchar>, upp::encoding::utf8, std::uint8_t>,
                                                      upp::encoding::ascii>);
+
+    STATIC_CHECK(upp::ranges::valid_code_unit_range<decltype(upp::ustring{}.code_units()), upp::encoding::utf8>);
+    STATIC_CHECK(!upp::ranges::valid_code_unit_range<decltype(upp::ustring{}.code_units()), upp::encoding::ascii>);
+    STATIC_CHECK(!upp::ranges::valid_code_unit_range<decltype(upp::utf16_string{}.code_units()), upp::encoding::utf32>);
+
+    STATIC_CHECK(upp::ranges::valid_code_unit_range<decltype(upp::ascii_string{}.code_units()), upp::encoding::ascii>);
+    STATIC_CHECK(upp::ranges::valid_code_unit_range<decltype(upp::ascii_string{}.code_units()), upp::encoding::utf8>);
+    STATIC_CHECK(!upp::ranges::valid_code_unit_range<decltype(upp::ascii_string{}.code_units()), upp::encoding::utf16>);
 }
 
 TEST_CASE("views::mark_as_valid_encoding", "[ranges]")

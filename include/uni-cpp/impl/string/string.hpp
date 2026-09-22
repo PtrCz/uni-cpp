@@ -13,6 +13,7 @@
 #include "../ranges/approximately_sized_range.hpp"
 
 #include "fwd.hpp"
+#include "code_units_t.hpp"
 #include "string_literal.hpp"
 
 #include <type_traits>
@@ -198,7 +199,10 @@ namespace upp
 
         /// @brief Returns a view of the underlying code units.
         ///
-        [[nodiscard]] constexpr std::span<const code_unit_type> code_units() const noexcept { return std::span<const code_unit_type>{m_container}; }
+        [[nodiscard]] constexpr auto code_units() const noexcept
+        {
+            return impl::make_code_units_t<encoding_value, code_unit_type>(std::span<const code_unit_type>{m_container});
+        }
 
         /// @brief Returns the maximum number of characters the string is able to hold due to system or library implementation limitations.
         ///
@@ -534,7 +538,10 @@ namespace upp
 
         /// @brief Returns a view of the underlying code units.
         ///
-        [[nodiscard]] constexpr std::span<const code_unit_type> code_units() const noexcept { return std::span<const code_unit_type>{m_container}; }
+        [[nodiscard]] constexpr auto code_units() const noexcept
+        {
+            return impl::make_code_units_t<encoding_value, code_unit_type>(std::span<const code_unit_type>{m_container});
+        }
 
         /// @brief Returns the maximum number of code units the string is able to hold due to system or library implementation limitations.
         ///

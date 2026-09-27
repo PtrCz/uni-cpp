@@ -176,6 +176,31 @@ namespace upp
         public:
             using base::base;
         };
+
+        /// @brief Converts an ASCII base-36 digit to an integer value.
+        ///
+        /// If @p ascii_ch is a decimal ASCII digit, returns `ascii_ch - '0'`.
+        /// Otherwise, if @p ascii_ch is a lowercase ASCII letter, returns `ascii_ch - 'a' + 10`.
+        /// Otherwise, if @p ascii_ch is an uppercase ASCII letter, returns `ascii_ch - 'A' + 10`.
+        /// Otherwise, returns `0xFF`.
+        ///
+        /// @pre `is_valid_ascii(ascii_ch)`
+        ///
+        [[nodiscard]] constexpr std::uint8_t ascii_base36_to_value(std::uint8_t ascii_ch) noexcept
+        {
+            static constexpr std::array<std::uint8_t, 128> values{
+                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // [0x00, 0x0F]
+                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // [0x10, 0x1F]
+                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // [0x20, 0x2F]
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // [0x30, 0x3F]
+                0xFF, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, // [0x40, 0x4F]
+                0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // [0x50, 0x5F]
+                0xFF, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, // [0x60, 0x6F]
+                0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // [0x70, 0x7F]
+            };
+
+            return values[ascii_ch];
+        }
     } // namespace impl
 
     /// @brief An ASCII character type representing a single ASCII character code.
@@ -438,6 +463,14 @@ namespace upp
         /// A sized range of `uchar`s returned by the `full_compatibility_decomposition` method. See its documentation for more.
         using full_compatibility_decomposition_t = impl::decomposition_t<impl::unicode_data::decomposition::decomposition_kind::compatibility>;
 
+        /// @brief An enum used in the `from_digit` function.
+        ///
+        enum class from_digit_case
+        {
+            lowercase, ///< Uses letters `a-z` for representing digits with values `10-35`.
+            uppercase, ///< Uses letters `A-Z` for representing digits with values `10-35`.
+        };
+
     public:
         /// @brief Default constructor. Initializes the value to the Null character (`U+0000`).
         ///
@@ -545,6 +578,68 @@ namespace upp
             return impl::unicode_data::composition_mapping::composition<upp::uchar>(code_point1.value(), code_point2.value());
         }
 
+        /// @brief Converts a digit in the given radix to a `uchar`.
+        ///
+        /// @param num   The digit to convert.
+        /// @param radix The radix (base) of the digit. `2` is binary, `10` is decimal, `16` is hex, etc.
+        ///
+        /// @return A character representing the digit `num`: `'0'-'9'` for values `0-9` and `'A'-'Z'` for values `10-35`.
+        ///         Returns `std::nullopt` if the input is not a digit in the given radix, i.e., @p num ≥ @p radix.
+        ///
+        /// @tparam Case By default, the values `10-35` are represented using the uppercase letters `A-Z`.
+        ///              This template parameter can be overriden to use the lowercase letters `a-z` for these values instead.
+        ///
+        /// @pre @p radix ≤ `36` <br><small><i><b>Note:</b> If this precondition isn't met, the behavior is undefined.</i></small>
+        ///
+        /// @par Examples
+        ///
+        /// @code{.cpp}
+        ///
+        /// assert(uchar::from_digit( 4, 10) == U'4'_uc);
+        /// assert(uchar::from_digit(13, 16) == U'D'_uc);
+        ///
+        /// // Use lowercase:
+        /// assert(uchar::from_digit<uchar::from_digit_case::lowercase>(22, 32) == U'm'_uc);
+        ///
+        /// // `7` is not a binary digit:
+        /// assert(uchar::from_digit(7, 2) == std::nullopt);
+        ///
+        /// // Undefined behaviour, `radix` > 36:
+        /// // assert(uchar::from_digit(50, 100) == ???);
+        ///
+        /// @endcode
+        ///
+        /// @see to_digit, is_digit
+        ///
+        template<from_digit_case Case = from_digit_case::uppercase>
+        [[nodiscard]] static constexpr std::optional<uchar> from_digit(std::uint8_t num, std::uint8_t radix) noexcept
+        {
+            if (num >= radix)
+                return {};
+
+            const std::uint32_t num32 = num;
+
+            constexpr std::uint32_t digit_0 = 0x30u;
+
+            if (num32 < 10u)
+                return std::optional<uchar>{std::in_place, uchar{digit_0 + num32}};
+
+            if constexpr (Case == from_digit_case::lowercase)
+            {
+                constexpr std::uint32_t lowercase_letter_a = 0x61u;
+
+                return std::optional<uchar>{std::in_place, uchar{lowercase_letter_a + num32 - 10u}};
+            }
+            else if constexpr (Case == from_digit_case::uppercase)
+            {
+                constexpr std::uint32_t uppercase_letter_a = 0x41u;
+
+                return std::optional<uchar>{std::in_place, uchar{uppercase_letter_a + num32 - 10u}};
+            }
+            else
+                static_assert(false);
+        }
+
         /// @brief Compares two `uchar` values for equality.
         ///
         /// Equivalent to `lhs.value() == rhs.value()`.
@@ -563,13 +658,16 @@ namespace upp
 
         /// @brief Checks whether the character is within the ASCII range (`U+0000` to `U+007F`, inclusive).
         ///
-        /// @see as_ascii, as_ascii_lossy
+        /// @see as_ascii, as_ascii_lossy, as_ascii_unchecked
         ///
         [[nodiscard]] constexpr bool is_ascii() const noexcept { return m_value < 0x80; }
 
         /// @brief Attempts to convert the character to an `ascii_char`, if possible (`is_ascii() == true`).
         ///
-        /// @see is_ascii, as_ascii_lossy
+        /// Use `as_ascii_lossy` to substitute non-ASCII characters with the ASCII substitute character, or `as_ascii_unchecked`
+        /// if you are certain this character is within the ASCII range and want to avoid a check.
+        ///
+        /// @see is_ascii, as_ascii_lossy, as_ascii_unchecked
         ///
         [[nodiscard]] constexpr std::optional<ascii_char> as_ascii() const noexcept
         {
@@ -584,7 +682,7 @@ namespace upp
         ///
         /// This is a safe conversion that ensures a valid `ascii_char` is always returned.
         ///
-        /// @see is_ascii, as_ascii
+        /// @see is_ascii, as_ascii, as_ascii_unchecked
         ///
         [[nodiscard]] constexpr ascii_char as_ascii_lossy() const noexcept
         {
@@ -592,6 +690,22 @@ namespace upp
                 return ascii_char::from_unchecked(static_cast<std::uint8_t>(m_value));
 
             return ascii_char::substitute_character();
+        }
+
+        /// @brief Constructs an `ascii_char` from this `uchar` without any checks.
+        ///
+        /// This function constructs an `ascii_char` assuming this `uchar` is within the ASCII range.
+        ///
+        /// @pre `is_ascii()` is `true`
+        ///
+        /// @warning If the precondition of this function isn't met, the behavior is undefined.
+        /// Use `as_ascii` or `as_ascii_lossy` as safe alternatives that perform validation.
+        ///
+        /// @see is_ascii, as_ascii, as_ascii_lossy
+        ///
+        [[nodiscard]] constexpr ascii_char as_ascii_unchecked() const noexcept
+        {
+            return ascii_char::from_unchecked(static_cast<std::uint8_t>(m_value));
         }
 
         /// @brief Returns the number of UTF-8 code units (bytes) required to encode this `uchar` in UTF-8.
@@ -692,6 +806,74 @@ namespace upp
             }
         }
 
+        /// @brief Checks whether this code point has been assigned a meaning by Unicode, as of `upp::unicode_version`.
+        ///
+        /// @return `false` for characters which have the `Unassigned` [general category][GeneralCategory],
+        ///         including the [noncharacters][Noncharacters]. `true` for all other characters.
+        ///
+        /// [GeneralCategory]: https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124142 "The Unicode Standard, Chapter 4.5 (General Category)"
+        /// [Noncharacters]: https://www.unicode.org/faq/private_use.html#noncharacters "Unicode FAQ, Noncharacters"
+        ///
+        [[nodiscard]] constexpr bool is_assigned() const noexcept { return general_category() != upp::general_category::unassigned; }
+
+        /// @brief Returns `true` if this `uchar` is a [noncharacter][Noncharacters].
+        ///
+        /// [Noncharacters]: https://www.unicode.org/faq/private_use.html#noncharacters "Unicode FAQ, Noncharacters"
+        ///
+        [[nodiscard]] constexpr bool is_noncharacter() const noexcept
+        {
+            const std::uint32_t low16 = m_value & 0xFFFFu;
+
+            return (m_value >= 0xFDD0u && m_value <= 0xFDEFu) || (low16 == 0xFFFEu || low16 == 0xFFFFu);
+        }
+
+        /// @brief Returns `true` if this `uchar` is a [private-use character][PrivateUseChar].
+        ///
+        /// [PrivateUseChar]: https://www.unicode.org/faq/private_use.html "Unicode FAQ, Private-Use Characters"
+        ///
+        [[nodiscard]] constexpr bool is_private_use() const noexcept { return general_category() == upp::general_category::private_use; }
+
+        /// @brief Returns `true` if this character has the [Lowercase][CaseDefinitions] property.
+        ///
+        /// @see is_uppercase, is_titlecase
+        /// @see to_lowercase
+        ///
+        /// [CaseDefinitions]: https://www.unicode.org/versions/latest/core-spec/chapter-4/#G136255 "Unicode 4.2.1 Definitions of Case and Casing"
+        ///
+        [[nodiscard]] constexpr bool is_lowercase() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::lowercase_bit>();
+        }
+
+        /// @brief Returns `true` if this character has the [Uppercase][CaseDefinitions] property.
+        ///
+        /// @see is_lowercase, is_titlecase
+        /// @see to_uppercase
+        ///
+        /// [CaseDefinitions]: https://www.unicode.org/versions/latest/core-spec/chapter-4/#G136255 "Unicode 4.2.1 Definitions of Case and Casing"
+        ///
+        [[nodiscard]] constexpr bool is_uppercase() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::uppercase_bit>();
+        }
+
+        /// @brief Returns `true` if this character has the `Titlecase_Letter` [general category][GeneralCategory].
+        ///
+        /// Titlecase in Unicode is **not** the same as uppercase. Uppercase letters are **not** considered titlecase by this function.
+        /// This function only considers "digraphs encoded as single code points, with their first part uppercase" to be titlecase characters.
+        /// For example, the code point 'A' _is **not**_ considered titlecase. The digraph code point 'ǲ' *is* considered titlecase.
+        ///
+        /// @note Try to select the 'D' part of 'ǲ'. You can't, because it's a single code point, a *[digraph](https://www.unicode.org/faq/ligature_digraph.html)*.
+        /// The digraph 'Ǳ' is considered uppercase, not titlecase. The digraph 'ǲ' is considered titlecase.
+        /// That's also the reason why other regular uppercase letters like 'A' aren't considered titlecase. They are considered uppercase.
+        ///
+        /// @see is_uppercase, is_lowercase
+        /// @see to_titlecase
+        ///
+        /// [GeneralCategory]: https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124142 "The Unicode Standard, Chapter 4.5 (General Category)"
+        ///
+        [[nodiscard]] constexpr bool is_titlecase() const noexcept { return general_category() == upp::general_category::titlecase_letter; }
+
         /// @brief Returns the lowercase mapping of this `uchar`.
         ///
         /// Most lowercase mappings consist of a single `uchar`, but some consist of multiple.
@@ -708,7 +890,9 @@ namespace upp
         ///       for that purpose and it slightly differs in its mappings. See `to_casefold` documentation.
         ///
         /// @return A range of `uchar`s.
+        ///
         /// @see to_uppercase, to_casefold, to_titlecase
+        /// @see is_lowercase
         ///
         [[nodiscard]] constexpr to_lowercase_t to_lowercase() const noexcept
         {
@@ -731,7 +915,9 @@ namespace upp
         ///       for that purpose. See `to_casefold` documentation.
         ///
         /// @return A range of `uchar`s.
+        ///
         /// @see to_lowercase, to_titlecase, to_casefold
+        /// @see is_uppercase
         ///
         [[nodiscard]] constexpr to_uppercase_t to_uppercase() const noexcept
         {
@@ -755,7 +941,9 @@ namespace upp
         ///       See [Unicode Standard Chapter 4.2 (Case)](https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124722).
         ///
         /// @return A range of `uchar`s.
+        ///
         /// @see to_uppercase, to_lowercase, to_casefold
+        /// @see is_titlecase
         ///
         [[nodiscard]] constexpr to_titlecase_t to_titlecase() const noexcept
         {
@@ -785,6 +973,189 @@ namespace upp
         [[nodiscard]] constexpr to_casefold_t to_casefold() const noexcept
         {
             return to_case_impl<to_casefold_t, impl::unicode_data::case_mapping::case_mapping_type::casefold>();
+        }
+
+        /// @brief Returns `true` if this code point has the [Cased][Cased] property.
+        ///
+        /// [Cased]: https://www.unicode.org/versions/latest/core-spec/chapter-3/#G44595 "Unicode, Chapter 3, Cased"
+        ///
+        [[nodiscard]] constexpr bool is_cased() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::cased_bit>();
+        }
+
+        /// @brief Returns `true` if this code point is [case-ignorable][CaseIgnorable].
+        ///
+        /// [CaseIgnorable]: https://www.unicode.org/versions/latest/core-spec/chapter-3/#G63116 "Unicode, Chapter 3, Case-Ignorable"
+        ///
+        [[nodiscard]] constexpr bool is_case_ignorable() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::case_ignorable_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [Alphabetic][Alphabetic] property.
+        ///
+        /// [Alphabetic]: https://www.unicode.org/versions/latest/core-spec/chapter-4/#G32524 "Unicode, Chapter 4, Alphabetic"
+        ///
+        [[nodiscard]] constexpr bool is_alphabetic() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::alphabetic_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has one of the [general categories][GeneralCategory] for numbers.
+        ///
+        /// Returns `true` if this code point's [general category][GeneralCategory] is one of:
+        /// - `Decimal_Number`,
+        /// - `Letter_Number`,
+        /// - `Other_Number`.
+        ///
+        /// @note The set of code points this function considers numeric doesn't include everything that could be considered a number.
+        ///       For example, ideographic numbers like '三' are **not** considered numeric by this function. See the examples below.
+        ///
+        /// @par Examples
+        ///
+        /// @code{.cpp}
+        ///
+        /// assert(U'2'_uc.is_numeric());
+        /// assert(U'¾'_uc.is_numeric());
+        /// assert(U'①'_uc.is_numeric());
+        ///
+        /// assert(not U'و'_uc.is_numeric());
+        /// assert(not U'藏'_uc.is_numeric());
+        /// assert(not U'三'_uc.is_numeric());
+        ///
+        /// @endcode
+        ///
+        /// @see is_digit
+        ///
+        /// [GeneralCategory]: https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124142 "The Unicode Standard, Chapter 4.5 (General Category)"
+        ///
+        [[nodiscard]] constexpr bool is_numeric() const noexcept
+        {
+            switch (general_category())
+            {
+            case upp::general_category::decimal_number: [[fallthrough]];
+            case upp::general_category::letter_number: [[fallthrough]];
+            case upp::general_category::other_number: return true;
+            default: return false;
+            }
+        }
+
+        /// @brief Returns `true` if this code point `is_alphabetic()` or `is_numeric()`.
+        ///
+        /// @see is_alphabetic
+        /// @see is_numeric
+        ///
+        [[nodiscard]] constexpr bool is_alphanumeric() const noexcept { return is_alphabetic() || is_numeric(); }
+
+        /// @brief Returns `true` if this code point has the [White_Space][White_Space] property.
+        ///
+        /// @par Examples
+        ///
+        /// @code{.cpp}
+        ///
+        /// assert(U' '_uc.is_whitespace());
+        /// assert(U'\n'_uc.is_whitespace());
+        ///
+        /// assert(U'\N{NO-BREAK SPACE}'_uc.is_whitespace());
+        /// assert(U'\N{THIN SPACE}'_uc.is_whitespace());
+        ///
+        /// assert(not U'$'_uc.is_whitespace());
+        ///
+        /// @endcode
+        ///
+        /// @note It's worth knowing that `is_pattern_whitespace()` can be a better fit in certain contexts than `is_whitespace()`.
+        ///
+        /// @see is_pattern_whitespace
+        ///
+        /// [White_Space]: https://www.unicode.org/reports/tr44/#White_Space "UAX #44, Unicode Character Database, White_Space"
+        ///
+        [[nodiscard]] constexpr bool is_whitespace() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::white_space_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the `Control` [general category][GeneralCategory].
+        ///
+        /// [GeneralCategory]: https://www.unicode.org/versions/latest/core-spec/chapter-4/#G124142 "The Unicode Standard, Chapter 4.5 (General Category)"
+        ///
+        [[nodiscard]] constexpr bool is_control() const noexcept { return general_category() == upp::general_category::control; }
+
+        /// @brief Checks if this `uchar` is a digit in the given radix.
+        ///
+        /// @param radix The radix (base) of the digit. `2` is binary, `10` is decimal, `16` is hex, etc.
+        ///
+        /// Unlike `is_numeric()`, this function only recognizes the ASCII characters `0-9`, `a-z` and `A-Z` as digits.
+        ///
+        /// @pre `2` ≤ @p radix ≤ `36` <br><small><i><b>Note:</b> If this precondition isn't met, the behavior is undefined.</i></small>
+        ///
+        /// @par Examples
+        ///
+        /// @code{.cpp}
+        ///
+        /// assert(U'4'_uc.is_digit(10));
+        ///
+        /// // 'C' is not a decimal digit, but it is a hex digit:
+        /// assert(U'C'_uc.is_digit(10) == false);
+        /// assert(U'C'_uc.is_digit(16) == true );
+        ///
+        /// assert(U'1'_uc.is_digit(2));
+        ///
+        /// // Undefined behaviour, invalid radix:
+        /// // assert(U'0'_uc.is_digit(1) == ???);
+        /// // assert(U'+'_uc.is_digit(64) == ???);
+        ///
+        /// @endcode
+        ///
+        /// @see to_digit, from_digit
+        ///
+        [[nodiscard]] constexpr bool is_digit(std::uint8_t radix) const noexcept
+        {
+            return is_ascii() ? (impl::ascii_base36_to_value(static_cast<std::uint8_t>(m_value)) < radix) : false;
+        }
+
+        /// @brief Converts this `uchar` to a digit in the given radix.
+        ///
+        /// @param radix The radix (base) of the digit. `2` is binary, `10` is decimal, `16` is hex, etc.
+        ///
+        /// 'Digit' is defined to be only the following ASCII characters:
+        /// - `0-9` represent the values `0-9`,
+        /// - `a-z` represent the values `10-35`,
+        /// - `A-Z` represent the values `10-35`.
+        ///
+        /// @return A value this character represents: values `0-9` for characters `'0'-'9'` and values `10-35` for characters `'a'-'z'` and `'A'-'Z'`.
+        ///         Returns `std::nullopt` if this character does not represent a digit in the given radix.
+        ///
+        /// @pre `2` ≤ @p radix ≤ `36` <br><small><i><b>Note:</b> If this precondition isn't met, the behavior is undefined.</i></small>
+        ///
+        /// @par Examples
+        ///
+        /// @code{.cpp}
+        ///
+        /// assert(U'4'_uc.to_digit(10) == 4);
+        ///
+        /// // 'C' is not a decimal digit, but it is a hex digit:
+        /// assert(U'C'_uc.to_digit(10) == std::nullopt);
+        /// assert(U'C'_uc.to_digit(16) == 0x0C);
+        ///
+        /// assert(U'1'_uc.to_digit(2) == 1);
+        ///
+        /// // Undefined behaviour, invalid radix:
+        /// // assert(U'0'_uc.to_digit(1) == ???);
+        /// // assert(U'+'_uc.to_digit(64) == ???);
+        ///
+        /// @endcode
+        ///
+        /// @see from_digit, is_digit
+        ///
+        [[nodiscard]] constexpr std::optional<std::uint8_t> to_digit(std::uint8_t radix) const noexcept
+        {
+            if (!is_ascii())
+                return {};
+
+            const std::uint8_t value = impl::ascii_base36_to_value(static_cast<std::uint8_t>(m_value));
+
+            return value < radix ? std::optional<std::uint8_t>{std::in_place, value} : std::optional<std::uint8_t>{};
         }
 
         /// @brief The [full canonical decomposition](https://www.unicode.org/versions/latest/core-spec/chapter-3/#G7425) of this `uchar`.
@@ -924,6 +1295,144 @@ namespace upp
         [[nodiscard]] constexpr quick_check nfkc_quick_check() const noexcept
         {
             return static_cast<quick_check>(get_property_value<impl::unicode_data::core_properties::impl::nfkc_quick_check_bit, 2uz>());
+        }
+
+        /// @brief Returns `true` if this code point has the [Pattern_Syntax][Pattern_Syntax] property.
+        ///
+        /// @see is_pattern_whitespace
+        ///
+        /// [Pattern_Syntax]: https://www.unicode.org/reports/tr44/#Pattern_Syntax "UAX #44, Unicode Character Database, Pattern_Syntax"
+        ///
+        [[nodiscard]] constexpr bool is_pattern_syntax() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::pattern_syntax_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [Pattern_White_Space][Pattern_White_Space] property.
+        ///
+        /// @par Examples
+        ///
+        /// @code{.cpp}
+        ///
+        /// assert(U' '_uc.is_pattern_whitespace());
+        /// assert(U'\n'_uc.is_pattern_whitespace());
+        ///
+        /// assert(not U'$'_uc.is_pattern_whitespace());
+        ///
+        /// // Unlike `is_whitespace()`, these are not considered Pattern_White_Space:
+        ///
+        /// assert(not U'\N{NO-BREAK SPACE}'_uc.is_pattern_whitespace());
+        /// assert(not U'\N{THIN SPACE}'_uc.is_pattern_whitespace());
+        ///
+        /// @endcode
+        ///
+        /// @see is_whitespace
+        /// @see is_pattern_syntax
+        ///
+        /// [Pattern_White_Space]: https://www.unicode.org/reports/tr44/#Pattern_White_Space "UAX #44, Unicode Character Database, Pattern_White_Space"
+        ///
+        [[nodiscard]] constexpr bool is_pattern_whitespace() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::pattern_white_space_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [ID_Start][ID_Start] property.
+        ///
+        /// @see has_id_continue_property
+        /// @see has_xid_start_property, has_id_compat_math_start_property
+        ///
+        /// [ID_Start]: https://www.unicode.org/reports/tr44/#ID_Start "UAX #44, Unicode Character Database, ID_Start"
+        ///
+        [[nodiscard]] constexpr bool has_id_start_property() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::id_start_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [ID_Continue][ID_Continue] property.
+        ///
+        /// @see has_id_start_property
+        /// @see has_xid_continue_property, has_id_compat_math_continue_property
+        ///
+        /// [ID_Continue]: https://www.unicode.org/reports/tr44/#ID_Continue "UAX #44, Unicode Character Database, ID_Continue"
+        ///
+        [[nodiscard]] constexpr bool has_id_continue_property() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::id_continue_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [XID_Start][XID_Start] property.
+        ///
+        /// @see has_xid_continue_property
+        /// @see has_id_start_property, has_id_compat_math_start_property
+        ///
+        /// [XID_Start]: https://www.unicode.org/reports/tr44/#XID_Start "UAX #44, Unicode Character Database, XID_Start"
+        ///
+        [[nodiscard]] constexpr bool has_xid_start_property() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::xid_start_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [XID_Continue][XID_Continue] property.
+        ///
+        /// @see has_xid_start_property
+        /// @see has_id_continue_property, has_id_compat_math_continue_property
+        ///
+        /// [XID_Continue]: https://www.unicode.org/reports/tr44/#XID_Continue "UAX #44, Unicode Character Database, XID_Continue"
+        ///
+        [[nodiscard]] constexpr bool has_xid_continue_property() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::xid_continue_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [ID_Compat_Math_Start][ID_Compat_Math_Start] property.
+        ///
+        /// @see has_id_compat_math_continue_property
+        /// @see has_id_start_property, has_xid_start_property
+        ///
+        /// [ID_Compat_Math_Start]: https://www.unicode.org/reports/tr44/#ID_Compat_Math_Start "UAX #44, Unicode Character Database, ID_Compat_Math_Start"
+        ///
+        [[nodiscard]] constexpr bool has_id_compat_math_start_property() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::id_compat_math_start_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [ID_Compat_Math_Continue][ID_Compat_Math_Continue] property.
+        ///
+        /// @see has_id_compat_math_start_property
+        /// @see has_id_continue_property, has_xid_continue_property
+        ///
+        /// [ID_Compat_Math_Continue]: https://www.unicode.org/reports/tr44/#ID_Compat_Math_Continue "UAX #44, Unicode Character Database, ID_Compat_Math_Continue"
+        ///
+        [[nodiscard]] constexpr bool has_id_compat_math_continue_property() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::id_compat_math_continue_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [Math][Math] property.
+        ///
+        /// [Math]: https://www.unicode.org/versions/latest/core-spec/chapter-22/#G26707 "Unicode, Chapter 22, The Math Property"
+        ///
+        [[nodiscard]] constexpr bool has_math_property() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::math_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [Dash][Dash] property.
+        ///
+        /// [Dash]: https://www.unicode.org/reports/tr44/#Dash "UAX #44, Unicode Character Database, Dash"
+        ///
+        [[nodiscard]] constexpr bool has_dash_property() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::dash_bit>();
+        }
+
+        /// @brief Returns `true` if this code point has the [Quotation_Mark][Quotation_Mark] property.
+        ///
+        /// [Quotation_Mark]: https://www.unicode.org/reports/tr44/#Quotation_Mark "UAX #44, Unicode Character Database, Quotation_Mark"
+        ///
+        [[nodiscard]] constexpr bool has_quotation_mark_property() const noexcept
+        {
+            return get_boolean_property<impl::unicode_data::core_properties::impl::quotation_mark_bit>();
         }
 
     private:

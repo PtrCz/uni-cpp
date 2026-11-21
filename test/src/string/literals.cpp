@@ -2,7 +2,7 @@
 
 #include <uni-cpp/string.hpp>
 
-#include <ranges>
+#include <algorithm>
 #include <string_view>
 #include <span>
 #include <bit>

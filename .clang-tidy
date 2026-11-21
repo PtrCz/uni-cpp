@@ -1,8 +1,11 @@
 HeaderFilterRegex: 'test/src/.*\.hpp$|include/uni-cpp/.*\.hpp$'
-Checks: '-*,readability-identifier-naming,bugprone-*,-bugprone-throwing-static-initialization,clang-analyzer-*,performance-*,-clang-analyzer-optin.core.EnumCastOutOfRange,-performance-unnecessary-value-param'
+Checks: '-*,readability-identifier-naming,bugprone-*,-bugprone-throwing-static-initialization,clang-analyzer-*,performance-*,-clang-analyzer-optin.core.EnumCastOutOfRange,-performance-unnecessary-value-param,-clang-analyzer-core.UndefinedBinaryOperatorResult'
 
 # -clang-analyzer-optin.core.EnumCastOutOfRange is to avoid warnings from Catch2 macro expansions
 # -performance-unnecessary-value-param is to prevent clang-tidy from crashing on template-heavy code
+# -clang-analyzer-core.UndefinedBinaryOperatorResult is to disable false-positives coming from patterns like:
+# REQUIRE(variable.has_value());
+# CHECK(*variable == 10); // false-positive: "variable.value() may be garbage"
 
 CheckOptions:
   - key: readability-identifier-naming.DefaultCase

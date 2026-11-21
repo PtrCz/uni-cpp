@@ -32,9 +32,10 @@ TEST_CASE("transcode_view", "[ranges][UTF encoding]")
                     const auto& expected       = seq.template encoded_as<TargetEncoding>();
                     const auto& expected_lossy = expected;
 
-                    const auto expected_expected = seq.template encoded_as<TargetEncoding>() | std::views::transform([](code_unit_type code_unit) {
-                                                       return std::expected<code_unit_type, error_type>{std::in_place, code_unit};
-                                                   });
+                    const auto expected_expected =
+                        seq.template encoded_as<TargetEncoding>() | std::views::transform([](auto code_unit) {
+                            return std::expected<code_unit_type, error_type>{std::in_place, std::bit_cast<code_unit_type>(code_unit)};
+                        });
 
                     const auto test_for_range = [&](auto&& rg) {
                         if constexpr (upp::ranges::valid_code_unit_range<decltype(rg), SourceEncoding>)

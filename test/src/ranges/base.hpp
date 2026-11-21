@@ -1,6 +1,7 @@
 #ifndef TEST_RANGES_BASE_HPP
 #define TEST_RANGES_BASE_HPP
 
+#include <algorithm>
 #include <ranges>
 #include <concepts>
 #include <type_traits>

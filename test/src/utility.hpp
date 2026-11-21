@@ -3,7 +3,10 @@
 
 #include <uni-cpp/encoding.hpp>
 
+#include <cstdint>
 #include <string_view>
+#include <stdexcept>
+#include <bit>
 
 namespace upp_test
 {
@@ -56,6 +59,84 @@ namespace upp_test
 
     inline namespace literals
     {
+        inline namespace int_literals
+        {
+            [[nodiscard]] constexpr char operator""_ch(const unsigned long long int value)
+            {
+                if (value > 0xFFull)
+                {
+                    throw std::invalid_argument("Invalid 8-bit value");
+                }
+
+                return std::bit_cast<char>(static_cast<std::uint8_t>(value));
+            }
+
+            [[nodiscard]] constexpr std::uint8_t operator""_u8(const unsigned long long int value)
+            {
+                if (value > 0xFFull)
+                {
+                    throw std::invalid_argument("Invalid unsigned 8-bit value");
+                }
+
+                return static_cast<std::uint8_t>(value);
+            }
+
+            [[nodiscard]] constexpr std::uint32_t operator""_u32(const unsigned long long int value)
+            {
+                if (value > 0xFF'FF'FF'FFull)
+                {
+                    throw std::invalid_argument("Invalid unsigned 32-bit value");
+                }
+
+                return static_cast<std::uint32_t>(value);
+            }
+        } // namespace int_literals
+
+        /// @brief Workaround for MSVC's broken consteval functions.
+        ///
+        inline namespace char_literals
+        {
+            [[nodiscard]] constexpr upp::ascii_char operator""_ac(const unsigned long long int value)
+            {
+                if (value > 0xFFull || !upp::is_valid_ascii(static_cast<std::uint8_t>(value)))
+                {
+                    throw std::invalid_argument("Invalid ASCII value");
+                }
+
+                return upp::ascii_char::from_unchecked(static_cast<std::uint8_t>(value));
+            }
+
+            [[nodiscard]] constexpr upp::ascii_char operator""_ac(const char8_t value)
+            {
+                if (!upp::is_valid_ascii(static_cast<std::uint8_t>(value)))
+                {
+                    throw std::invalid_argument("Invalid ASCII value");
+                }
+
+                return upp::ascii_char::from_unchecked(static_cast<std::uint8_t>(value));
+            }
+
+            [[nodiscard]] constexpr upp::uchar operator""_uc(const unsigned long long int value)
+            {
+                if (value > 0xFF'FF'FF'FFull || !upp::is_valid_usv(static_cast<std::uint32_t>(value)))
+                {
+                    throw std::invalid_argument("Invalid Unicode scalar value");
+                }
+
+                return upp::uchar::from_unchecked(static_cast<std::uint32_t>(value));
+            }
+
+            [[nodiscard]] constexpr upp::uchar operator""_uc(const char32_t value)
+            {
+                if (!upp::is_valid_usv(static_cast<std::uint32_t>(value)))
+                {
+                    throw std::invalid_argument("Invalid Unicode scalar value");
+                }
+
+                return upp::uchar::from_unchecked(static_cast<std::uint32_t>(value));
+            }
+        } // namespace char_literals
+
         /// @brief Workaround for clang's broken UD string literals.
         ///
         inline namespace string_literals

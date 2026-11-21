@@ -4,6 +4,7 @@
 #include <uni-cpp/ranges.hpp>
 
 #include "base.hpp"
+#include "../utility.hpp"
 
 #include <string_view>
 #include <array>
@@ -14,7 +15,7 @@ TEST_CASE("encode_view", "[ranges][UTF encoding]")
     CONSTEXPR_AND_RUNTIME_TEST()
     {
         using namespace std::string_view_literals;
-        using namespace upp::char_literals;
+        using namespace upp_test::char_literals;
 
         CRTT_CHECK(
             upp_test::ranges::equal(std::array{u8'a'_ac, u8'b'_ac, u8'c'_ac} | upp::views::encode_as<upp::encoding::ascii, char8_t>, u8"abc"sv));

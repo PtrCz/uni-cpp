@@ -107,6 +107,7 @@ namespace upp_test::utf
 
     [[nodiscard]] constexpr auto invalid_utf8_sequences()
     {
+        using namespace upp_test::int_literals;
         using namespace upp_test::string_literals;
 
         using invalid_seq = invalid_sequence<upp::encoding::utf8>;
@@ -114,89 +115,89 @@ namespace upp_test::utf
         return std::to_array<invalid_seq>({
             {
                 .sequence       = {0x8F}, // Too Long (0 bytes)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte}},
                 AS_UTF_LOSSY("\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS(
-                    { APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte}); }),
+                    { APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte}); }),
             },
             {
                 .sequence       = {0x39, 0x8C}, // Too Long (1 byte)
-                .expected_error = {.valid_up_to = 1, .error = {.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte}},
+                .expected_error = {.valid_up_to = 1, .error = {.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte}},
                 AS_UTF_LOSSY("\u0039\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
                     APPEND_STRING_LITERAL("\u0039"sv);
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xC6, 0x84, 0x98}, // Too Long (2 bytes)
-                .expected_error = {.valid_up_to = 2, .error = {.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte}},
+                .expected_error = {.valid_up_to = 2, .error = {.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte}},
                 AS_UTF_LOSSY("\u0184\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
                     APPEND_STRING_LITERAL("\u0184"sv);
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xE0, 0xA0, 0x8C, 0x9E}, // Too Long (3 bytes)
-                .expected_error = {.valid_up_to = 3, .error = {.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte}},
+                .expected_error = {.valid_up_to = 3, .error = {.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte}},
                 AS_UTF_LOSSY("\u080C\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
                     APPEND_STRING_LITERAL("\u080C"sv);
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xF3, 0xA0, 0x81, 0x88, 0xBC}, // Too Long (4 bytes)
-                .expected_error = {.valid_up_to = 4, .error = {.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte}},
+                .expected_error = {.valid_up_to = 4, .error = {.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte}},
                 AS_UTF_LOSSY("\u{E0048}\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
                     APPEND_STRING_LITERAL("\u{E0048}"sv);
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xF8, 0x83, 0xA0, 0x81, 0xA1}, // 5+ Byte (5 bytes, U+E0061)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::invalid_leading_byte}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::invalid_leading_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte});
 
                     for (auto i = 0uz; i < 4; ++i)
-                        APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                        APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xFC, 0x80, 0x83, 0xA0, 0x81, 0xA1}, // 5+ Byte (6 bytes, U+E0061)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::invalid_leading_byte}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::invalid_leading_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte});
 
                     for (auto i = 0uz; i < 5; ++i)
-                        APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                        APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xFE, 0x80, 0x80, 0x83, 0xA0, 0x81, 0xA1}, // 5+ Byte (7 bytes, U+E0061)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::invalid_leading_byte}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::invalid_leading_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte});
 
                     for (auto i = 0uz; i < 6; ++i)
-                        APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                        APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xFF, 0x80, 0x80, 0x80, 0x83, 0xA0, 0x81, 0xA1}, // 5+ Byte (8 bytes, U+E0061)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::invalid_leading_byte}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::invalid_leading_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte});
 
                     for (auto i = 0uz; i < 7; ++i)
-                        APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                        APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
@@ -208,10 +209,10 @@ namespace upp_test::utf
             },
             {
                 .sequence       = {0xC4, u8'A'}, // Too Short (in the middle, should be 2-byte long, 1 byte missing, U+0104)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::truncated_sequence}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::truncated_sequence}},
                 AS_UTF_LOSSY("\uFFFD\u0041"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::truncated_sequence});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::truncated_sequence});
                     APPEND_STRING_LITERAL("\u0041"sv);
                 }),
             },
@@ -224,10 +225,10 @@ namespace upp_test::utf
             },
             {
                 .sequence       = {0xE1, u8'0'}, // Too Short (in the middle, should be 3-byte long, 2 bytes missing, U+10C4)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::truncated_sequence}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::truncated_sequence}},
                 AS_UTF_LOSSY("\uFFFD\u0030"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::truncated_sequence});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::truncated_sequence});
                     APPEND_STRING_LITERAL("\u0030"sv);
                 }),
             },
@@ -240,10 +241,10 @@ namespace upp_test::utf
             },
             {
                 .sequence       = {0xE1, 0x83, u8' '}, // Too Short (in the middle, should be 3-byte long, 1 byte missing, U+10C4)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 2, .code = upp::utf8_error_code::truncated_sequence}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 2_u8, .code = upp::utf8_error_code::truncated_sequence}},
                 AS_UTF_LOSSY("\uFFFD\u0020"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 2, .code = upp::utf8_error_code::truncated_sequence});
+                    APPEND_ERROR(upp::utf8_error{.length = 2_u8, .code = upp::utf8_error_code::truncated_sequence});
                     APPEND_STRING_LITERAL("\u0020"sv);
                 }),
             },
@@ -256,10 +257,10 @@ namespace upp_test::utf
             },
             {
                 .sequence       = {0xF3, u8' '}, // Too Short (in the middle, should be 4-byte long, 3 bytes missing, U+E0198)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::truncated_sequence}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::truncated_sequence}},
                 AS_UTF_LOSSY("\uFFFD\u0020"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::truncated_sequence});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::truncated_sequence});
                     APPEND_STRING_LITERAL("\u0020"sv);
                 }),
             },
@@ -272,10 +273,10 @@ namespace upp_test::utf
             },
             {
                 .sequence       = {0xF3, 0xA0, u8' '}, // Too Short (in the middle, should be 4-byte long, 2 bytes missing, U+E0198)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 2, .code = upp::utf8_error_code::truncated_sequence}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 2_u8, .code = upp::utf8_error_code::truncated_sequence}},
                 AS_UTF_LOSSY("\uFFFD\u0020"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 2, .code = upp::utf8_error_code::truncated_sequence});
+                    APPEND_ERROR(upp::utf8_error{.length = 2_u8, .code = upp::utf8_error_code::truncated_sequence});
                     APPEND_STRING_LITERAL("\u0020"sv);
                 }),
             },
@@ -288,104 +289,104 @@ namespace upp_test::utf
             },
             {
                 .sequence       = {0xF3, 0xA0, 0x86, u8' '}, // Too Short (in the middle, should be 4-byte long, 1 byte missing, U+E0198)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 3, .code = upp::utf8_error_code::truncated_sequence}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 3_u8, .code = upp::utf8_error_code::truncated_sequence}},
                 AS_UTF_LOSSY("\uFFFD\u0020"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 3, .code = upp::utf8_error_code::truncated_sequence});
+                    APPEND_ERROR(upp::utf8_error{.length = 3_u8, .code = upp::utf8_error_code::truncated_sequence});
                     APPEND_STRING_LITERAL("\u0020"sv);
                 }),
             },
             {
                 .sequence       = {0xC0, 0xB6}, // Overlong (2-byte long, U+0036)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::invalid_leading_byte}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::invalid_leading_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xE0, 0x97, 0x9F}, // Overlong (3-byte long, U+05DF)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::overlong}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::overlong}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::overlong});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::overlong});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xF0, 0x8F, 0xAC, 0xB4}, // Overlong (4-byte long, U+FB34)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::overlong}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::overlong}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::overlong});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::overlong});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xF7, 0x8C, 0x9A, 0x8D}, // Too Large (detectable at 1st byte)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::invalid_leading_byte}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::invalid_leading_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xF4, 0x90, 0x91, 0xB1}, // Too Large (detectable at 2nd byte)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::out_of_range}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::out_of_range}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::out_of_range});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::out_of_range});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0xED, 0xA1, 0xB4}, // Surrogate (0xD874)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::encoded_surrogate}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::encoded_surrogate}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::encoded_surrogate});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::encoded_surrogate});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                 }),
             },
             {
                 .sequence       = {0x20, 0xFF, 0xD0, 0x9F, 0xD1, 0x80, 0x4E, 0xD0, 0xB8, 0xE0, 0x97, 0x9F, 0xD0},
-                .expected_error = {.valid_up_to = 1, .error = {.length = 1, .code = upp::utf8_error_code::invalid_leading_byte}},
+                .expected_error = {.valid_up_to = 1, .error = {.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte}},
                 AS_UTF_LOSSY("\u0020\uFFFD\u041F\u0440\u004E\u0438\uFFFD\uFFFD\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
                     APPEND_STRING_LITERAL("\u0020"sv);
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::invalid_leading_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::invalid_leading_byte});
                     APPEND_STRING_LITERAL("\u041F\u0440\u004E\u0438"sv);
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::overlong});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::overlong});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                     APPEND_ERROR(upp::utf8_error{.length = std::nullopt, .code = upp::utf8_error_code::truncated_sequence});
                 }),
             },
             {
                 .sequence       = {0xF4, 0xB0, 0x94, 0x82, 0xE6, 0xBC, 0xA2, 0xED, 0xA1, 0xB4, 0x30, 0xE2, 0x97, 0x00},
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf8_error_code::out_of_range}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf8_error_code::out_of_range}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD\uFFFD\uFFFD\u6F22\uFFFD\uFFFD\uFFFD\u0030\uFFFD\u0000"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::out_of_range});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::out_of_range});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                     APPEND_STRING_LITERAL("\u6F22"sv);
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::encoded_surrogate});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
-                    APPEND_ERROR(upp::utf8_error{.length = 1, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::encoded_surrogate});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
+                    APPEND_ERROR(upp::utf8_error{.length = 1_u8, .code = upp::utf8_error_code::unexpected_continuation_byte});
                     APPEND_STRING_LITERAL("\u0030"sv);
-                    APPEND_ERROR(upp::utf8_error{.length = 2, .code = upp::utf8_error_code::truncated_sequence});
+                    APPEND_ERROR(upp::utf8_error{.length = 2_u8, .code = upp::utf8_error_code::truncated_sequence});
                     APPEND_STRING_LITERAL("\u0000"sv);
                 }),
             },
@@ -403,6 +404,7 @@ namespace upp_test::utf
 
     [[nodiscard]] constexpr auto invalid_utf16_sequences()
     {
+        using namespace upp_test::int_literals;
         using namespace upp_test::string_literals;
 
         using invalid_seq = invalid_sequence<upp::encoding::utf16>;
@@ -417,64 +419,64 @@ namespace upp_test::utf
             },
             {
                 .sequence       = {0xD800, u'A'}, // Isolated high surrogate (in the middle)
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf16_error_code::unpaired_high_surrogate}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf16_error_code::unpaired_high_surrogate}},
                 AS_UTF_LOSSY("\uFFFD\u0041"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf16_error{.length = 1, .code = upp::utf16_error_code::unpaired_high_surrogate});
+                    APPEND_ERROR(upp::utf16_error{.length = 1_u8, .code = upp::utf16_error_code::unpaired_high_surrogate});
                     APPEND_STRING_LITERAL("\u0041"sv);
                 }),
             },
             {
                 .sequence       = {0xDC00}, // Isolated low surrogate
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf16_error_code::unpaired_low_surrogate}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf16_error_code::unpaired_low_surrogate}},
                 AS_UTF_LOSSY("\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS(
-                    { APPEND_ERROR(upp::utf16_error{.length = 1, .code = upp::utf16_error_code::unpaired_low_surrogate}); }),
+                    { APPEND_ERROR(upp::utf16_error{.length = 1_u8, .code = upp::utf16_error_code::unpaired_low_surrogate}); }),
             },
             {
                 .sequence       = {u'A', 0xDC00}, // Isolated low surrogate
-                .expected_error = {.valid_up_to = 1, .error = {.length = 1, .code = upp::utf16_error_code::unpaired_low_surrogate}},
+                .expected_error = {.valid_up_to = 1, .error = {.length = 1_u8, .code = upp::utf16_error_code::unpaired_low_surrogate}},
                 AS_UTF_LOSSY("\u0041\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
                     APPEND_STRING_LITERAL("\u0041"sv);
-                    APPEND_ERROR(upp::utf16_error{.length = 1, .code = upp::utf16_error_code::unpaired_low_surrogate});
+                    APPEND_ERROR(upp::utf16_error{.length = 1_u8, .code = upp::utf16_error_code::unpaired_low_surrogate});
                 }),
             },
             {
                 .sequence       = {0xDC00, 0xD800}, // Reversed surrogate pair
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf16_error_code::unpaired_low_surrogate}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf16_error_code::unpaired_low_surrogate}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf16_error{.length = 1, .code = upp::utf16_error_code::unpaired_low_surrogate});
+                    APPEND_ERROR(upp::utf16_error{.length = 1_u8, .code = upp::utf16_error_code::unpaired_low_surrogate});
                     APPEND_ERROR(upp::utf16_error{.length = std::nullopt, .code = upp::utf16_error_code::unpaired_high_surrogate});
                 }),
             },
             {
                 .sequence       = {0xD800, 0xD801}, // High surrogate followed by high surrogate
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf16_error_code::unpaired_high_surrogate}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf16_error_code::unpaired_high_surrogate}},
                 AS_UTF_LOSSY("\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf16_error{.length = 1, .code = upp::utf16_error_code::unpaired_high_surrogate});
+                    APPEND_ERROR(upp::utf16_error{.length = 1_u8, .code = upp::utf16_error_code::unpaired_high_surrogate});
                     APPEND_ERROR(upp::utf16_error{.length = std::nullopt, .code = upp::utf16_error_code::unpaired_high_surrogate});
                 }),
             },
             {
                 .sequence       = {0xD83D, 0xDE00, 0xDC00}, // Valid surrogate pair followed by an isolated low surrogate
-                .expected_error = {.valid_up_to = 2, .error = {.length = 1, .code = upp::utf16_error_code::unpaired_low_surrogate}},
+                .expected_error = {.valid_up_to = 2, .error = {.length = 1_u8, .code = upp::utf16_error_code::unpaired_low_surrogate}},
                 AS_UTF_LOSSY("\u{1F600}\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
                     APPEND_STRING_LITERAL("\u{1F600}"sv);
-                    APPEND_ERROR(upp::utf16_error{.length = 1, .code = upp::utf16_error_code::unpaired_low_surrogate});
+                    APPEND_ERROR(upp::utf16_error{.length = 1_u8, .code = upp::utf16_error_code::unpaired_low_surrogate});
                 }),
             },
             {
                 .sequence       = {0xD850, 0xEF00, 0xD8FF, 0xDEAD, 0x0350, 0xDF00, 0xD9FD},
-                .expected_error = {.valid_up_to = 0, .error = {.length = 1, .code = upp::utf16_error_code::unpaired_high_surrogate}},
+                .expected_error = {.valid_up_to = 0, .error = {.length = 1_u8, .code = upp::utf16_error_code::unpaired_high_surrogate}},
                 AS_UTF_LOSSY("\uFFFD\uEF00\U0004FEAD\u0350\uFFFD\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({
-                    APPEND_ERROR(upp::utf16_error{.length = 1, .code = upp::utf16_error_code::unpaired_high_surrogate});
+                    APPEND_ERROR(upp::utf16_error{.length = 1_u8, .code = upp::utf16_error_code::unpaired_high_surrogate});
                     APPEND_STRING_LITERAL("\uEF00\U0004FEAD\u0350"sv);
-                    APPEND_ERROR(upp::utf16_error{.length = 1, .code = upp::utf16_error_code::unpaired_low_surrogate});
+                    APPEND_ERROR(upp::utf16_error{.length = 1_u8, .code = upp::utf16_error_code::unpaired_low_surrogate});
                     APPEND_ERROR(upp::utf16_error{.length = std::nullopt, .code = upp::utf16_error_code::unpaired_high_surrogate});
                 }),
             },

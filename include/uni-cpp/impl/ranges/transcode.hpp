@@ -658,6 +658,11 @@ namespace upp::ranges
                 }
             }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4701) // warning C4701: potentially uninitialized local variable 'code_point' used
+#endif
+
             static constexpr std::expected<uchar, error_type> read_utf8(std::ranges::iterator_t<base_t>&       it,
                                                                         const std::ranges::sentinel_t<base_t>& last)
                 requires(SourceEncoding == encoding::utf8)
@@ -718,6 +723,10 @@ namespace upp::ranges
                     std::unreachable();
             }
 
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
             static constexpr std::expected<uchar, error_type> read_utf16(std::ranges::iterator_t<base_t>&       it,
                                                                          const std::ranges::sentinel_t<base_t>& last)
                 requires(SourceEncoding == encoding::utf16)
@@ -743,8 +752,10 @@ namespace upp::ranges
                         if (first_code_unit >= 0xDC00U) [[unlikely]]
                         {
                             return expected_type{
-                                std::unexpect,
-                                utf16_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate}
+                                std::unexpect, utf16_error{
+                                                   .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                                   .code   = utf16_error_code::unpaired_low_surrogate
+                                               }
                             };
                         }
 
@@ -760,10 +771,10 @@ namespace upp::ranges
                         if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU) [[unlikely]]
                         {
                             return expected_type{
-                                std::unexpect,
-                                utf16_error{
-                                    .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_high_surrogate
-                                }
+                                std::unexpect, utf16_error{
+                                                   .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                                   .code   = utf16_error_code::unpaired_high_surrogate
+                                               }
                             };
                         }
 
@@ -908,8 +919,10 @@ namespace upp::ranges
                 {
                     --m_current;
                     return expected_type{
-                        std::unexpect,
-                        utf8_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf8_error_code::unexpected_continuation_byte}
+                        std::unexpect, utf8_error{
+                                           .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                           .code   = utf8_error_code::unexpected_continuation_byte
+                                       }
                     };
                 }
 
@@ -922,15 +935,19 @@ namespace upp::ranges
                     const auto error_code = count == 1 ? utf8_error_code::invalid_leading_byte : utf8_error_code::unexpected_continuation_byte;
 
                     --m_current;
-                    return expected_type{std::unexpect, utf8_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = error_code}};
+                    return expected_type{
+                        std::unexpect, utf8_error{.length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}}, .code = error_code}
+                    };
                 }
 
                 if (count > expected_count)
                 {
                     --m_current;
                     return expected_type{
-                        std::unexpect,
-                        utf8_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf8_error_code::unexpected_continuation_byte}
+                        std::unexpect, utf8_error{
+                                           .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                           .code   = utf8_error_code::unexpected_continuation_byte
+                                       }
                     };
                 }
 
@@ -948,7 +965,7 @@ namespace upp::ranges
 
                     const auto err = count == 1 ? result.error()
                                                 : utf8_error{
-                                                      .length = std::optional<std::uint8_t>{std::in_place, 1},
+                                                      .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
                                                       .code   = utf8_error_code::unexpected_continuation_byte
                                                   };
 
@@ -1009,8 +1026,10 @@ namespace upp::ranges
                     --m_current;
 
                     return expected_type{
-                        std::unexpect,
-                        utf8_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf8_error_code::unexpected_continuation_byte}
+                        std::unexpect, utf8_error{
+                                           .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                           .code   = utf8_error_code::unexpected_continuation_byte
+                                       }
                     };
                 }
                 else
@@ -1047,8 +1066,8 @@ namespace upp::ranges
                     {
                         if (code_unit < 0xDC00U) [[unlikely]]
                         {
-                            const auto error_length =
-                                is_at_sentinel ? std::optional<std::uint8_t>{std::nullopt} : std::optional<std::uint8_t>{std::in_place, 1};
+                            const auto error_length = is_at_sentinel ? std::optional<std::uint8_t>{std::nullopt}
+                                                                     : std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}};
 
                             return expected_type{
                                 std::unexpect, utf16_error{.length = error_length, .code = utf16_error_code::unpaired_high_surrogate}
@@ -1058,8 +1077,10 @@ namespace upp::ranges
                         if (m_current == m_begin) [[unlikely]]
                         {
                             return expected_type{
-                                std::unexpect,
-                                utf16_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate}
+                                std::unexpect, utf16_error{
+                                                   .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                                   .code   = utf16_error_code::unpaired_low_surrogate
+                                               }
                             };
                         }
 
@@ -1071,8 +1092,10 @@ namespace upp::ranges
                             ++m_current;
 
                             return expected_type{
-                                std::unexpect,
-                                utf16_error{.length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate}
+                                std::unexpect, utf16_error{
+                                                   .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                                   .code   = utf16_error_code::unpaired_low_surrogate
+                                               }
                             };
                         }
 
@@ -1140,7 +1163,7 @@ namespace upp::ranges
                 {
                     m_buffer.clear();
                     encode_code_point_to_buffer(*decoded);
-                    m_buffer_index = m_buffer.size() - 1;
+                    m_buffer_index = static_cast<std::int8_t>(m_buffer.size() - 1);
                 }
                 else
                 {
@@ -1148,7 +1171,7 @@ namespace upp::ranges
                     {
                         m_buffer.clear();
                         encode_code_point_to_buffer(*decoded);
-                        m_buffer_index = m_buffer.size() - 1;
+                        m_buffer_index = static_cast<std::int8_t>(m_buffer.size() - 1);
                     }
                     else [[unlikely]]
                     {
@@ -1161,7 +1184,7 @@ namespace upp::ranges
                         {
                             m_buffer.clear();
                             encode_code_point_to_buffer(uchar::replacement_character());
-                            m_buffer_index = m_buffer.size() - 1;
+                            m_buffer_index = static_cast<std::int8_t>(m_buffer.size() - 1);
                         }
                     }
                 }

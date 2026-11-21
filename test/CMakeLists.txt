@@ -14,6 +14,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(catch2)
 
+set_target_properties(Catch2 PROPERTIES
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED ON
+)
+
+set_target_properties(Catch2WithMain PROPERTIES
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED ON
+)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE "uni-cpp" Catch2::Catch2WithMain)
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
@@ -36,6 +46,12 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(${PROJECT_NAME} PRIVATE -fconstexpr-steps=1000000000 -fconstexpr-depth=2048)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     target_compile_options(${PROJECT_NAME} PRIVATE -fconstexpr-ops-limit=1000000000 -fconstexpr-depth=2048)
+endif()
+
+# MSVC-specific options
+
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /utf-8 /bigobj)
 endif()
 
 # Make a clang-tidy target

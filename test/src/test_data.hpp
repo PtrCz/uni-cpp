@@ -112,7 +112,7 @@ namespace upp_test
 
     [[nodiscard]] inline const std::vector<normalization_test_case>& load_normalization_test_data()
     {
-        static const auto result = [] {
+        static const auto normalization_test_data = [] {
             const std::filesystem::path filepath{"test_data/ucd/NormalizationTest.txt"};
 
             std::println("Loading normalization test data from file: {}", filepath.generic_string());
@@ -159,7 +159,7 @@ namespace upp_test
             return result;
         }();
 
-        return result;
+        return normalization_test_data;
     }
 } // namespace upp_test
 

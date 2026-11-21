@@ -24,6 +24,11 @@
 #include <expected>
 #include <functional>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4701) // warning C4701: potentially uninitialized local variable used
+#endif
+
 namespace upp
 {
     /// @brief Enumeration of text encodings.
@@ -402,7 +407,8 @@ namespace upp
                 {
                     const std::size_t invalid_code_units_length = index - valid_up_to + 1uz;
 
-                    const std::uint8_t error_length = impl::utf8::get_error_length_from_invalid_code_units_length(invalid_code_units_length);
+                    const std::uint8_t error_length =
+                        impl::utf8::get_error_length_from_invalid_code_units_length(static_cast<std::uint8_t>(invalid_code_units_length));
 
                     const utf8_error_code error_code = impl::utf8::get_error_code(previous_state, type);
 
@@ -491,7 +497,8 @@ namespace upp
                 {
                     const std::size_t invalid_code_units_length = index - valid_up_to + 1uz;
 
-                    const std::uint8_t error_length = impl::utf8::get_error_length_from_invalid_code_units_length(invalid_code_units_length);
+                    const std::uint8_t error_length =
+                        impl::utf8::get_error_length_from_invalid_code_units_length(static_cast<std::uint8_t>(invalid_code_units_length));
 
                     const utf8_error_code error_code = impl::utf8::get_error_code(previous_state, type);
 
@@ -718,13 +725,13 @@ namespace upp
                     if (first_code_unit >= 0xDC00U)
                     {
                         return expected_type{
-                            std::unexpect,
-                            from_utf16_error{
-                                .valid_up_to = valid_up_to,
-                                .error       = utf16_error{
-                                    .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate
-                                }
-                            }
+                            std::unexpect, from_utf16_error{
+                                               .valid_up_to = valid_up_to,
+                                               .error       = utf16_error{
+                                                   .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                                   .code   = utf16_error_code::unpaired_low_surrogate
+                                               }
+                                           }
                         };
                     }
 
@@ -744,13 +751,13 @@ namespace upp
                     if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU)
                     {
                         return expected_type{
-                            std::unexpect,
-                            from_utf16_error{
-                                .valid_up_to = valid_up_to,
-                                .error       = utf16_error{
-                                    .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_high_surrogate
-                                }
-                            }
+                            std::unexpect, from_utf16_error{
+                                               .valid_up_to = valid_up_to,
+                                               .error       = utf16_error{
+                                                   .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                                   .code   = utf16_error_code::unpaired_high_surrogate
+                                               }
+                                           }
                         };
                     }
 
@@ -810,13 +817,13 @@ namespace upp
                     if (first_code_unit >= 0xDC00U)
                     {
                         return expected_type{
-                            std::unexpect,
-                            from_utf16_error{
-                                .valid_up_to = valid_up_to,
-                                .error       = utf16_error{
-                                    .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_low_surrogate
-                                }
-                            }
+                            std::unexpect, from_utf16_error{
+                                               .valid_up_to = valid_up_to,
+                                               .error       = utf16_error{
+                                                   .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                                   .code   = utf16_error_code::unpaired_low_surrogate
+                                               }
+                                           }
                         };
                     }
 
@@ -836,13 +843,13 @@ namespace upp
                     if (second_code_unit < 0xDC00U || second_code_unit > 0xDFFFU)
                     {
                         return expected_type{
-                            std::unexpect,
-                            from_utf16_error{
-                                .valid_up_to = valid_up_to,
-                                .error       = utf16_error{
-                                    .length = std::optional<std::uint8_t>{std::in_place, 1}, .code = utf16_error_code::unpaired_high_surrogate
-                                }
-                            }
+                            std::unexpect, from_utf16_error{
+                                               .valid_up_to = valid_up_to,
+                                               .error       = utf16_error{
+                                                   .length = std::optional<std::uint8_t>{std::in_place, std::uint8_t{1}},
+                                                   .code   = utf16_error_code::unpaired_high_surrogate
+                                               }
+                                           }
                         };
                     }
 
@@ -1258,5 +1265,9 @@ namespace upp
         }();
     } // namespace impl
 } // namespace upp
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // UNI_CPP_ENCODING_HPP

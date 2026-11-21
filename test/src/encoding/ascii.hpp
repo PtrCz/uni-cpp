@@ -10,23 +10,12 @@
 #include <stdexcept>
 #include <expected>
 #include <vector>
-#include <bit>
 
 #include "macros.hpp"
 #include "../utility.hpp"
 
 namespace upp_test::ascii
 {
-    [[nodiscard]] consteval char operator""_char(const unsigned long long int value)
-    {
-        if (value > 0xFFULL)
-        {
-            throw std::invalid_argument("Invalid 8-bit value");
-        }
-
-        return std::bit_cast<char>(static_cast<std::uint8_t>(value));
-    }
-
     struct valid_sequence
     {
         std::string    sequence;
@@ -106,6 +95,7 @@ namespace upp_test::ascii
 
     [[nodiscard]] constexpr auto invalid_sequences()
     {
+        using namespace upp_test::int_literals;
         using namespace upp_test::string_literals;
 
 #define AS_UTF_LOSSY(literal) .as_utf8_lossy = u8##literal##_s, .as_utf16_lossy = u##literal##_s, .as_utf32_lossy = U##literal##_s
@@ -117,14 +107,14 @@ namespace upp_test::ascii
 
         return std::to_array<invalid_sequence>({
             {
-                .sequence       = {0x93_char},
+                .sequence       = {0x93_ch},
                 .expected_error = {.valid_up_to = 0, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x1A"_s,
                 AS_UTF_LOSSY("\uFFFD"),
                 EXPECTED_UTF_TRANSCODING_WITH_ERRORS({ APPEND_ERROR(upp::ascii_error{}); }),
             },
             {
-                .sequence       = {0x71_char, 0x7A_char, 0x39_char, 0x5F_char, 0x80_char, 0x58_char},
+                .sequence       = {0x71_ch, 0x7A_ch, 0x39_ch, 0x5F_ch, 0x80_ch, 0x58_ch},
                 .expected_error = {.valid_up_to = 4, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x71\x7A\x39\x5F\x1A\x58"_s,
                 AS_UTF_LOSSY("\u0071\u007A\u0039\u005F\uFFFD\u0058"),
@@ -135,7 +125,7 @@ namespace upp_test::ascii
                 }),
             },
             {
-                .sequence       = {0x41_char, 0x37_char, 0x23_char, 0xFF_char, 0x40_char},
+                .sequence       = {0x41_ch, 0x37_ch, 0x23_ch, 0xFF_ch, 0x40_ch},
                 .expected_error = {.valid_up_to = 3, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x41\x37\x23\x1A\x40"_s,
                 AS_UTF_LOSSY("\u0041\u0037\u0023\uFFFD\u0040"),
@@ -146,7 +136,7 @@ namespace upp_test::ascii
                 }),
             },
             {
-                .sequence       = {0x80_char, 0x4B_char, 0x33_char, 0x24_char, 0x5E_char},
+                .sequence       = {0x80_ch, 0x4B_ch, 0x33_ch, 0x24_ch, 0x5E_ch},
                 .expected_error = {.valid_up_to = 0, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x1A\x4B\x33\x24\x5E"_s,
                 AS_UTF_LOSSY("\uFFFD\u004B\u0033\u0024\u005E"),
@@ -156,7 +146,7 @@ namespace upp_test::ascii
                 }),
             },
             {
-                .sequence       = {0x5A_char, 0x39_char, 0x7F_char, 0x80_char, 0x21_char},
+                .sequence       = {0x5A_ch, 0x39_ch, 0x7F_ch, 0x80_ch, 0x21_ch},
                 .expected_error = {.valid_up_to = 3, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x5A\x39\x7F\x1A\x21"_s,
                 AS_UTF_LOSSY("\u005A\u0039\u007F\uFFFD\u0021"),
@@ -167,7 +157,7 @@ namespace upp_test::ascii
                 }),
             },
             {
-                .sequence       = {0x31_char, 0x5F_char, 0x32_char, 0x2D_char, 0xC0_char},
+                .sequence       = {0x31_ch, 0x5F_ch, 0x32_ch, 0x2D_ch, 0xC0_ch},
                 .expected_error = {.valid_up_to = 4, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x31\x5F\x32\x2D\x1A"_s,
                 AS_UTF_LOSSY("\u0031\u005F\u0032\u002D\uFFFD"),
@@ -177,7 +167,7 @@ namespace upp_test::ascii
                 }),
             },
             {
-                .sequence       = {0x40_char, 0x25_char, 0xA0_char, 0x5E_char, 0x7E_char},
+                .sequence       = {0x40_ch, 0x25_ch, 0xA0_ch, 0x5E_ch, 0x7E_ch},
                 .expected_error = {.valid_up_to = 2, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x40\x25\x1A\x5E\x7E"_s,
                 AS_UTF_LOSSY("\u0040\u0025\uFFFD\u005E\u007E"),
@@ -188,7 +178,7 @@ namespace upp_test::ascii
                 }),
             },
             {
-                .sequence       = {0x51_char, 0xE2_char, 0x52_char, 0x34_char},
+                .sequence       = {0x51_ch, 0xE2_ch, 0x52_ch, 0x34_ch},
                 .expected_error = {.valid_up_to = 1, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x51\x1A\x52\x34"_s,
                 AS_UTF_LOSSY("\u0051\uFFFD\u0052\u0034"),
@@ -199,7 +189,7 @@ namespace upp_test::ascii
                 }),
             },
             {
-                .sequence       = {0x38_char, 0x2A_char, 0xFF_char, 0xFF_char, 0x28_char},
+                .sequence       = {0x38_ch, 0x2A_ch, 0xFF_ch, 0xFF_ch, 0x28_ch},
                 .expected_error = {.valid_up_to = 2, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x38\x2A\x1A\x1A\x28"_s,
                 AS_UTF_LOSSY("\u0038\u002A\uFFFD\uFFFD\u0028"),
@@ -211,7 +201,7 @@ namespace upp_test::ascii
                 }),
             },
             {
-                .sequence       = {0x4D_char, 0x2D_char, 0x9B_char, 0x5F_char},
+                .sequence       = {0x4D_ch, 0x2D_ch, 0x9B_ch, 0x5F_ch},
                 .expected_error = {.valid_up_to = 2, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x4D\x2D\x1A\x5F"_s,
                 AS_UTF_LOSSY("\u004D\u002D\uFFFD\u005F"),
@@ -222,7 +212,7 @@ namespace upp_test::ascii
                 }),
             },
             {
-                .sequence       = {0x58_char, 0x80_char, 0x59_char, 0x80_char, 0x5A_char},
+                .sequence       = {0x58_ch, 0x80_ch, 0x59_ch, 0x80_ch, 0x5A_ch},
                 .expected_error = {.valid_up_to = 1, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x58\x1A\x59\x1A\x5A"_s,
                 AS_UTF_LOSSY("\u0058\uFFFD\u0059\uFFFD\u005A"),
@@ -235,7 +225,7 @@ namespace upp_test::ascii
                 }),
             },
             {
-                .sequence       = {0x1A_char, 0x83_char, 0x25_char, 0x61_char, 0xE1_char, 0x1A_char, 0x1A_char},
+                .sequence       = {0x1A_ch, 0x83_ch, 0x25_ch, 0x61_ch, 0xE1_ch, 0x1A_ch, 0x1A_ch},
                 .expected_error = {.valid_up_to = 1, .error = upp::ascii_error{}},
                 .as_ascii_lossy = "\x1A\x1A\x25\x61\x1A\x1A\x1A"_s,
                 AS_UTF_LOSSY("\u001A\uFFFD\u0025\u0061\uFFFD\u001A\u001A"),

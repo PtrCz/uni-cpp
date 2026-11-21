@@ -312,7 +312,7 @@ TEST_CASE("upp::uchar decomposition_type()", "[upp::uchar]")
         else
         {
             REQUIRE(result.has_value());
-            CHECK(std::to_underlying(*result) == expected.front()); // NOLINT(bugprone-unchecked-optional-access)
+            CHECK(std::to_underlying(*result) == expected.front()); // NOLINT(bugprone-unchecked-optional-access, clang-analyzer-core.CallAndMessage)
         }
     }
 }

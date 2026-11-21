@@ -5,6 +5,7 @@
 
 #include "base.hpp"
 #include "to_input.hpp"
+#include "../utility.hpp"
 
 #include <string_view>
 #include <vector>
@@ -14,7 +15,7 @@ TEST_CASE("decode_view", "[ranges][UTF encoding]")
     CONSTEXPR_AND_RUNTIME_TEST()
     {
         using namespace std::string_view_literals;
-        using namespace upp::char_literals;
+        using namespace upp_test::char_literals;
 
         CRTT_CHECK(upp_test::ranges::equal(u8"abc"sv | upp::views::decode_lossy_ascii, {u8'a'_ac, u8'b'_ac, u8'c'_ac}));
         CRTT_CHECK(upp_test::ranges::equal(u8"abc"sv | upp::views::decode_lossy_ascii_to_uchars, {U'a'_uc, U'b'_uc, U'c'_uc}));

@@ -121,6 +121,20 @@ namespace upp::ranges
                 return std::input_iterator_tag{};
             }
         }
+
+        template<typename T>
+        [[nodiscard]] constexpr decltype(auto) underlying_iterator(T&& it) noexcept
+        {
+            return (std::forward<T>(it).m_current);
+        }
+
+        template<typename T>
+        [[nodiscard]] constexpr decltype(auto) underlying_buffer_index(T&& it) noexcept
+        {
+            return (std::forward<T>(it).m_buffer_index);
+        }
+
+        using signed_size_t = decltype(0z);
     } // namespace impl
 } // namespace upp::ranges
 

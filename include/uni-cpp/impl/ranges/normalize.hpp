@@ -192,8 +192,6 @@ namespace upp::ranges
         }
 
     private:
-        using signed_size_t = decltype(0z);
-
         static constexpr bool s_canonical     = canonical_normalization_form<Form>;
         static constexpr bool s_compatibility = compatibility_normalization_form<Form>;
 
@@ -212,16 +210,6 @@ namespace upp::ranges
             constexpr iterator()
                 requires std::default_initializable<std::ranges::iterator_t<View>>
             = default;
-
-            constexpr iterator(const iterator&)
-                requires std::copyable<std::ranges::iterator_t<View>>
-            = default;
-            constexpr iterator(iterator&&) = default;
-
-            constexpr iterator& operator=(const iterator&)
-                requires std::copyable<std::ranges::iterator_t<View>>
-            = default;
-            constexpr iterator& operator=(iterator&&) = default;
 
             /// @brief Returns a `const` reference to the underlying iterator.
             ///
@@ -322,7 +310,7 @@ namespace upp::ranges
                 else
                 {
                     if constexpr (!std::ranges::forward_range<View>)
-                        m_buffer_index = impl::buffer_index_at_sentinel<signed_size_t>;
+                        m_buffer_index = impl::buffer_index_at_sentinel<impl::signed_size_t>;
                 }
             }
 
@@ -340,7 +328,7 @@ namespace upp::ranges
                     if constexpr (std::ranges::forward_range<View>)
                         m_buffer_index = 0z;
                     else
-                        m_buffer_index = impl::buffer_index_at_sentinel<signed_size_t>;
+                        m_buffer_index = impl::buffer_index_at_sentinel<impl::signed_size_t>;
                 }
             }
 
@@ -723,6 +711,15 @@ namespace upp::ranges
             }
 
         private:
+            friend normalize_view;
+
+            template<typename T>
+            friend constexpr decltype(auto) impl::underlying_iterator(T&&) noexcept;
+
+            template<typename T>
+            friend constexpr decltype(auto) impl::underlying_buffer_index(T&&) noexcept;
+
+        private:
             std::ranges::iterator_t<View> m_current = std::ranges::iterator_t<View>();
 
             UNI_CPP_IMPL_NO_UNIQUE_ADDRESS
@@ -734,10 +731,7 @@ namespace upp::ranges
             upp::impl::maybe_present<std::ranges::forward_range<View>, std::optional<std::ranges::iterator_t<View>>> m_advance_to;
 
             upp::impl::small_vector<uchar, 32u> m_buffer{};
-            signed_size_t                       m_buffer_index = 0z;
-
-        private:
-            friend normalize_view;
+            impl::signed_size_t                 m_buffer_index = 0z;
         };
 
         class sentinel
@@ -760,11 +754,12 @@ namespace upp::ranges
             {
                 if constexpr (std::ranges::forward_range<View>)
                 {
-                    return x.m_current == y.m_end;
+                    return impl::underlying_iterator(x) == y.m_end;
                 }
                 else
                 {
-                    return x.m_current == y.m_end && x.m_buffer_index == impl::buffer_index_at_sentinel<signed_size_t>;
+                    return impl::underlying_iterator(x) == y.m_end &&
+                           impl::underlying_buffer_index(x) == impl::buffer_index_at_sentinel<impl::signed_size_t>;
                 }
             }
 

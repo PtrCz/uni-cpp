@@ -79,8 +79,8 @@ namespace upp::ranges::impl
     ///
     /// @note This type should only be used as a base class for a view adaptor. It should not be used directly.
     ///
-    template<typename Traits, std::ranges::view View>
-        requires std::is_class_v<Traits> && std::same_as<Traits, std::remove_cv_t<Traits>> && std::ranges::input_range<View>
+    template<typename Traits, typename View>
+        requires std::is_class_v<Traits> && std::same_as<Traits, std::remove_cv_t<Traits>>
     class simple_view_adaptor : public UNI_CPP_IMPL_VIEW_INTERFACE(simple_view_adaptor<Traits, View>)
     {
     private:
@@ -530,6 +530,9 @@ namespace upp::ranges::impl
 
             friend simple_view_adaptor;
 
+            template<typename T>
+            friend constexpr decltype(auto) impl::underlying_iterator(T&&) noexcept;
+
         private:
             std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
         };
@@ -575,7 +578,7 @@ namespace upp::ranges::impl
                 requires std::sentinel_for<std::ranges::sentinel_t<base_t>, std::ranges::iterator_t<impl::maybe_const<OtherConst, View>>>
             friend constexpr bool operator==(const iterator<OtherConst>& x, const sentinel& y)
             {
-                return x.m_current == y.m_end;
+                return impl::underlying_iterator(x) == y.m_end;
             }
 
             /// @brief Returns the distance between the iterator `x` and the sentinel `y`.
@@ -585,7 +588,7 @@ namespace upp::ranges::impl
             friend constexpr std::ranges::range_difference_t<impl::maybe_const<OtherConst, View>> operator-(const iterator<OtherConst>& x,
                                                                                                             const sentinel&             y)
             {
-                return x.m_current - y.m_end;
+                return impl::underlying_iterator(x) - y.m_end;
             }
 
             /// @brief Returns the distance between the sentinel `y` and the iterator `x`.
@@ -595,7 +598,7 @@ namespace upp::ranges::impl
             friend constexpr std::ranges::range_difference_t<impl::maybe_const<OtherConst, View>> operator-(const sentinel&             y,
                                                                                                             const iterator<OtherConst>& x)
             {
-                return y.m_end - x.m_current;
+                return y.m_end - impl::underlying_iterator(x);
             }
 
         private:

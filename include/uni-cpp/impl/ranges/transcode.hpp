@@ -690,8 +690,8 @@ namespace upp::ranges
 
                             const std::size_t invalid_code_units_length = index + 1uz;
 
-                            const std::uint8_t error_length =
-                                upp::impl::utf8::get_error_length_from_invalid_code_units_length(invalid_code_units_length);
+                            const std::uint8_t error_length = upp::impl::utf8::get_error_length_from_invalid_code_units_length(
+                                static_cast<std::uint8_t>(invalid_code_units_length));
 
                             const utf8_error_code error_code = upp::impl::utf8::get_error_code(previous_state, type);
 
@@ -1189,6 +1189,12 @@ namespace upp::ranges
 
             friend transcode_view;
 
+            template<typename T>
+            friend constexpr decltype(auto) impl::underlying_iterator(T&&) noexcept;
+
+            template<typename T>
+            friend constexpr decltype(auto) impl::underlying_buffer_index(T&&) noexcept;
+
         private:
             std::ranges::iterator_t<base_t> m_current = std::ranges::iterator_t<base_t>();
 
@@ -1243,11 +1249,11 @@ namespace upp::ranges
             {
                 if constexpr (std::ranges::forward_range<base_t>)
                 {
-                    return x.m_current == y.m_end;
+                    return impl::underlying_iterator(x) == y.m_end;
                 }
                 else
                 {
-                    return x.m_current == y.m_end && x.m_buffer_index == impl::buffer_index_at_sentinel<std::int8_t>;
+                    return impl::underlying_iterator(x) == y.m_end && impl::underlying_buffer_index(x) == impl::buffer_index_at_sentinel<std::int8_t>;
                 }
             }
 

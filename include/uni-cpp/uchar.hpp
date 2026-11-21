@@ -91,8 +91,7 @@ namespace upp
         class immutable_inplace_buffer
         {
         public:
-            using const_iterator         = inplace_vector<T, MaxSize>::const_iterator;
-            using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+            using const_iterator = inplace_vector<T, MaxSize>::const_iterator;
 
         public:
             constexpr immutable_inplace_buffer(const immutable_inplace_buffer&) noexcept = default;
@@ -103,14 +102,10 @@ namespace upp
             constexpr immutable_inplace_buffer& operator=(const immutable_inplace_buffer&) noexcept = default;
             constexpr immutable_inplace_buffer& operator=(immutable_inplace_buffer&&) noexcept      = default;
 
-            [[nodiscard]] constexpr const_iterator         begin() const noexcept { return m_data.begin(); }
-            [[nodiscard]] constexpr const_iterator         cbegin() const noexcept { return m_data.cbegin(); }
-            [[nodiscard]] constexpr const_iterator         end() const noexcept { return m_data.end(); }
-            [[nodiscard]] constexpr const_iterator         cend() const noexcept { return m_data.cend(); }
-            [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept { return m_data.rbegin(); }
-            [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept { return m_data.crbegin(); }
-            [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept { return m_data.rend(); }
-            [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept { return m_data.crend(); }
+            [[nodiscard]] constexpr const_iterator begin() const noexcept { return m_data.begin(); }
+            [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return m_data.cbegin(); }
+            [[nodiscard]] constexpr const_iterator end() const noexcept { return m_data.end(); }
+            [[nodiscard]] constexpr const_iterator cend() const noexcept { return m_data.cend(); }
 
             [[nodiscard]] constexpr std::size_t size() const noexcept { return m_data.size(); }
 

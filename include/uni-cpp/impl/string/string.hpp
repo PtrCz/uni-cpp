@@ -13,9 +13,11 @@
 #include "../ranges/approximately_sized_range.hpp"
 #include "../ranges/valid_code_unit_range.hpp"
 #include "../ranges/cast_code_units_to.hpp"
+#include "../ranges/transcode.hpp"
 
 #include "fwd.hpp"
 #include "code_units_t.hpp"
+#include "char_indices.hpp"
 #include "string_literal.hpp"
 
 #include <type_traits>
@@ -189,6 +191,37 @@ namespace upp
             requires ranges::code_unit_range_for<Range, encoding::ascii>
         [[nodiscard]] static constexpr basic_ascii_string from_ascii_unchecked(Range&& range);
 
+        /// @brief Copy assignment operator. Replaces the contents of this string with a copy of the contents of `other`.
+        ///
+        constexpr basic_ascii_string& operator=(const basic_ascii_string& other) noexcept(std::is_nothrow_copy_assignable_v<container_type>) =
+            default;
+
+        /// @brief Move assignment operator. Replaces the contents of this string with those of `other` using move semantics.
+        ///
+        /// After the move, `other` is **guaranteed** to be empty.
+        ///
+        constexpr basic_ascii_string& operator=(basic_ascii_string&& other) noexcept(std::is_nothrow_move_assignable_v<container_type>)
+        {
+            m_container = std::move(other.m_container);
+            other.clear();
+
+            return *this;
+        }
+
+        /// @brief Returns the allocator associated with the string.
+        ///
+        [[nodiscard]] constexpr decltype(auto) get_allocator() const
+            requires requires(const container_type& cont) { cont.get_allocator(); }
+        {
+            return m_container.get_allocator();
+        }
+
+        /// @brief Equality comparison operator.
+        ///
+        /// @return `underlying() == other.underlying()`.
+        ///
+        [[nodiscard]] constexpr bool operator==(const basic_ascii_string&) const = default;
+
         /// @brief Returns a `const` reference to the underlying container.
         ///
         /// It is intended for interoperability with APIs that expect the underlying container as an input.
@@ -224,6 +257,48 @@ namespace upp
         [[nodiscard]] constexpr auto code_units() const noexcept
         {
             return impl::make_code_units_t<encoding_value, code_unit_type>(std::span<const code_unit_type>{m_container});
+        }
+
+        /// @brief Returns a range of @ref upp::ascii_char "ascii_chars" of this string.
+        ///
+        /// @par Example
+        ///
+        /// @code{.cpp}
+        ///
+        /// auto hey = "Hey"_as;
+        ///
+        /// auto chars = hey.chars();
+        ///
+        /// assert(chars[0] == 'H'_ac);
+        /// assert(chars[1] == 'e'_ac);
+        /// assert(chars[2] == 'y'_ac);
+        ///
+        /// @endcode
+        ///
+        [[nodiscard]] constexpr auto chars() const noexcept { return views::decode_valid_ascii(code_units()); }
+
+        /// @brief Returns a range of @ref upp::ascii_char "ascii_chars" of this string, and their offsets.
+        ///
+        /// @par Example
+        ///
+        /// @code{.cpp}
+        ///
+        /// for (const auto& [offset, character] : "Hey"_as.char_indices())
+        /// {
+        ///     std::println("{}: {}", char{character.value()}, offset);
+        /// }
+        ///
+        /// // Output:
+        ///
+        /// // H: 0
+        /// // e: 1
+        /// // y: 2
+        ///
+        /// @endcode
+        ///
+        [[nodiscard]] constexpr auto char_indices() const noexcept
+        {
+            return ranges::impl::char_indices_view<encoding_value, code_unit_type>{code_units()};
         }
 
         /// @brief Returns the maximum number of characters the string is able to hold due to system or library implementation limitations.
@@ -548,6 +623,45 @@ namespace upp
             requires ranges::code_unit_range_for<Range, encoding::utf32>
         [[nodiscard]] static constexpr basic_ustring from_utf32_unchecked(Range&& range);
 
+        /// @brief Copy assignment operator. Replaces the contents of this string with a copy of the contents of `other`.
+        ///
+        constexpr basic_ustring& operator=(const basic_ustring& other) noexcept(std::is_nothrow_copy_assignable_v<container_type>) = default;
+
+        /// @brief Move assignment operator. Replaces the contents of this string with those of `other` using move semantics.
+        ///
+        /// After the move, `other` is **guaranteed** to be empty.
+        ///
+        constexpr basic_ustring& operator=(basic_ustring&& other) noexcept(std::is_nothrow_move_assignable_v<container_type>)
+        {
+            m_container = std::move(other.m_container);
+            other.clear();
+
+            return *this;
+        }
+
+        /// @brief Returns the allocator associated with the string.
+        ///
+        [[nodiscard]] constexpr decltype(auto) get_allocator() const
+            requires requires(const container_type& cont) { cont.get_allocator(); }
+        {
+            return m_container.get_allocator();
+        }
+
+        /// @brief Checks whether this string is code-point-wise equal to `other`.
+        ///
+        /// Iff this returns `true`, the strings contain exactly the same code point sequence.
+        /// Code-unit-wise comparison is guaranteed to have the same result as a code-point-wise comparison
+        /// for UTF-8, UTF-16 and UTF-32, as guaranteed by Unicode.
+        ///
+        /// @note This comparison operator does not perform Unicode normalization. Consequently,
+        ///       canonically equivalent strings (e.g. precomposed `é` <U+00E9 LATIN SMALL LETTER E WITH ACUTE>
+        ///       and decomposed `e` followed by a combining acute accent <U+0065 LATIN SMALL LETTER E, U+0301 COMBINING ACUTE ACCENT>)
+        ///       compare unequal despite representing the same text.
+        ///
+        /// @return `underlying() == other.underlying()`.
+        ///
+        [[nodiscard]] constexpr bool operator==(const basic_ustring&) const = default;
+
         /// @brief Returns a `const` reference to the underlying container.
         ///
         /// It is intended for interoperability with APIs that expect the underlying container as an input.
@@ -583,6 +697,53 @@ namespace upp
         [[nodiscard]] constexpr auto code_units() const noexcept
         {
             return impl::make_code_units_t<encoding_value, code_unit_type>(std::span<const code_unit_type>{m_container});
+        }
+
+        /// @brief Returns a range of @ref upp::uchar "uchars" (code points) of this string.
+        ///
+        /// @par Example
+        ///
+        /// @code{.cpp}
+        ///
+        /// using namespace upp::string_literals;
+        ///
+        /// for (upp::uchar code_point : u8"¿Qué?"_us.chars())
+        /// {
+        ///     std::print("U+{:04X} ", code_point.value());
+        /// }
+        ///
+        /// // Output: U+00BF U+0051 U+0075 U+00E9 U+003F
+        ///
+        /// @endcode
+        ///
+        [[nodiscard]] constexpr auto chars() const noexcept { return views::decode_valid<encoding_value>(code_units()); }
+
+        /// @brief Returns a range of @ref upp::uchar "uchars" (code points) of this string, and their code unit offsets.
+        ///
+        /// @par Example
+        ///
+        /// @code{.cpp}
+        ///
+        /// using namespace upp::string_literals;
+        ///
+        /// for (const auto& [offset, code_point] : u8"¿Qué?"_us.char_indices())
+        /// {
+        ///     std::println("U+{:04X}: {}", code_point.value(), offset);
+        /// }
+        ///
+        /// // Output:
+        ///
+        /// // U+00BF: 0
+        /// // U+0051: 2
+        /// // U+0075: 3
+        /// // U+00E9: 4
+        /// // U+003F: 6
+        ///
+        /// @endcode
+        ///
+        [[nodiscard]] constexpr auto char_indices() const noexcept
+        {
+            return ranges::impl::char_indices_view<encoding_value, code_unit_type>{code_units()};
         }
 
         /// @brief Returns the maximum number of code units the string is able to hold due to system or library implementation limitations.

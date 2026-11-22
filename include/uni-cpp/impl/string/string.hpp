@@ -811,8 +811,12 @@ namespace upp
         /// Contains the following user-defined literals:
         ///
         /// - ASCII string literals:
-        ///     - `_as` for creating `upp::ascii_string` from a UTF-8 string literal (example: `u8"Hello"_as`),
-        ///     - `_a8s` for creating `upp::basic_ascii_string<std::u8string>` from a UTF-8 string literal (example: `u8"Hello"_a8s`),
+        ///     - `_as` for creating `upp::ascii_string` from:
+        ///         - an ordinary string literal (example: `"Hello"_as`),
+        ///         - a UTF-8 string literal (example: `u8"Hello"_as`),
+        ///     - `_a8s` for creating `upp::basic_ascii_string<std::u8string>` from:
+        ///         - an ordinary string literal (example: `"Hello"_a8s`),
+        ///         - a UTF-8 string literal (example: `u8"Hello"_a8s`),
         ///
         /// - Unicode string literals:
         ///     - UTF-8 string literals:
@@ -825,13 +829,30 @@ namespace upp
         ///         - `_utf16s` for creating `upp::utf16_string` from a UTF-16 string literal (example: `u"Γειά σας"_utf16s`),
         ///         - `_utf32s` for creating `upp::utf32_string` from a UTF-32 string literal (example: `U"नमस्ते"_utf32s`).
         ///
+        /// @note Using ordinary string literals for the `_as` and `_a8s` literals is only available on platforms
+        ///       which use ASCII (or a superset of ASCII, such as UTF-8) for the ordinary literal encoding.
+        ///
         inline namespace string_literals
         {
-            /// @brief User-defined literal for creating an `ascii_string` from a UTF-8 string literal.
+            /// @brief User-defined literal for creating an `ascii_string` from a string literal.
+            ///
+            /// @p Example
+            ///
+            /// @code{.cpp}
+            ///
+            /// using namespace upp::string_literals;
+            ///
+            /// /* 1 */ upp::ascii_string str1 =   "Hello"_as; // or:
+            /// /* 2 */ upp::ascii_string str2 = u8"Hello"_as;
+            ///
+            /// @endcode
+            ///
+            /// @note Using ordinary string literals (like #1 in the example above) is only available on platforms
+            ///       which use ASCII (or a superset of ASCII, such as UTF-8) for the ordinary literal encoding.
             ///
             /// @see operator""_a8s
             ///
-            template<impl::string_literal_utf8_as_char StringLiteral>
+            template<impl::string_literal_ascii_as_char StringLiteral>
             [[nodiscard]] constexpr ascii_string operator""_as()
             {
                 using from_unchecked = decltype([](auto&& rg) static { return ascii_string::from_ascii_unchecked(std::forward<decltype(rg)>(rg)); });
@@ -839,11 +860,25 @@ namespace upp
                 return impl::ud_string_literal_impl<encoding::ascii, ascii_string, from_unchecked, StringLiteral>();
             }
 
-            /// @brief User-defined literal for creating a `basic_ascii_string<std::u8string>` from a UTF-8 string literal.
+            /// @brief User-defined literal for creating a `basic_ascii_string<std::u8string>` from a string literal.
+            ///
+            /// @p Example
+            ///
+            /// @code{.cpp}
+            ///
+            /// using namespace upp::string_literals;
+            ///
+            /// /* 1 */ upp::basic_ascii_string<std::u8string> str1 =   "Hello"_a8s; // or:
+            /// /* 2 */ upp::basic_ascii_string<std::u8string> str2 = u8"Hello"_a8s;
+            ///
+            /// @endcode
+            ///
+            /// @note Using ordinary string literals (like #1 in the example above) is only available on platforms
+            ///       which use ASCII (or a superset of ASCII, such as UTF-8) for the ordinary literal encoding.
             ///
             /// @see operator""_as
             ///
-            template<impl::string_literal_char8_t StringLiteral>
+            template<impl::string_literal_ascii_as_char8_t StringLiteral>
             [[nodiscard]] constexpr basic_ascii_string<std::u8string> operator""_a8s()
             {
                 using from_unchecked = decltype([](auto&& rg) static {

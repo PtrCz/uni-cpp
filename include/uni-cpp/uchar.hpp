@@ -31,6 +31,7 @@
 #include "impl/encoding/ascii.hpp"
 #include "impl/encoding/utf32.hpp"
 #include "impl/inplace_vector.hpp"
+#include "impl/ordinary_literal_encoding.hpp"
 
 #include <concepts>
 #include <iterator>
@@ -1470,11 +1471,12 @@ namespace upp
         ///
         /// - `_ac` for creating `upp::ascii_char` from:
         ///     - an integer literal (example: `0x41_ac`),
-        ///     - a UTF-8 character literal (example: ``u8'A'_ac``),
+        ///     - an ordinary character literal (example: `'A'_ac`),
+        ///     - a UTF-8 character literal (example: `u8'A'_ac`),
         ///
         /// - `_uc` for creating `upp::uchar` from:
         ///     - an integer literal (example: `0xFFFD_uc`),
-        ///     - a UTF-32 character literal (example: ``U'a'_uc``).
+        ///     - a UTF-32 character literal (example: `U'a'_uc`).
         ///
         inline namespace char_literals
         {
@@ -1495,6 +1497,35 @@ namespace upp
 
                 return ascii_char::from_unchecked(static_cast<std::uint8_t>(value));
             }
+
+#ifdef UNI_CPP_ASCII_IS_THE_ORDINARY_LITERAL_ENCODING
+
+            /// @brief User-defined literal for creating an `ascii_char` from an ordinary character literal.
+            /// @param value The ASCII character.
+            ///
+            /// @throws std::invalid_argument If the `value` is **not** a valid ASCII character.
+            ///
+            /// @note This function is only available if the ordinary literal encoding is ASCII or an ASCII superset (such as UTF-8).
+            ///       An alternative that is always available is using the UTF-8 user-defined character literal
+            ///       (`u8'A'_ac` instead of `'A'_ac`).
+            ///
+            [[nodiscard]] consteval ascii_char operator""_ac(const char value)
+            {
+                if (!is_valid_ascii(std::bit_cast<std::uint8_t>(value)))
+                {
+                    throw std::invalid_argument("Invalid ASCII value");
+                }
+
+                return ascii_char::from_unchecked(std::bit_cast<std::uint8_t>(value));
+            }
+
+#else
+
+            // This function isn't available, because the ordinary literal encoding isn't ASCII-compatible.
+            // Instead of using 'A'_ac, use u8'A'_ac -- it's an alternative that is always available.
+            [[nodiscard]] consteval ascii_char operator""_ac(const char value) = delete;
+
+#endif
 
             /// @brief User-defined literal for creating an `ascii_char` from a UTF-8 character literal.
             /// @param value The ASCII character.

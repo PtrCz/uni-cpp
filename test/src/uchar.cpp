@@ -21,8 +21,12 @@ TEST_CASE("upp::ascii_char user-defined literals", "[upp::ascii_char]")
 {
     using namespace upp::char_literals;
 
+    CHECK('Z'_ac.value() == 0x5A);
     CHECK(u8'A'_ac.value() == 0x41);
     CHECK((0x1A_ac).value() == 0x1A);
+
+    CHECK('\0'_ac.value() == 0x00);
+    CHECK('\x7F'_ac.value() == 0x7F);
 
     CHECK(u8'\u0000'_ac.value() == 0x00);
     CHECK(u8'\u007F'_ac.value() == 0x7F);

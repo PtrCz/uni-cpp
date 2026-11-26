@@ -19,6 +19,7 @@
 #include "code_units_t.hpp"
 #include "char_indices.hpp"
 #include "string_literal.hpp"
+#include "container.hpp"
 
 #include <type_traits>
 #include <memory>
@@ -41,13 +42,6 @@ namespace upp
 
         inline constexpr from_container_t from_container{};
     } // namespace impl
-
-    template<typename C>
-    concept reservable_container = container<C> && requires(C& c, const C& cc, typename C::size_type n) {
-        c.reserve(n);
-        { cc.capacity() } -> std::same_as<decltype(n)>;
-        { cc.max_size() } -> std::same_as<decltype(n)>;
-    };
 
     template<string_compatible_container<encoding::ascii> Container>
     class basic_ascii_string
@@ -343,6 +337,36 @@ namespace upp
         ///
         constexpr void clear() noexcept { m_container.clear(); }
 
+        /// @brief Appends a single character to the end of the string.
+        ///
+        constexpr void push_back(ascii_char ch) { push_back_code_unit(ch.value()); }
+
+        /// @brief Appends a range of code units to the end of the string.
+        ///
+        /// @pre @p range must not overlap with this string. Otherwise, the behavior is undefined.
+        ///
+        template<ranges::valid_code_unit_range<encoding::ascii> Range>
+        constexpr basic_ascii_string& append_code_units(Range&& range)
+        {
+            impl::csc::append_range(m_container,
+                                    upp::views::cast_code_units_to<code_unit_type>(impl::csc::to_viewable_range(std::forward<Range>(range))));
+
+            return *this;
+        }
+
+        /// @brief Appends a range of @ref upp::ascii_char "ascii_chars" to the end of the string.
+        ///
+        /// @pre @p range must not depend on the state of this string. Otherwise, the behavior is undefined.
+        ///
+        template<ranges::ascii_range Range>
+        constexpr basic_ascii_string& append_chars(Range&& range)
+        {
+            impl::csc::append_range(m_container,
+                                    upp::views::encode_as<encoding::ascii, code_unit_type>(impl::csc::to_viewable_range(std::forward<Range>(range))));
+
+            return *this;
+        }
+
     private:
         /// @brief Constructs the string directly from the underlying container type.
         ///
@@ -364,21 +388,8 @@ namespace upp
             requires code_unit_type_for<T, encoding::ascii>
         constexpr void push_back_code_unit(T code_unit)
         {
-            const auto value = std::bit_cast<code_unit_type>(code_unit);
-
-            if constexpr (requires(container_type& c, code_unit_type v) { c.push_back(v); })
-            {
-                m_container.push_back(value);
-            }
-            else
-            {
-                m_container.insert(std::as_const(m_container).end(), value);
-            }
+            impl::csc::push_back(m_container, std::bit_cast<code_unit_type>(code_unit));
         }
-
-        /// @brief Appends a single character to the end of the string.
-        ///
-        constexpr void push_back(const ascii_char ch) { push_back_code_unit(ch.value()); }
 
     private:
         Container m_container;
@@ -788,6 +799,50 @@ namespace upp
         ///
         constexpr void clear() noexcept { m_container.clear(); }
 
+        /// @brief Encodes the @p code_point and appends it to the end of the string.
+        ///
+        constexpr void push_back(uchar code_point)
+        {
+            if constexpr (Encoding == encoding::utf8)
+            {
+                append_code_units(code_point.encode_as_utf8());
+            }
+            else if constexpr (Encoding == encoding::utf16)
+            {
+                append_code_units(code_point.encode_as_utf16());
+            }
+            else if constexpr (Encoding == encoding::utf32)
+            {
+                push_back_code_unit(code_point.value());
+            }
+        }
+
+        /// @brief Appends a range of code units to the end of the string.
+        ///
+        /// @pre @p range must not overlap with this string. Otherwise, the behavior is undefined.
+        ///
+        template<ranges::valid_code_unit_range<Encoding> Range>
+        constexpr basic_ustring& append_code_units(Range&& range)
+        {
+            impl::csc::append_range(m_container,
+                                    upp::views::cast_code_units_to<code_unit_type>(impl::csc::to_viewable_range(std::forward<Range>(range))));
+
+            return *this;
+        }
+
+        /// @brief Encodes a range of @ref upp::uchar "uchars" and appends it to the end of the string.
+        ///
+        /// @pre @p range must not depend on the state of this string. Otherwise, the behavior is undefined.
+        ///
+        template<ranges::code_point_range Range>
+        constexpr basic_ustring& append_chars(Range&& range)
+        {
+            impl::csc::append_range(m_container,
+                                    upp::views::encode_as<Encoding, code_unit_type>(impl::csc::to_viewable_range(std::forward<Range>(range))));
+
+            return *this;
+        }
+
     private:
         /// @brief Constructs the string directly from the underlying container type.
         ///
@@ -880,63 +935,7 @@ namespace upp
             requires code_unit_type_for<T, Encoding>
         constexpr void push_back_code_unit(T code_unit)
         {
-            const auto value = std::bit_cast<code_unit_type>(code_unit);
-
-            if constexpr (requires(container_type& c, code_unit_type v) { c.push_back(v); })
-            {
-                m_container.push_back(value);
-            }
-            else
-            {
-                m_container.insert(std::as_const(m_container).end(), value);
-            }
-        }
-
-        /// @brief Appends a range of code units to the end of the string.
-        ///
-        /// @pre The `range` must not depend on the state of this string. For example, it cannot be a view into this string's underlying container.
-        ///
-        template<ranges::valid_code_unit_range<Encoding> Range>
-        constexpr void append_code_units_range(Range&& range)
-        {
-            auto code_units = std::forward<Range>(range) | views::cast_code_units_to<code_unit_type>;
-
-            using code_units_range_t = decltype(code_units);
-
-            using const_iter = container_type::const_iterator;
-
-            if constexpr (requires(container_type& c, code_units_range_t& r) { c.append_range(r); })
-            {
-                m_container.append_range(code_units);
-            }
-            else if constexpr (requires(container_type& c, const_iter cit, code_units_range_t& r) { c.insert_range(cit, r); })
-            {
-                m_container.insert_range(std::as_const(m_container).end(), code_units);
-            }
-            else
-            {
-                auto common_range = std::views::common(std::move(code_units));
-
-                m_container.insert(std::as_const(m_container).end(), std::ranges::begin(common_range), std::ranges::end(common_range));
-            }
-        }
-
-        /// @brief Encodes the `code_point` and appends it to the end of the string.
-        ///
-        constexpr void push_back(const uchar code_point)
-        {
-            if constexpr (Encoding == encoding::utf8)
-            {
-                append_code_units_range(code_point.encode_as_utf8());
-            }
-            else if constexpr (Encoding == encoding::utf16)
-            {
-                append_code_units_range(code_point.encode_as_utf16());
-            }
-            else if constexpr (Encoding == encoding::utf32)
-            {
-                push_back_code_unit(code_point.value());
-            }
+            impl::csc::push_back(m_container, std::bit_cast<code_unit_type>(code_unit));
         }
 
     private:

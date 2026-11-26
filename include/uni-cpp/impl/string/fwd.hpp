@@ -7,6 +7,7 @@
 ///
 
 #include "../../encoding.hpp"
+#include "container.hpp"
 
 #include <string>
 #include <concepts>
@@ -14,66 +15,6 @@
 
 namespace upp
 {
-    /// @brief Concept for identifying container types.
-    ///
-    /// The requirements of this concept are similar to those of [C++'s named requirements](https://en.cppreference.com/w/cpp/named_req/Container).
-    ///
-    /// @headerfile "" <uni-cpp/string.hpp>
-    ///
-    template<typename C>
-    concept container =
-        requires(C c, const C cc) {
-            typename C::value_type;
-            typename C::iterator;
-            typename C::const_iterator;
-            typename C::size_type;
-
-            { c.begin() } -> std::same_as<typename C::iterator>;
-            { c.end() } -> std::same_as<typename C::iterator>;
-            { cc.begin() } -> std::same_as<typename C::const_iterator>;
-            { cc.end() } -> std::same_as<typename C::const_iterator>;
-
-            { c.size() } -> std::same_as<typename C::size_type>;
-            { c.empty() } -> std::same_as<bool>;
-        } && std::unsigned_integral<typename C::size_type> && std::default_initializable<C> && std::copy_constructible<C> &&
-        std::assignable_from<C&, const C> && std::equality_comparable<C>;
-
-    /// @brief Concept for identifying contiguous sequence container types.
-    ///
-    /// The requirements of this concept are similar to those of C++'s named requirements for
-    /// [SequenceContainer](https://en.cppreference.com/w/cpp/named_req/SequenceContainer.html)s and
-    /// [ContiguousContainer](https://en.cppreference.com/w/cpp/named_req/ContiguousContainer.html)s.
-    ///
-    /// @headerfile "" <uni-cpp/string.hpp>
-    ///
-    template<typename C>
-    concept contiguous_sequence_container = container<C> && std::ranges::contiguous_range<C> &&
-
-                                            std::constructible_from<C, typename C::iterator, typename C::iterator> &&
-                                            std::constructible_from<C, std::initializer_list<typename C::value_type>> &&
-
-                                            requires(C c, const C cc, typename C::size_type n, typename C::value_type v, typename C::iterator it,
-                                                     typename C::const_iterator cit, std::initializer_list<typename C::value_type> il) {
-                                                { c.assign(n, v) };
-                                                { c.assign(it, it) };
-                                                { c.assign(il) };
-
-                                                { c.insert(cit, v) } -> std::same_as<typename C::iterator>;
-                                                { c.insert(cit, n, v) } -> std::same_as<typename C::iterator>;
-                                                { c.insert(cit, it, it) } -> std::same_as<typename C::iterator>;
-
-                                                { c.erase(cit) } -> std::same_as<typename C::iterator>;
-                                                { c.erase(cit, cit) } -> std::same_as<typename C::iterator>;
-
-                                                { c.clear() };
-
-                                                { c[n] } -> std::same_as<typename C::value_type&>;
-                                                { cc[n] } -> std::same_as<const typename C::value_type&>;
-
-                                                { c.data() } -> std::same_as<typename C::value_type*>;
-                                                { cc.data() } -> std::same_as<const typename C::value_type*>;
-                                            };
-
     /// @brief Concept for identifying container types that work with uni-cpp's string types.
     ///
     /// @headerfile "" <uni-cpp/string.hpp>

@@ -67,6 +67,13 @@ namespace upp::ranges
     template<typename Range>
     concept code_unit_range = std::ranges::input_range<Range> && code_unit_type<impl::conditional_range_elem_t<Range>>;
 
+    /// @brief Identifies types that are input ranges of ASCII (or more precisely, @ref upp::ascii_char "ascii_chars").
+    ///
+    /// @headerfile "" <uni-cpp/ranges.hpp>
+    ///
+    template<typename Range>
+    concept ascii_range = std::ranges::input_range<Range> && std::same_as<impl::conditional_range_elem_t<Range>, upp::ascii_char>;
+
     /// @brief Identifies types that are input ranges of code points (or more precisely, @ref upp::uchar "uchars").
     ///
     /// @headerfile "" <uni-cpp/ranges.hpp>

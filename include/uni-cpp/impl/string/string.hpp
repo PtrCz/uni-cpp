@@ -49,11 +49,12 @@ namespace upp
     public:
         static constexpr encoding encoding_value = encoding::ascii;
 
-        using traits_type    = encoding_traits<encoding::ascii>;
-        using container_type = Container;
-        using size_type      = Container::size_type;
-        using code_unit_type = Container::value_type;
-        using char_type      = ascii_char;
+        using traits_type        = encoding_traits<encoding::ascii>;
+        using container_type     = Container;
+        using size_type          = Container::size_type;
+        using code_unit_type     = Container::value_type;
+        using char_type          = ascii_char;
+        using code_unit_iterator = Container::const_iterator;
 
     public:
         /// @brief Default constructor. Constructs an empty string.
@@ -250,7 +251,8 @@ namespace upp
         ///
         [[nodiscard]] constexpr auto code_units() const noexcept
         {
-            return impl::make_code_units_t<encoding_value, code_unit_type>(std::span<const code_unit_type>{m_container});
+            return impl::make_code_units_t<Container, encoding::ascii>(
+                std::ranges::subrange<code_unit_iterator>{m_container.begin(), m_container.end()});
         }
 
         /// @brief Returns a range of @ref upp::ascii_char "ascii_chars" of this string.
@@ -292,7 +294,7 @@ namespace upp
         ///
         [[nodiscard]] constexpr auto char_indices() const noexcept
         {
-            return ranges::impl::char_indices_view<encoding_value, code_unit_type>{code_units()};
+            return ranges::impl::char_indices_view<Container, encoding::ascii>{code_units()};
         }
 
         /// @brief Returns the maximum number of characters the string is able to hold due to system or library implementation limitations.
@@ -414,11 +416,12 @@ namespace upp
     public:
         static constexpr encoding encoding_value = Encoding;
 
-        using traits_type    = encoding_traits<Encoding>;
-        using container_type = Container;
-        using size_type      = Container::size_type;
-        using code_unit_type = Container::value_type;
-        using char_type      = uchar;
+        using traits_type        = encoding_traits<Encoding>;
+        using container_type     = Container;
+        using size_type          = Container::size_type;
+        using code_unit_type     = Container::value_type;
+        using char_type          = uchar;
+        using code_unit_iterator = Container::const_iterator;
 
     public:
         /// @brief Default constructor. Constructs an empty string.
@@ -707,7 +710,7 @@ namespace upp
         ///
         [[nodiscard]] constexpr auto code_units() const noexcept
         {
-            return impl::make_code_units_t<encoding_value, code_unit_type>(std::span<const code_unit_type>{m_container});
+            return impl::make_code_units_t<Container, Encoding>(std::ranges::subrange<code_unit_iterator>{m_container.begin(), m_container.end()});
         }
 
         /// @brief Returns a range of @ref upp::uchar "uchars" (code points) of this string.
@@ -752,10 +755,7 @@ namespace upp
         ///
         /// @endcode
         ///
-        [[nodiscard]] constexpr auto char_indices() const noexcept
-        {
-            return ranges::impl::char_indices_view<encoding_value, code_unit_type>{code_units()};
-        }
+        [[nodiscard]] constexpr auto char_indices() const noexcept { return ranges::impl::char_indices_view<Container, Encoding>{code_units()}; }
 
         /// @brief Returns the maximum number of code units the string is able to hold due to system or library implementation limitations.
         ///

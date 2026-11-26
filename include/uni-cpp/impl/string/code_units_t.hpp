@@ -11,26 +11,29 @@
 
 namespace upp::impl
 {
-    template<encoding Encoding, typename CodeUnitType>
+    template<typename Container, encoding Encoding>
     class code_units_t;
 
-    template<encoding Encoding, typename CodeUnitType>
-    [[nodiscard]] constexpr code_units_t<Encoding, CodeUnitType> make_code_units_t(std::span<const CodeUnitType> code_units) noexcept;
+    template<typename Container, encoding Encoding>
+    [[nodiscard]] constexpr code_units_t<Container, Encoding> make_code_units_t(
+        std::ranges::subrange<typename Container::const_iterator> code_units) noexcept;
 
-    template<encoding Encoding, typename CodeUnitType>
+    template<typename Container, encoding Encoding>
     class code_units_t
     {
     private:
-        using span_t    = std::span<const CodeUnitType>;
-        using size_type = span_t::size_type;
-        using reference = const CodeUnitType&;
-        using pointer   = const CodeUnitType*;
+        using const_it       = Container::const_iterator;
+        using code_unit_type = Container::value_type;
+        using subrange_t     = std::ranges::subrange<const_it>;
+        using size_type      = std::ranges::range_size_t<subrange_t>;
+        using reference      = const code_unit_type&;
+        using pointer        = const code_unit_type*;
 
     public:
         code_units_t() = default;
 
-        [[nodiscard]] constexpr auto begin() const noexcept { return m_code_units.begin(); }
-        [[nodiscard]] constexpr auto end() const noexcept { return m_code_units.end(); }
+        [[nodiscard]] constexpr const_it begin() const noexcept { return m_code_units.begin(); }
+        [[nodiscard]] constexpr const_it end() const noexcept { return m_code_units.end(); }
 
         [[nodiscard]] constexpr reference front() const { return m_code_units.front(); }
         [[nodiscard]] constexpr reference back() const { return m_code_units.back(); }
@@ -45,47 +48,51 @@ namespace upp::impl
             return m_code_units.data()[pos];
         }
 
-        [[nodiscard]] constexpr reference operator[](size_type index) const { return m_code_units[index]; }
+        [[nodiscard]] constexpr reference operator[](size_type index) const
+        {
+            return m_code_units[static_cast<std::ranges::range_difference_t<subrange_t>>(index)];
+        }
 
         [[nodiscard]] constexpr pointer data() const noexcept { return m_code_units.data(); }
 
         [[nodiscard]] constexpr bool empty() const noexcept { return m_code_units.empty(); }
 
-        [[nodiscard]] constexpr size_type size() const noexcept { return m_code_units.size(); }
-        [[nodiscard]] constexpr size_type size_bytes() const noexcept { return m_code_units.size_bytes(); }
+        [[nodiscard]] constexpr size_type   size() const noexcept { return m_code_units.size(); }
+        [[nodiscard]] constexpr std::size_t size_bytes() const noexcept { return m_code_units.size() * sizeof(code_unit_type); }
 
-        [[nodiscard]] std::span<const std::byte> as_bytes() const noexcept { return std::as_bytes(m_code_units); }
+        [[nodiscard]] std::span<const std::byte> as_bytes() const noexcept { return std::as_bytes(std::span<const code_unit_type>{m_code_units}); }
 
     private:
-        constexpr explicit code_units_t(span_t code_units) noexcept
-            : m_code_units(code_units)
+        constexpr explicit code_units_t(subrange_t code_units) noexcept
+            : m_code_units(std::move(code_units))
         {
         }
 
-        friend constexpr code_units_t<Encoding, CodeUnitType> make_code_units_t<Encoding, CodeUnitType>(
-            std::span<const CodeUnitType> code_units) noexcept;
+        friend constexpr code_units_t<Container, Encoding> make_code_units_t<Container, Encoding>(
+            std::ranges::subrange<typename Container::const_iterator> code_units) noexcept;
 
     private:
-        span_t m_code_units;
+        subrange_t m_code_units;
     };
 
-    template<encoding Encoding, typename CodeUnitType>
-    [[nodiscard]] constexpr code_units_t<Encoding, CodeUnitType> make_code_units_t(std::span<const CodeUnitType> code_units) noexcept
+    template<typename Container, encoding Encoding>
+    [[nodiscard]] constexpr code_units_t<Container, Encoding> make_code_units_t(
+        std::ranges::subrange<typename Container::const_iterator> code_units) noexcept
     {
-        return code_units_t<Encoding, CodeUnitType>{code_units};
+        return code_units_t<Container, Encoding>{code_units};
     }
 } // namespace upp::impl
 
 /// @cond
 
-template<upp::encoding Encoding, typename CodeUnitType>
-inline constexpr bool std::ranges::enable_borrowed_range<upp::impl::code_units_t<Encoding, CodeUnitType>> = true;
+template<typename Container, upp::encoding Encoding>
+inline constexpr bool std::ranges::enable_borrowed_range<upp::impl::code_units_t<Container, Encoding>> = true;
 
-template<upp::encoding Encoding, typename CodeUnitType>
-inline constexpr bool std::ranges::enable_view<upp::impl::code_units_t<Encoding, CodeUnitType>> = true;
+template<typename Container, upp::encoding Encoding>
+inline constexpr bool std::ranges::enable_view<upp::impl::code_units_t<Container, Encoding>> = true;
 
-template<upp::encoding Encoding, typename CodeUnitType>
-inline constexpr bool upp::ranges::enable_valid_code_unit_range<upp::impl::code_units_t<Encoding, CodeUnitType>, Encoding> = true;
+template<typename Container, upp::encoding Encoding>
+inline constexpr bool upp::ranges::enable_valid_code_unit_range<upp::impl::code_units_t<Container, Encoding>, Encoding> = true;
 
 /// @endcond
 

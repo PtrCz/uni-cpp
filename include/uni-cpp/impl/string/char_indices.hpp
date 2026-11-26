@@ -13,11 +13,11 @@
 
 namespace upp::ranges::impl
 {
-    template<encoding Encoding, typename CodeUnitType>
-    class char_indices_view : public UNI_CPP_IMPL_VIEW_INTERFACE(char_indices_view<Encoding, CodeUnitType>)
+    template<typename Container, encoding Encoding>
+    class char_indices_view : public UNI_CPP_IMPL_VIEW_INTERFACE(char_indices_view<Container, Encoding>)
     {
     private:
-        using code_units_view_t = upp::impl::code_units_t<Encoding, CodeUnitType>;
+        using code_units_view_t = upp::impl::code_units_t<Container, Encoding>;
         using code_units_it     = std::ranges::iterator_t<code_units_view_t>;
         using view_t =
             decode_view<code_units_view_t, Encoding, decode_view_kind::valid, std::conditional_t<Encoding == encoding::ascii, ascii_char, uchar>>;
@@ -176,7 +176,7 @@ namespace upp::ranges::impl
     };
 } // namespace upp::ranges::impl
 
-template<upp::encoding Encoding, typename CodeUnitType>
-inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::impl::char_indices_view<Encoding, CodeUnitType>> = true;
+template<typename Container, upp::encoding Encoding>
+inline constexpr bool std::ranges::enable_borrowed_range<upp::ranges::impl::char_indices_view<Container, Encoding>> = true;
 
 #endif // UNI_CPP_IMPL_STRING_CHAR_INDICES_HPP
